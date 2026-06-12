@@ -42,6 +42,7 @@ class StrategyConfig(FlexibleConfig):
     spread_filter: dict[str, Any]
     execution: dict[str, Any]
     reporting: dict[str, Any]
+    forensics: dict[str, Any] = {}
     max_trade_duration_days: int = 7
     market_open_filter: dict[str, Any] = {}
     base_dir: Path = Path(".")

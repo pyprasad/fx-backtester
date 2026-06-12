@@ -22,3 +22,12 @@ def test_long_enters_ask_and_short_enters_bid(ticks, strategy_config):
     assert short.entry_price == 103.10
     assert long.exit_price == 103.12
     assert short.exit_price == 103.14
+
+
+def test_short_stop_triggers_when_ask_equals_float_noisy_stop(ticks, strategy_config):
+    strategy_config.execution["slippage_enabled"] = False
+    signal = _signal("SHORT")
+    signal.proposed_stop = 103.14000000000003
+    trade = execute_signal(signal, ticks.sort("timestamp_utc"), strategy_config, 10000)
+    assert trade.exit_timestamp_utc == ticks.sort("timestamp_utc")["timestamp_utc"][-1]
+    assert trade.exit_reason == "stop_loss"

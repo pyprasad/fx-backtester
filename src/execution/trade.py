@@ -31,3 +31,17 @@ class Trade:
     partial_exits: list[dict] = field(default_factory=list)
     status: str = "CLOSED"
     session: str = ""
+    signal_timestamp_utc: datetime | None = None
+    initial_risk_price_distance: float | None = None
+    initial_risk_pips: float | None = None
+    max_favourable_excursion_r: float | None = None
+    max_adverse_excursion_r: float | None = None
+    held_over_weekend: bool = False
+    entry_tick_id: int | None = None
+    exit_tick_id: int | None = None
+    stop_history: list[dict] = field(default_factory=list)
+    target_history: list[dict] = field(default_factory=list)
+    trailing_history: list[dict] = field(default_factory=list)
+    breakeven_moved: bool = False
+    breakeven_timestamp_utc: datetime | None = None
+    notes: str = ""

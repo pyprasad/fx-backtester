@@ -1,5 +1,6 @@
 import argparse
 import json
+from pathlib import Path
 
 import polars as pl
 
@@ -14,6 +15,8 @@ from src.config.config_loader import (
 from src.data.data_quality import analyze_data_quality, write_quality_reports
 from src.data.tick_loader import scan_ticks
 from src.data.tick_normalizer import normalize_ticks
+from src.forensics.trade_forensics import TradeForensicsEngine
+from src.reporting.html_report import add_forensic_link
 from src.utils.logging import configure_logging, get_logger, timed_stage
 
 logger = get_logger(__name__)
@@ -54,6 +57,21 @@ def add_strategy_overrides(parser):
     parser.add_argument("--report-output-path", help="Override backtest report parent directory")
 
 
+def run_forensics(config, run_path, normalised_tick_path, candle_path):
+    run_path = Path(run_path).resolve()
+    engine = TradeForensicsEngine(
+        config,
+        run_path / "trade_log.csv",
+        Path(normalised_tick_path).resolve(),
+        Path(candle_path).resolve(),
+        run_path,
+    )
+    summary = engine.run()
+    add_forensic_link(run_path, summary)
+    print(json.dumps(summary, default=str, indent=2))
+    print(f"Forensic report: {run_path / 'forensics' / 'forensic_report.html'}")
+
+
 def data_config(args, path):
     return apply_data_quality_overrides(
         load_data_quality_config(path),
@@ -91,12 +109,25 @@ def main():
     all_parser.add_argument("--data-quality-config", required=True)
     all_parser.add_argument("--strategy-config", required=True)
     all_parser.add_argument("--overwrite", action="store_true")
+    all_parser.add_argument("--run-forensics", action="store_true")
     add_data_overrides(all_parser)
     add_strategy_overrides(all_parser)
+    forensic_parser = sub.add_parser("forensics")
+    forensic_parser.add_argument("--strategy-config", required=True)
+    forensic_parser.add_argument("--run-path", required=True)
+    forensic_parser.add_argument("--normalised-tick-path", required=True)
+    forensic_parser.add_argument("--candle-path", required=True)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
-    if args.command == "data-quality":
+    if args.command == "forensics":
+        run_forensics(
+            load_strategy_config(args.strategy_config),
+            args.run_path,
+            args.normalised_tick_path,
+            args.candle_path,
+        )
+    elif args.command == "data-quality":
         quality(data_config(args, args.config))
     elif args.command == "normalise":
         _, summary = normalize_ticks(data_config(args, args.config), args.overwrite)
@@ -121,6 +152,8 @@ def main():
         build_candles_for_config(strategy)
         logger.info("ALL stage 4/4 | run backtest")
         _, metrics, output = run_backtest(strategy)
+        if args.run_forensics:
+            run_forensics(strategy, output, resolve(strategy, strategy.data["normalised_tick_path"]), resolve(strategy, strategy.data["candle_path"]))
         print(json.dumps(metrics, default=str, indent=2))
         print(f"Reports: {output}")
     logger.info("Pipeline command completed | command=%s", args.command)

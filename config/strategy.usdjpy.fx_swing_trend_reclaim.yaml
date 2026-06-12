@@ -54,3 +54,50 @@ execution:
   slippage_enabled: true
   default_slippage_points: 0.002
 reporting: {output_path: reports/runs, generate_html: true, generate_csv: true}
+forensics:
+  enabled: true
+  output:
+    include_tick_windows: true
+    tick_window_minutes_before_entry: 60
+    tick_window_minutes_after_exit: 60
+    tick_window_minutes_around_stop_cross: 30
+    max_ticks_export_per_trade: 20000
+  worst_trade_analysis:
+    enabled: true
+    top_n_worst_trades: 25
+    top_n_best_trades: 10
+    investigate_trade_ids: []
+  stop_audit:
+    enabled: true
+    check_stop_cross_before_exit: true
+    check_take_profit_cross_before_exit: true
+    check_trailing_stop_cross_before_exit: true
+    tolerance_price: 0.000001
+  weekend_gap_audit:
+    enabled: true
+    friday_cutoff_utc: "20:30"
+    sunday_open_utc: "21:00"
+    flag_trades_held_over_weekend: true
+  r_multiple_audit:
+    enabled: true
+    max_expected_loss_r_warning: -2.5
+    max_expected_loss_r_fail: -5.0
+  execution_audit:
+    enabled: true
+    price_tolerance: 0.000001
+    verify_long_entry_uses_ask: true
+    verify_long_exit_uses_bid: true
+    verify_short_entry_uses_bid: true
+    verify_short_exit_uses_ask: true
+    verify_short_stop_uses_ask: true
+    verify_short_target_uses_ask: true
+    verify_long_stop_uses_bid: true
+    verify_long_target_uses_bid: true
+  signal_alignment_audit:
+    enabled: true
+    verify_entry_tick_after_signal_close: true
+    minimum_entry_delay_seconds: 0
+  report:
+    generate_html: true
+    generate_csv: true
+    generate_json: true

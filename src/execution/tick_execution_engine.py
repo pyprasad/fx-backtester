@@ -26,8 +26,12 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
     partial_cfg = config.exit["partial_take_profit"]
     be_cfg = config.exit["move_stop_to_breakeven"]
     final_r = config.exit["runner"]["final_target_r"]
+    price_tolerance = config.forensics.get("stop_audit", {}).get("tolerance_price", 0.000001)
     target = entry + (initial_risk * final_r * (1 if is_long else -1))
     remaining, realized, partials = 1.0, 0.0, []
+    stop_history = [{"timestamp": first["timestamp_utc"], "price": stop, "reason": "initial"}]
+    trailing_history = []
+    breakeven_timestamp = None
     final_stop, reason, exit_row, exit_price = stop, "end_of_data", future.row(-1, named=True), None
     mfe = mae = 0.0
     deadline = signal.timestamp_utc + timedelta(days=config.max_trade_duration_days)
@@ -36,7 +40,11 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         move = (close_side - entry) * (1 if is_long else -1)
         mfe, mae = max(mfe, move), min(mae, move)
         if be_cfg["enabled"] and move >= initial_risk * be_cfg["after_r"]:
-            final_stop = max(final_stop, entry) if is_long else min(final_stop, entry)
+            candidate = max(final_stop, entry) if is_long else min(final_stop, entry)
+            if candidate != final_stop:
+                final_stop = candidate
+                breakeven_timestamp = row["timestamp_utc"]
+                stop_history.append({"timestamp": row["timestamp_utc"], "price": final_stop, "reason": "breakeven"})
         if partial_cfg["enabled"] and remaining == 1.0 and move >= initial_risk * partial_cfg["at_r"]:
             fraction = partial_cfg["close_percent"] / 100
             realized += move * size * fraction
@@ -45,9 +53,19 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         if config.exit["runner"]["enabled"] and remaining < 1.0:
             trail_distance = signal.indicator_snapshot.get("atr_14", initial_risk) * config.exit["runner"]["trailing_stop"]["atr_multiplier"]
             candidate = close_side - trail_distance if is_long else close_side + trail_distance
-            final_stop = max(final_stop, candidate) if is_long else min(final_stop, candidate)
-        stop_hit = close_side <= final_stop if is_long else close_side >= final_stop
-        target_hit = close_side >= target if is_long else close_side <= target
+            candidate = max(final_stop, candidate) if is_long else min(final_stop, candidate)
+            if candidate != final_stop:
+                final_stop = candidate
+                trailing_history.append({"timestamp": row["timestamp_utc"], "price": final_stop})
+                stop_history.append({"timestamp": row["timestamp_utc"], "price": final_stop, "reason": "trailing"})
+        stop_hit = (
+            close_side <= final_stop + price_tolerance
+            if is_long else close_side >= final_stop - price_tolerance
+        )
+        target_hit = (
+            close_side >= target - price_tolerance
+            if is_long else close_side <= target + price_tolerance
+        )
         if stop_hit or target_hit or row["timestamp_utc"] >= deadline:
             reason = ("trailing_stop" if stop_hit and final_stop != stop else "stop_loss") if stop_hit else ("take_profit" if target_hit else "max_duration")
             exit_row, exit_price = row, close_side - slip if is_long else close_side + slip
@@ -62,4 +80,15 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         realized, realized, realized / risk_amount, mfe, mae, duration, duration / 3600,
         duration / 86400, reason, first["spread_pips"], exit_row["spread_pips"], partials,
         session=signal.session,
+        signal_timestamp_utc=signal.timestamp_utc,
+        initial_risk_price_distance=initial_risk,
+        initial_risk_pips=initial_risk / 0.01,
+        max_favourable_excursion_r=mfe / initial_risk,
+        max_adverse_excursion_r=mae / initial_risk,
+        held_over_weekend=first["timestamp_utc"].weekday() <= 4 and exit_row["timestamp_utc"].weekday() == 6,
+        stop_history=stop_history,
+        target_history=[{"timestamp": first["timestamp_utc"], "price": target}],
+        trailing_history=trailing_history,
+        breakeven_moved=breakeven_timestamp is not None,
+        breakeven_timestamp_utc=breakeven_timestamp,
     )

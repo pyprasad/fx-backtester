@@ -1,0 +1,50 @@
+2026-06-13 00:05:29 | INFO | __main__ | Pipeline command started | command=forensics
+2026-06-13 00:05:30 | INFO | src.forensics.trade_forensics | START audit all trades | trades=450
+2026-06-13 00:05:30 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=1/450
+2026-06-13 00:05:32 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=25/450
+2026-06-13 00:05:34 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=50/450
+2026-06-13 00:05:38 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=75/450
+2026-06-13 00:05:41 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=100/450
+2026-06-13 00:05:45 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=125/450
+2026-06-13 00:05:48 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=150/450
+2026-06-13 00:05:51 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=175/450
+2026-06-13 00:05:55 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=200/450
+2026-06-13 00:05:58 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=225/450
+2026-06-13 00:06:03 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=250/450
+2026-06-13 00:06:06 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=275/450
+2026-06-13 00:06:10 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=300/450
+2026-06-13 00:06:13 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=325/450
+2026-06-13 00:06:17 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=350/450
+2026-06-13 00:06:21 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=375/450
+2026-06-13 00:06:24 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=400/450
+2026-06-13 00:06:26 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=425/450
+2026-06-13 00:06:28 | INFO | src.forensics.trade_forensics | Forensic audit progress | trade=450/450
+2026-06-13 00:06:28 | INFO | src.forensics.trade_forensics | DONE audit all trades | elapsed=58.3s
+2026-06-13 00:06:28 | INFO | src.forensics.trade_forensics | START export forensic reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2022_2025/20260612_230419_usdjpy_fx_swing_trend_reclaim_v1/forensics
+2026-06-13 00:06:30 | INFO | src.forensics.trade_forensics | DONE export forensic reports | elapsed=1.7s
+2026-06-13 00:06:30 | INFO | __main__ | Pipeline command completed | command=forensics
+{
+  "total_trades": 450,
+  "audited_trades": 450,
+  "worst_trade_id": "bf028d3a-9d83-4168-b029-8c37b9b84d2e",
+  "worst_trade_r": -14.77078203717973,
+  "worst_trade_exit_reason": "stop_loss",
+  "worst_trade_held_over_weekend": true,
+  "worst_trade_stop_crossed_before_exit": false,
+  "worst_trade_expected_exit_reason": "stop_loss",
+  "worst_trade_actual_exit_reason": "stop_loss",
+  "trades_loss_beyond_2_5r_count": 1,
+  "trades_loss_beyond_5r_count": 1,
+  "stop_cross_mismatch_count": 1,
+  "target_cross_mismatch_count": 0,
+  "bid_ask_side_mismatch_count": 0,
+  "entry_before_signal_count": 0,
+  "missing_tick_window_count": 0,
+  "weekend_held_trade_count": 12,
+  "weekend_held_loss_count": 7,
+  "partial_exit_r_mismatch_count": 0,
+  "critical_flag_count": 0,
+  "warning_flag_count": 20,
+  "final_status": "WARNING"
+}
+Forensic report: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2022_2025/20260612_230419_usdjpy_fx_swing_trend_reclaim_v1/forensics/forensic_report.html
