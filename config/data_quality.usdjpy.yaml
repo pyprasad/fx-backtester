@@ -1,0 +1,35 @@
+market:
+  symbol: USDJPY
+  pip_size: 0.01
+  price_decimals: 3
+  timezone: UTC
+input:
+  raw_tick_path: data/raw_ticks/USDJPY
+  file_pattern: "*.csv"
+  normalised_output_path: data/normalised_ticks/USDJPY.parquet
+validation:
+  require_columns: [timestamp, bid, ask, mid, bid_vol, ask_vol]
+timestamp:
+  require_timezone: true
+  expected_timezone: UTC
+  allow_out_of_order: false
+  allow_duplicates: false
+price:
+  reject_bid_greater_than_ask: true
+  reject_negative_or_zero_prices: true
+  mid_tolerance: 0.00001
+spread:
+  warning_spread_pips: 2.0
+  extreme_spread_pips: 5.0
+  reject_negative_spread: true
+  reject_zero_spread: false
+gaps:
+  warning_gap_seconds: 300
+  extreme_gap_seconds: 3600
+trading_hours:
+  allow_sunday_after_21_00_utc: true
+  allow_friday_until_22_00_utc: true
+  flag_weekend_ticks: true
+output:
+  report_path: reports/data_quality/USDJPY_quality_report.html
+  summary_csv_path: reports/data_quality/USDJPY_quality_summary.csv

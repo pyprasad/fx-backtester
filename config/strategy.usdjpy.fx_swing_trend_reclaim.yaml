@@ -1,0 +1,56 @@
+strategy:
+  name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  mode: research
+  test_mode: short_only
+data:
+  normalised_tick_path: data/normalised_ticks/USDJPY.parquet
+  candle_path: data/candles/USDJPY
+  timezone: Europe/London
+timeframes: {trend: 4H, entry: 1H, precision: 15M}
+candles:
+  build_timeframes: [1M, 5M, 15M, 1H, 4H, 1D]
+indicators: {ema_fast: 20, ema_mid: 50, ema_slow: 200, rsi_period: 14, atr_period: 14}
+entry:
+  short:
+    enabled: true
+    max_pullback_atr: 1.2
+    rsi_cross_down_level: 50
+  long:
+    enabled: false
+    max_pullback_atr: 1.2
+    rsi_cross_up_level: 50
+risk:
+  starting_balance: 10000
+  account_currency: GBP
+  risk_per_trade_percent: 0.25
+  max_open_trades_total: 1
+  max_open_trades_per_market: 1
+  max_daily_loss_percent: 1.0
+  max_weekly_loss_percent: 3.0
+  max_strategy_drawdown_percent: 10.0
+stop_loss:
+  type: max_of_swing_and_atr
+  atr_multiplier: 1.2
+  swing_lookback_candles: 8
+  swing_buffer_atr_multiplier: 0.20
+exit:
+  partial_take_profit: {enabled: true, at_r: 2.0, close_percent: 50}
+  move_stop_to_breakeven: {enabled: true, after_r: 1.2}
+  runner:
+    enabled: true
+    trailing_stop: {type: atr, atr_multiplier: 1.5}
+    final_target_r: 4.0
+max_trade_duration_days: 7
+session_filter:
+  timezone: Europe/London
+  entry_windows:
+    - {name: London morning, start: "07:00", end: "11:30"}
+    - {name: London New York overlap, start: "13:00", end: "16:30"}
+market_open_filter: {enabled: true, avoid_sunday_open: true, avoid_first_minutes_after_week_open: 60}
+spread_filter: {enabled: true, max_spread_pips: 2.0}
+execution:
+  use_tick_execution: true
+  slippage_enabled: true
+  default_slippage_points: 0.002
+reporting: {output_path: reports/runs, generate_html: true, generate_csv: true}

@@ -1,0 +1,15 @@
+Metadata-Version: 2.1
+Name: fx-backtester
+Version: 0.1.0
+Summary: Research-grade USDJPY tick backtester
+Requires-Python: >=3.11
+Requires-Dist: polars>=1.20
+Requires-Dist: pyarrow>=18
+Requires-Dist: pydantic>=2.8
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: numpy>=2.0
+Requires-Dist: jinja2>=3.1
+Requires-Dist: plotly>=5.24
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: ruff>=0.8; extra == "dev"

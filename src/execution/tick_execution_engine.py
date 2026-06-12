@@ -1,0 +1,65 @@
+from datetime import timedelta
+from uuid import uuid4
+
+import polars as pl
+
+from src.config.schemas import StrategyConfig
+from src.risk.position_sizer import position_size
+from src.strategies.signal import Signal
+
+from .trade import Trade
+
+
+def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, balance: float) -> Trade | None:
+    future = ticks.filter(pl.col("timestamp_utc") > signal.timestamp_utc)
+    if future.is_empty():
+        return None
+    first = future.row(0, named=True)
+    slip = config.execution["default_slippage_points"] if config.execution.get("slippage_enabled") else 0
+    is_long = signal.direction == "LONG"
+    entry = first["ask"] + slip if is_long else first["bid"] - slip
+    stop = signal.proposed_stop
+    initial_risk = abs(entry - stop)
+    if initial_risk <= 0:
+        return None
+    size, risk_amount = position_size(balance, config.risk["risk_per_trade_percent"], entry, stop)
+    partial_cfg = config.exit["partial_take_profit"]
+    be_cfg = config.exit["move_stop_to_breakeven"]
+    final_r = config.exit["runner"]["final_target_r"]
+    target = entry + (initial_risk * final_r * (1 if is_long else -1))
+    remaining, realized, partials = 1.0, 0.0, []
+    final_stop, reason, exit_row, exit_price = stop, "end_of_data", future.row(-1, named=True), None
+    mfe = mae = 0.0
+    deadline = signal.timestamp_utc + timedelta(days=config.max_trade_duration_days)
+    for row in future.iter_rows(named=True):
+        close_side = row["bid"] if is_long else row["ask"]
+        move = (close_side - entry) * (1 if is_long else -1)
+        mfe, mae = max(mfe, move), min(mae, move)
+        if be_cfg["enabled"] and move >= initial_risk * be_cfg["after_r"]:
+            final_stop = max(final_stop, entry) if is_long else min(final_stop, entry)
+        if partial_cfg["enabled"] and remaining == 1.0 and move >= initial_risk * partial_cfg["at_r"]:
+            fraction = partial_cfg["close_percent"] / 100
+            realized += move * size * fraction
+            remaining -= fraction
+            partials.append({"timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction})
+        if config.exit["runner"]["enabled"] and remaining < 1.0:
+            trail_distance = signal.indicator_snapshot.get("atr_14", initial_risk) * config.exit["runner"]["trailing_stop"]["atr_multiplier"]
+            candidate = close_side - trail_distance if is_long else close_side + trail_distance
+            final_stop = max(final_stop, candidate) if is_long else min(final_stop, candidate)
+        stop_hit = close_side <= final_stop if is_long else close_side >= final_stop
+        target_hit = close_side >= target if is_long else close_side <= target
+        if stop_hit or target_hit or row["timestamp_utc"] >= deadline:
+            reason = ("trailing_stop" if stop_hit and final_stop != stop else "stop_loss") if stop_hit else ("take_profit" if target_hit else "max_duration")
+            exit_row, exit_price = row, close_side - slip if is_long else close_side + slip
+            break
+    if exit_price is None:
+        exit_price = exit_row["bid"] if is_long else exit_row["ask"]
+    realized += (exit_price - entry) * (1 if is_long else -1) * size * remaining
+    duration = (exit_row["timestamp_utc"] - first["timestamp_utc"]).total_seconds()
+    return Trade(
+        str(uuid4()), signal.signal_id, signal.symbol, signal.direction, first["timestamp_utc"],
+        exit_row["timestamp_utc"], entry, exit_price, stop, final_stop, target, size, risk_amount,
+        realized, realized, realized / risk_amount, mfe, mae, duration, duration / 3600,
+        duration / 86400, reason, first["spread_pips"], exit_row["spread_pips"], partials,
+        session=signal.session,
+    )
