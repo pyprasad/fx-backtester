@@ -155,3 +155,52 @@ stability_validation:
     max_single_month_profit_contribution_percent: 35
     max_top_3_month_profit_contribution_percent: 60
     max_top_10_trade_profit_contribution_percent: 50
+walk_forward_validation:
+  enabled: true
+  baseline_policy_name: force_close_friday_20_30
+  strategy_name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  direction_mode: short_only
+  methodology:
+    no_parameter_optimisation: true
+    no_test_period_tuning: true
+    use_fixed_strategy_parameters: true
+    use_selected_weekend_policy: true
+  anchored_windows:
+    enabled: true
+    windows:
+      - name: train_2022_test_2023
+        train_start: "2022-01-01T00:00:00+00:00"
+        train_end: "2022-12-31T23:59:59+00:00"
+        test_start: "2023-01-01T00:00:00+00:00"
+        test_end: "2023-12-31T23:59:59+00:00"
+      - name: train_2022_2023_test_2024
+        train_start: "2022-01-01T00:00:00+00:00"
+        train_end: "2023-12-31T23:59:59+00:00"
+        test_start: "2024-01-01T00:00:00+00:00"
+        test_end: "2024-12-31T23:59:59+00:00"
+      - name: train_2022_2024_test_2025
+        train_start: "2022-01-01T00:00:00+00:00"
+        train_end: "2024-12-31T23:59:59+00:00"
+        test_start: "2025-01-01T00:00:00+00:00"
+        test_end: "2025-12-31T23:59:59+00:00"
+  rolling_windows:
+    enabled: true
+    definitions:
+      - {name: train_12m_test_3m, train_months: 12, test_months: 3, step_months: 3}
+      - {name: train_18m_test_3m, train_months: 18, test_months: 3, step_months: 3}
+      - {name: train_24m_test_6m, train_months: 24, test_months: 6, step_months: 6}
+  minimums:
+    min_train_trades_warning: 30
+    min_test_trades_warning: 10
+    min_test_windows_required: 3
+  pass_fail_rules:
+    min_positive_test_window_percent: 70
+    min_test_profit_factor: 1.3
+    max_test_drawdown_percent: 10
+    max_test_worst_trade_r: -2.5
+    min_test_average_r: 0.0
+    max_train_test_profit_factor_decay_percent: 50
+    max_train_test_average_r_decay_percent: 60
+    allow_low_trade_count_warning: true
+  output: {generate_csv: true, generate_json: true, generate_html: true, include_charts: true}

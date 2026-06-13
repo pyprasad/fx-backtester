@@ -185,3 +185,26 @@ because the validation measures active trading periods.
 `PASS` means the configured historical stability thresholds were met and the strategy may proceed
 to walk-forward validation. `WARNING` or `FAIL` means weak periods, concentration, or regimes must
 be investigated first. None of these verdicts means the strategy is production-ready.
+
+## FX-2D: Walk-Forward Validation
+
+FX-2D follows stability validation by treating each test period as unseen out-of-sample data. It
+uses the unchanged fixed-parameter `force_close_friday_20_30` baseline trade log. Train periods are
+used only for comparison; they do not optimize parameters or influence test-period signals.
+
+```bash
+python3.11 -m src.main --log-level INFO walk-forward \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --run-path reports/weekend_policy_comparison/<comparison_run>/force_close_friday_20_30 \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/walk_forward
+```
+
+Anchored windows test each future year after an expanding historical train period. Rolling windows
+test repeated 3-month and 6-month future periods after fixed-length train periods. Trades are
+assigned using entry timestamps, preventing test trades from leaking into train statistics.
+
+Outputs include anchored and rolling CSVs, aggregate summaries, score JSON/CSV, and
+`walk_forward_report.html`. Scores of `85-100` are `STRONG_WALK_FORWARD`, `70-84` are `PASS`,
+`50-69` are `WARNING`, and lower scores are `FAIL`. This remains historical research and does not
+establish production readiness.

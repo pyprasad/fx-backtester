@@ -1,0 +1,263 @@
+2026-06-13 10:21:12 | INFO | __main__ | Pipeline command started | command=all
+2026-06-13 10:21:12 | INFO | __main__ | ALL stage 1/4 | normalize ticks
+2026-06-13 10:21:12 | INFO | src.data.tick_normalizer | START scan tick CSV metadata
+2026-06-13 10:21:12 | INFO | src.data.tick_loader | Tick input selected | files=5, total_size=15.1 GiB, pattern=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks/usdjpy_ticks_202[1-5].csv
+2026-06-13 10:21:12 | INFO | src.data.tick_loader | Tick input file | path=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks/usdjpy_ticks_2021.csv, size=1.1 GiB
+2026-06-13 10:21:12 | INFO | src.data.tick_loader | Tick input file | path=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks/usdjpy_ticks_2022.csv, size=3.5 GiB
+2026-06-13 10:21:12 | INFO | src.data.tick_loader | Tick input file | path=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks/usdjpy_ticks_2023.csv, size=3.8 GiB
+2026-06-13 10:21:12 | INFO | src.data.tick_loader | Tick input file | path=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks/usdjpy_ticks_2024.csv, size=3.6 GiB
+2026-06-13 10:21:12 | INFO | src.data.tick_loader | Tick input file | path=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks/usdjpy_ticks_2025.csv, size=3.1 GiB
+2026-06-13 10:21:12 | INFO | src.data.tick_normalizer | DONE scan tick CSV metadata | elapsed=0.0s
+2026-06-13 10:21:12 | INFO | src.data.tick_normalizer | START validate structural tick data
+2026-06-13 10:22:37 | INFO | src.data.tick_normalizer | DONE validate structural tick data | elapsed=85.4s
+2026-06-13 10:22:37 | INFO | src.data.tick_normalizer | START normalize and write Parquet | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/normalised_ticks/USDJPY_2021_2025.parquet
+2026-06-13 10:25:54 | INFO | src.data.tick_normalizer | DONE normalize and write Parquet | elapsed=196.4s
+2026-06-13 10:25:54 | INFO | src.data.tick_normalizer | Normalized Parquet written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/normalised_ticks/USDJPY_2021_2025.parquet, size=1.8 GiB
+2026-06-13 10:25:54 | INFO | src.data.tick_normalizer | START calculate normalization summary
+2026-06-13 10:25:55 | INFO | src.data.tick_normalizer | DONE calculate normalization summary | elapsed=1.4s
+2026-06-13 10:25:55 | INFO | src.data.tick_normalizer | Normalization summary | ticks=172,885,283, start=2021-01-03 22:00:00.227000+00:00, end=2025-12-31 21:58:58.498000+00:00
+2026-06-13 10:25:55 | INFO | __main__ | ALL stage 2/4 | data quality
+2026-06-13 10:25:55 | INFO | __main__ | START analyze data quality
+2026-06-13 10:25:55 | INFO | src.data.data_quality | START quality ordering and duplicate scan
+2026-06-13 10:26:52 | INFO | src.data.data_quality | DONE quality ordering and duplicate scan | elapsed=56.9s
+2026-06-13 10:26:52 | INFO | src.data.data_quality | START quality aggregate metrics scan
+2026-06-13 10:27:18 | INFO | src.data.data_quality | DONE quality aggregate metrics scan | elapsed=26.4s
+2026-06-13 10:27:18 | INFO | src.data.data_quality | START quality grouped distribution scans
+2026-06-13 10:27:30 | INFO | src.data.data_quality | DONE quality grouped distribution scans | elapsed=11.9s
+2026-06-13 10:27:30 | INFO | __main__ | DONE analyze data quality | elapsed=95.2s
+2026-06-13 10:27:30 | INFO | __main__ | START write data-quality reports
+2026-06-13 10:27:35 | INFO | __main__ | DONE write data-quality reports | elapsed=5.0s
+2026-06-13 10:27:35 | INFO | __main__ | Data quality complete | status=WARNING, ticks=172,885,283, warnings=2834119, extreme_spreads=635927
+2026-06-13 10:27:35 | INFO | __main__ | ALL stage 3/4 | build candles
+2026-06-13 10:27:35 | INFO | src.backtest.backtest_engine | Building candles | tick_path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/normalised_ticks/USDJPY_2021_2025.parquet, output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025
+2026-06-13 10:27:35 | INFO | src.data.candle_builder | START build 1M candles | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025/USDJPY_1M.parquet
+2026-06-13 10:28:25 | INFO | src.data.candle_builder | DONE build 1M candles | elapsed=49.6s
+2026-06-13 10:28:25 | INFO | src.data.candle_builder | 1M candles written | count=1,860,251
+2026-06-13 10:28:25 | INFO | src.data.candle_builder | START build 5M candles | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025/USDJPY_5M.parquet
+2026-06-13 10:29:15 | INFO | src.data.candle_builder | DONE build 5M candles | elapsed=49.7s
+2026-06-13 10:29:15 | INFO | src.data.candle_builder | 5M candles written | count=374,024
+2026-06-13 10:29:15 | INFO | src.data.candle_builder | START build 15M candles | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025/USDJPY_15M.parquet
+2026-06-13 10:29:59 | INFO | src.data.candle_builder | DONE build 15M candles | elapsed=44.8s
+2026-06-13 10:29:59 | INFO | src.data.candle_builder | 15M candles written | count=124,711
+2026-06-13 10:29:59 | INFO | src.data.candle_builder | START build 1H candles | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025/USDJPY_1H.parquet
+2026-06-13 10:30:41 | INFO | src.data.candle_builder | DONE build 1H candles | elapsed=41.5s
+2026-06-13 10:30:41 | INFO | src.data.candle_builder | 1H candles written | count=31,180
+2026-06-13 10:30:41 | INFO | src.data.candle_builder | START build 4H candles | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025/USDJPY_4H.parquet
+2026-06-13 10:31:24 | INFO | src.data.candle_builder | DONE build 4H candles | elapsed=42.7s
+2026-06-13 10:31:24 | INFO | src.data.candle_builder | 4H candles written | count=8,059
+2026-06-13 10:31:24 | INFO | src.data.candle_builder | START build 1D candles | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2021_2025/USDJPY_1D.parquet
+2026-06-13 10:32:01 | INFO | src.data.candle_builder | DONE build 1D candles | elapsed=37.6s
+2026-06-13 10:32:01 | INFO | src.data.candle_builder | 1D candles written | count=1,563
+2026-06-13 10:32:02 | INFO | __main__ | ALL stage 4/4 | run backtest
+2026-06-13 10:32:02 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 10:32:02 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.3s
+2026-06-13 10:32:02 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 10:32:03 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.7s
+2026-06-13 10:32:03 | INFO | src.backtest.backtest_engine | Signals generated | accepted=811, rejected=19,393
+2026-06-13 10:32:03 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/811, trades=0, balance=10000.00
+2026-06-13 10:32:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/811, trades=17, balance=10061.06
+2026-06-13 10:32:06 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/811, trades=31, balance=10131.34
+2026-06-13 10:32:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/811, trades=51, balance=10421.07
+2026-06-13 10:32:09 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/811, trades=72, balance=10482.42
+2026-06-13 10:32:10 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/811, trades=89, balance=10578.98
+2026-06-13 10:32:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/811, trades=111, balance=10529.69
+2026-06-13 10:32:13 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/811, trades=126, balance=10742.39
+2026-06-13 10:32:17 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/811, trades=145, balance=10936.85
+2026-06-13 10:32:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/811, trades=163, balance=11511.97
+2026-06-13 10:32:24 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/811, trades=181, balance=11827.21
+2026-06-13 10:32:29 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/811, trades=201, balance=11879.22
+2026-06-13 10:32:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/811, trades=219, balance=11949.42
+2026-06-13 10:32:40 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/811, trades=240, balance=11888.21
+2026-06-13 10:32:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/811, trades=260, balance=12241.37
+2026-06-13 10:32:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/811, trades=279, balance=12280.78
+2026-06-13 10:32:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/811, trades=296, balance=12713.71
+2026-06-13 10:32:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/811, trades=314, balance=13065.60
+2026-06-13 10:33:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/811, trades=329, balance=13494.36
+2026-06-13 10:33:05 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/811, trades=346, balance=13803.06
+2026-06-13 10:33:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/811, trades=362, balance=13898.97
+2026-06-13 10:33:15 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/811, trades=377, balance=14183.47
+2026-06-13 10:33:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/811, trades=395, balance=14185.21
+2026-06-13 10:33:24 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/811, trades=404, balance=14565.56
+2026-06-13 10:33:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/811, trades=427, balance=14611.45
+2026-06-13 10:33:32 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/811, trades=447, balance=14793.89
+2026-06-13 10:33:38 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/811, trades=464, balance=15274.93
+2026-06-13 10:33:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=675/811, trades=481, balance=15653.39
+2026-06-13 10:33:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=700/811, trades=498, balance=15779.94
+2026-06-13 10:33:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=725/811, trades=515, balance=15987.03
+2026-06-13 10:33:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=750/811, trades=532, balance=16514.96
+2026-06-13 10:33:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=775/811, trades=548, balance=16833.95
+2026-06-13 10:33:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=800/811, trades=565, balance=16656.40
+2026-06-13 10:33:59 | INFO | src.backtest.backtest_engine | Execution progress | signal=811/811, trades=570, balance=16641.45
+2026-06-13 10:33:59 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2021_2025/20260613_093359_usdjpy_fx_swing_trend_reclaim_v1
+2026-06-13 10:33:59 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=1.0s
+2026-06-13 10:33:59 | INFO | src.backtest.backtest_engine | Backtest complete | trades=570, ending_balance=16641.45, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2021_2025/20260613_093359_usdjpy_fx_swing_trend_reclaim_v1
+2026-06-13 10:34:00 | INFO | __main__ | Pipeline command completed | command=all
+{
+  "symbol": "USDJPY",
+  "start_timestamp": "2021-01-03 22:00:00.227000+00:00",
+  "end_timestamp": "2025-12-31 21:58:58.498000+00:00",
+  "total_ticks": 172885283,
+  "duplicate_timestamp_count": 0,
+  "out_of_order_count": 0,
+  "bid_greater_than_ask_count": 0,
+  "negative_or_zero_price_count": 0,
+  "negative_spread_count": 0,
+  "zero_spread_count": 0,
+  "mid_mismatch_count": 0,
+  "warning_spread_count": 2834119,
+  "extreme_spread_count": 635927,
+  "max_spread_pips": 53.7,
+  "avg_spread_pips": 0.707,
+  "median_spread_pips": 0.6,
+  "p95_spread_pips": 1.2,
+  "p99_spread_pips": 2.9,
+  "max_gap_seconds": 259220,
+  "warning_gap_count": 464,
+  "extreme_gap_count": 264,
+  "weekend_tick_count": 1896994,
+  "sunday_open_tick_count": 1896994,
+  "ticks_by_year": {
+    "2021": 14822017,
+    "2022": 39593910,
+    "2023": 43459260,
+    "2024": 40963402,
+    "2025": 34046694
+  },
+  "ticks_by_month": {
+    "2021-01": 1230927,
+    "2021-02": 1010644,
+    "2021-03": 1333001,
+    "2021-04": 1103855,
+    "2021-05": 1063655,
+    "2021-06": 1033682,
+    "2021-07": 1210728,
+    "2021-08": 1034006,
+    "2021-09": 1084211,
+    "2021-10": 1418880,
+    "2021-11": 1779754,
+    "2021-12": 1518674,
+    "2022-01": 1459715,
+    "2022-02": 1643673,
+    "2022-03": 2162777,
+    "2022-04": 2698212,
+    "2022-05": 2972454,
+    "2022-06": 3373399,
+    "2022-07": 3106407,
+    "2022-08": 3534807,
+    "2022-09": 4708436,
+    "2022-10": 4212452,
+    "2022-11": 5075895,
+    "2022-12": 4645683,
+    "2023-01": 4686475,
+    "2023-02": 4062966,
+    "2023-03": 5581224,
+    "2023-04": 3611272,
+    "2023-05": 4112575,
+    "2023-06": 3286884,
+    "2023-07": 3302410,
+    "2023-08": 3493887,
+    "2023-09": 2560761,
+    "2023-10": 2444117,
+    "2023-11": 2476006,
+    "2023-12": 3840683,
+    "2024-01": 3725512,
+    "2024-02": 3128860,
+    "2024-03": 2734951,
+    "2024-04": 2373704,
+    "2024-05": 2214265,
+    "2024-06": 2209019,
+    "2024-07": 3423501,
+    "2024-08": 5087969,
+    "2024-09": 4551867,
+    "2024-10": 3560647,
+    "2024-11": 4433776,
+    "2024-12": 3519331,
+    "2025-01": 3467097,
+    "2025-02": 3260155,
+    "2025-03": 3897035,
+    "2025-04": 5547117,
+    "2025-05": 3149583,
+    "2025-06": 2417111,
+    "2025-07": 2170032,
+    "2025-08": 1806135,
+    "2025-09": 2033481,
+    "2025-10": 2381758,
+    "2025-11": 1999841,
+    "2025-12": 1917349
+  },
+  "ticks_by_day_of_week": {
+    "1": 31069857,
+    "2": 33870154,
+    "3": 35382628,
+    "4": 36017899,
+    "5": 34647751,
+    "7": 1896994
+  },
+  "ticks_by_hour_utc": {
+    "0": 8482573,
+    "1": 8066096,
+    "2": 6212410,
+    "3": 5395206,
+    "4": 5227995,
+    "5": 5712957,
+    "6": 7603685,
+    "7": 9778461,
+    "8": 9456755,
+    "9": 7918996,
+    "10": 6910813,
+    "11": 6987143,
+    "12": 10402577,
+    "13": 12681250,
+    "14": 13175957,
+    "15": 10817883,
+    "16": 7451802,
+    "17": 5867887,
+    "18": 5759286,
+    "19": 5193460,
+    "20": 3802315,
+    "21": 2517751,
+    "22": 3260960,
+    "23": 4201065
+  },
+  "status": "WARNING"
+}
+{
+  "starting_balance": 10000,
+  "ending_balance": 16641.45,
+  "total_return_percent": 66.4145,
+  "total_trades": 570,
+  "winning_trades": 225,
+  "losing_trades": 345,
+  "win_rate": 39.4737,
+  "gross_profit": 15575.18,
+  "gross_loss": -8933.73,
+  "net_profit": 6641.45,
+  "profit_factor": 1.7434,
+  "max_drawdown_percent": 3.9464,
+  "max_drawdown_amount": 664.34,
+  "average_r": 0.3612,
+  "expectancy_r": 0.3612,
+  "average_win_r": 2.132,
+  "average_loss_r": -0.7936,
+  "best_trade_r": 9.2,
+  "worst_trade_r": -14.7708,
+  "average_trade_duration": 5.0668,
+  "median_trade_duration": 2.4862,
+  "trades_per_month": 10.1786,
+  "consecutive_losses_max": 9,
+  "consecutive_wins_max": 8,
+  "short_trade_count": 570,
+  "short_win_rate": 39.4737,
+  "long_trade_count": 0,
+  "long_win_rate": 0,
+  "average_spread_pips_at_entry": 0.546,
+  "average_spread_pips_at_exit": 1.105,
+  "stop_loss_exit_count": 236,
+  "take_profit_exit_count": 96,
+  "trailing_stop_exit_count": 238,
+  "max_duration_exit_count": 0,
+  "weekend_force_close_exit_count": 0,
+  "weekend_losing_trade_close_exit_count": 0,
+  "weekend_profit_threshold_close_exit_count": 0
+}
+Reports: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2021_2025/20260613_093359_usdjpy_fx_swing_trend_reclaim_v1

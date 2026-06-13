@@ -1,0 +1,10 @@
+2026-06-13 01:55:20 | INFO | __main__ | Pipeline command started | command=walk-forward
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | Start walk-forward validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_20_30
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | Equity curve available | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_20_30/equity_curve.csv; strict entry-window drawdown uses selected trades
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | START anchored walk-forward analysis
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | DONE anchored walk-forward analysis | elapsed=0.0s
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | START rolling walk-forward analysis
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | DONE rolling walk-forward analysis | elapsed=0.1s
+2026-06-13 01:55:20 | INFO | src.walk_forward.walk_forward_runner | Walk-forward report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/walk_forward/20260613_005520_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/walk_forward_report.html
+2026-06-13 01:55:20 | INFO | __main__ | Pipeline command completed | command=walk-forward
+Walk-forward report: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/walk_forward/20260613_005520_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/walk_forward_report.html

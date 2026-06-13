@@ -21,6 +21,7 @@ from src.forensics.trade_forensics import TradeForensicsEngine
 from src.reporting.html_report import add_forensic_link
 from src.stability.stability_runner import StabilityValidationRunner
 from src.utils.logging import configure_logging, get_logger, timed_stage
+from src.walk_forward.walk_forward_runner import WalkForwardValidationRunner
 
 logger = get_logger(__name__)
 
@@ -141,6 +142,11 @@ def main():
     stability_parser.add_argument("--candle-path", required=True)
     stability_parser.add_argument("--report-output-path", required=True)
     stability_parser.add_argument("--baseline-policy-name")
+    walk_forward_parser = sub.add_parser("walk-forward")
+    walk_forward_parser.add_argument("--strategy-config", required=True)
+    walk_forward_parser.add_argument("--run-path", required=True)
+    walk_forward_parser.add_argument("--candle-path", required=True)
+    walk_forward_parser.add_argument("--report-output-path", required=True)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -156,6 +162,11 @@ def main():
             args.baseline_policy_name,
         ).run()
         print(f"Stability report: {output / 'stability_report.html'}")
+    elif args.command == "walk-forward":
+        output = WalkForwardValidationRunner(
+            args.strategy_config, args.run_path, args.candle_path, args.report_output_path,
+        ).run()
+        print(f"Walk-forward report: {output / 'walk_forward_report.html'}")
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),
