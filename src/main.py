@@ -19,6 +19,7 @@ from src.data.tick_loader import scan_ticks
 from src.data.tick_normalizer import normalize_ticks
 from src.forensics.trade_forensics import TradeForensicsEngine
 from src.reporting.html_report import add_forensic_link
+from src.stability.stability_runner import StabilityValidationRunner
 from src.utils.logging import configure_logging, get_logger, timed_stage
 
 logger = get_logger(__name__)
@@ -134,6 +135,12 @@ def main():
     compare_parser.add_argument("--normalised-tick-path", required=True)
     compare_parser.add_argument("--candle-path", required=True)
     compare_parser.add_argument("--report-output-path", required=True)
+    stability_parser = sub.add_parser("stability-validate")
+    stability_parser.add_argument("--strategy-config", required=True)
+    stability_parser.add_argument("--run-path", required=True)
+    stability_parser.add_argument("--candle-path", required=True)
+    stability_parser.add_argument("--report-output-path", required=True)
+    stability_parser.add_argument("--baseline-policy-name")
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -143,6 +150,12 @@ def main():
             args.candle_path, args.report_output_path,
         ).run_all_variants()
         print(f"Weekend policy comparison: {output / 'weekend_policy_comparison.html'}")
+    elif args.command == "stability-validate":
+        output = StabilityValidationRunner(
+            args.strategy_config, args.run_path, args.candle_path, args.report_output_path,
+            args.baseline_policy_name,
+        ).run()
+        print(f"Stability report: {output / 'stability_report.html'}")
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

@@ -157,3 +157,31 @@ to `65.09%`, reduced maximum drawdown from `3.95%` to `1.46%`, and improved the 
 This policy is the current successful research baseline. See
 [FX Swing Trend Reclaim v1](docs/fx_swing_trend_reclaim_v1.md) for its full rules, validation
 history, results, and limitations.
+
+## FX-2C: Yearly, Monthly, and Regime Stability Validation
+
+FX-2C checks whether the historical result is distributed across time and market regimes before
+walk-forward validation. It does not optimise or change the strategy. The recommended input is an
+existing `force_close_friday_20_30` run containing `trade_log.csv`, `equity_curve.csv`, and
+`strategy_summary.csv`.
+
+```bash
+python3.11 -m src.main --log-level INFO stability-validate \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --run-path reports/weekend_policy_comparison/<comparison_run>/force_close_friday_20_30 \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/stability_validation
+```
+
+The command creates yearly, quarterly, monthly, rolling-window, profit-concentration, daily-regime,
+regime-performance, stability-score, JSON, CSV, and HTML outputs. Months with no trades are omitted
+because the validation measures active trading periods.
+
+- `85-100`: `STRONG_STABILITY`
+- `70-84`: `PASS`
+- `50-69`: `WARNING`
+- Below `50`: `FAIL`
+
+`PASS` means the configured historical stability thresholds were met and the strategy may proceed
+to walk-forward validation. `WARNING` or `FAIL` means weak periods, concentration, or regimes must
+be investigated first. None of these verdicts means the strategy is production-ready.

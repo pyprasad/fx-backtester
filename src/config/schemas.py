@@ -44,6 +44,7 @@ class StrategyConfig(FlexibleConfig):
     reporting: dict[str, Any]
     forensics: dict[str, Any] = {}
     weekend_policy: dict[str, Any] = {}
+    stability_validation: dict[str, Any] = {}
     max_trade_duration_days: int = 7
     market_open_filter: dict[str, Any] = {}
     base_dir: Path = Path(".")
