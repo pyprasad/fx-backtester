@@ -7,7 +7,7 @@ from src.config.schemas import StrategyConfig
 from src.data.candle_builder import build_and_save_all
 from src.execution.tick_execution_engine import execute_signal
 from src.indicators.indicator_engine import add_indicators
-from src.reporting.csv_report import write_csv_reports
+from src.reporting.csv_report import write_csv_reports, write_weekend_policy_reports
 from src.reporting.html_report import write_html_report
 from src.reporting.metrics import calculate_metrics
 from src.risk.risk_manager import RiskManager
@@ -24,7 +24,7 @@ def build_candles_for_config(config: StrategyConfig) -> dict[str, pl.DataFrame]:
     return build_and_save_all(ticks, resolve(config, config.data["candle_path"]), config.candles["build_timeframes"])
 
 
-def run_backtest(config: StrategyConfig) -> tuple[list, dict, object]:
+def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, dict, object]:
     tick_path = resolve(config, config.data["normalised_tick_path"])
     candle_dir = resolve(config, config.data["candle_path"])
     if not (candle_dir / "USDJPY_1H.parquet").exists():
@@ -72,9 +72,10 @@ def run_backtest(config: StrategyConfig) -> tuple[list, dict, object]:
             active_until = trade.exit_timestamp_utc
     metrics = calculate_metrics(trades, config.risk["starting_balance"])
     run_name = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1")
-    output = resolve(config, config.reporting["output_path"]) / run_name
+    output = output_override or (resolve(config, config.reporting["output_path"]) / run_name)
     with timed_stage(logger, "write backtest reports", output=output):
         write_csv_reports(output, trades, metrics, rejections)
+        write_weekend_policy_reports(output, trades, rejections, config.weekend_policy)
         write_html_report(output, metrics)
     logger.info("Backtest complete | trades=%s, ending_balance=%.2f, reports=%s", len(trades), metrics["ending_balance"], output)
     return trades, metrics, output

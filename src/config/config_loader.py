@@ -61,3 +61,22 @@ def apply_strategy_overrides(
     if report_output_path:
         config.reporting["output_path"] = report_output_path
     return config
+
+
+def apply_weekend_policy_variant(
+    config: StrategyConfig, variant_name: str, variants_path: str | Path
+) -> StrategyConfig:
+    variants = yaml.safe_load(Path(variants_path).read_text())["variants"]
+    variant = next((item for item in variants if item["name"] == variant_name), None)
+    if variant is None:
+        raise ValueError(f"Unknown weekend policy variant: {variant_name}")
+
+    def merge(base: dict, override: dict) -> dict:
+        result = dict(base)
+        for key, value in override.items():
+            result[key] = merge(result.get(key, {}), value) if isinstance(value, dict) else value
+        return result
+
+    config.weekend_policy = merge(config.weekend_policy, variant["weekend_policy"])
+    config.weekend_policy["policy_name"] = variant_name
+    return config

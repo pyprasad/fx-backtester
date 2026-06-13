@@ -1,0 +1,345 @@
+2026-06-13 01:04:28 | INFO | __main__ | Pipeline command started | command=weekend-policy-compare
+2026-06-13 01:04:28 | INFO | src.backtest.weekend_policy_runner | Weekend variant 1/9 | name=baseline_allow_weekend
+2026-06-13 01:04:28 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=baseline_allow_weekend
+2026-06-13 01:04:28 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:04:28 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:04:28 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:04:29 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:04:29 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:04:29 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:04:31 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:04:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10693.10
+2026-06-13 01:04:38 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11120.57
+2026-06-13 01:04:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11322.71
+2026-06-13 01:04:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11356.77
+2026-06-13 01:04:55 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11369.02
+2026-06-13 01:05:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11581.30
+2026-06-13 01:05:06 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11590.83
+2026-06-13 01:05:10 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11957.30
+2026-06-13 01:05:14 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12213.67
+2026-06-13 01:05:19 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12514.62
+2026-06-13 01:05:24 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13125.69
+2026-06-13 01:05:30 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13222.00
+2026-06-13 01:05:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13380.21
+2026-06-13 01:05:38 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13507.86
+2026-06-13 01:05:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13711.17
+2026-06-13 01:05:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13785.06
+2026-06-13 01:05:54 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14083.78
+2026-06-13 01:06:01 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14311.04
+2026-06-13 01:06:06 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14749.16
+2026-06-13 01:06:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15064.49
+2026-06-13 01:06:17 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15061.78
+2026-06-13 01:06:21 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15581.25
+2026-06-13 01:06:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15824.65
+2026-06-13 01:06:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=15510.94
+2026-06-13 01:06:27 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=15862.80
+2026-06-13 01:06:27 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/baseline_allow_weekend
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=15862.80, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/baseline_allow_weekend
+2026-06-13 01:06:28 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=119.8s
+2026-06-13 01:06:28 | INFO | src.backtest.weekend_policy_runner | Weekend variant 2/9 | name=block_friday_after_17
+2026-06-13 01:06:28 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=block_friday_after_17
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.1s
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:06:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:06:31 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:06:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10693.10
+2026-06-13 01:06:37 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11120.57
+2026-06-13 01:06:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11322.71
+2026-06-13 01:06:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11356.77
+2026-06-13 01:06:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11369.02
+2026-06-13 01:07:00 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11581.30
+2026-06-13 01:07:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11590.83
+2026-06-13 01:07:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11957.30
+2026-06-13 01:07:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12213.67
+2026-06-13 01:07:16 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12514.62
+2026-06-13 01:07:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13125.69
+2026-06-13 01:07:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13222.00
+2026-06-13 01:07:30 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13380.21
+2026-06-13 01:07:33 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13507.86
+2026-06-13 01:07:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13711.17
+2026-06-13 01:07:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13785.06
+2026-06-13 01:07:47 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14083.78
+2026-06-13 01:07:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14311.04
+2026-06-13 01:07:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14749.16
+2026-06-13 01:08:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15064.49
+2026-06-13 01:08:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15061.78
+2026-06-13 01:08:11 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15581.25
+2026-06-13 01:08:13 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15824.65
+2026-06-13 01:08:15 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=15510.94
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=15862.80
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/block_friday_after_17
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.9s
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=15862.80, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/block_friday_after_17
+2026-06-13 01:08:18 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=110.4s
+2026-06-13 01:08:18 | INFO | src.backtest.weekend_policy_runner | Weekend variant 3/9 | name=force_close_friday_20_00
+2026-06-13 01:08:18 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=force_close_friday_20_00
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:08:18 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:08:19 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:08:19 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:08:19 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:08:21 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:08:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10690.91
+2026-06-13 01:08:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11118.30
+2026-06-13 01:08:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11320.39
+2026-06-13 01:08:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11354.44
+2026-06-13 01:08:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11334.99
+2026-06-13 01:08:52 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11546.62
+2026-06-13 01:08:55 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11576.41
+2026-06-13 01:08:59 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11942.42
+2026-06-13 01:09:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12198.47
+2026-06-13 01:09:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12499.05
+2026-06-13 01:09:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13107.51
+2026-06-13 01:09:18 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13203.69
+2026-06-13 01:09:22 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13376.50
+2026-06-13 01:09:26 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13504.10
+2026-06-13 01:09:31 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13747.85
+2026-06-13 01:09:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13844.89
+2026-06-13 01:09:40 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14134.51
+2026-06-13 01:09:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14362.59
+2026-06-13 01:09:52 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14802.29
+2026-06-13 01:09:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15085.14
+2026-06-13 01:10:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15082.42
+2026-06-13 01:10:05 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15602.61
+2026-06-13 01:10:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15846.34
+2026-06-13 01:10:10 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=16121.36
+2026-06-13 01:10:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=16487.06
+2026-06-13 01:10:12 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_20_00
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=16487.06, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_20_00
+2026-06-13 01:10:13 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.3s
+2026-06-13 01:10:13 | INFO | src.backtest.weekend_policy_runner | Weekend variant 4/9 | name=force_close_friday_20_30
+2026-06-13 01:10:13 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=force_close_friday_20_30
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:10:13 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:10:16 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:10:19 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10702.58
+2026-06-13 01:10:22 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11130.43
+2026-06-13 01:10:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11332.75
+2026-06-13 01:10:33 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11366.83
+2026-06-13 01:10:38 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11347.18
+2026-06-13 01:10:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11559.04
+2026-06-13 01:10:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11597.58
+2026-06-13 01:10:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11964.25
+2026-06-13 01:10:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12220.78
+2026-06-13 01:11:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12521.90
+2026-06-13 01:11:06 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13129.52
+2026-06-13 01:11:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13225.85
+2026-06-13 01:11:17 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13398.81
+2026-06-13 01:11:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13526.63
+2026-06-13 01:11:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13774.75
+2026-06-13 01:11:29 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13868.49
+2026-06-13 01:11:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14150.51
+2026-06-13 01:11:40 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14378.85
+2026-06-13 01:11:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14819.05
+2026-06-13 01:11:52 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15098.78
+2026-06-13 01:11:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15096.06
+2026-06-13 01:12:00 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15616.71
+2026-06-13 01:12:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15860.66
+2026-06-13 01:12:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=16142.91
+2026-06-13 01:12:06 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=16509.10
+2026-06-13 01:12:06 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_20_30
+2026-06-13 01:12:07 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:12:07 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=16509.10, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_20_30
+2026-06-13 01:12:07 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.6s
+2026-06-13 01:12:07 | INFO | src.backtest.weekend_policy_runner | Weekend variant 5/9 | name=force_close_friday_21_00
+2026-06-13 01:12:07 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=force_close_friday_21_00
+2026-06-13 01:12:07 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:12:07 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:12:07 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:12:08 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:12:08 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:12:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:12:10 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:12:14 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10682.85
+2026-06-13 01:12:17 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11109.92
+2026-06-13 01:12:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11311.86
+2026-06-13 01:12:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11345.88
+2026-06-13 01:12:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11313.55
+2026-06-13 01:12:41 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11524.79
+2026-06-13 01:12:45 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11557.37
+2026-06-13 01:12:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11922.77
+2026-06-13 01:12:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12178.41
+2026-06-13 01:12:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12478.49
+2026-06-13 01:13:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13062.37
+2026-06-13 01:13:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13158.22
+2026-06-13 01:13:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13326.86
+2026-06-13 01:13:16 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13453.99
+2026-06-13 01:13:21 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13713.42
+2026-06-13 01:13:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13811.30
+2026-06-13 01:13:30 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14090.39
+2026-06-13 01:13:36 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14317.76
+2026-06-13 01:13:41 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14756.09
+2026-06-13 01:13:47 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15026.52
+2026-06-13 01:13:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15023.81
+2026-06-13 01:13:54 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15541.98
+2026-06-13 01:13:57 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15784.76
+2026-06-13 01:13:59 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=16047.15
+2026-06-13 01:14:01 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=16411.17
+2026-06-13 01:14:01 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_21_00
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=16411.17, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/force_close_friday_21_00
+2026-06-13 01:14:02 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.7s
+2026-06-13 01:14:02 | INFO | src.backtest.weekend_policy_runner | Weekend variant 6/9 | name=close_losing_trades_friday_20_30
+2026-06-13 01:14:02 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=close_losing_trades_friday_20_30
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:14:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:14:05 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:14:09 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10693.10
+2026-06-13 01:14:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11120.57
+2026-06-13 01:14:17 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11322.71
+2026-06-13 01:14:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11356.77
+2026-06-13 01:14:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11330.81
+2026-06-13 01:14:36 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11542.37
+2026-06-13 01:14:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11579.90
+2026-06-13 01:14:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11946.02
+2026-06-13 01:14:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12202.15
+2026-06-13 01:14:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12502.81
+2026-06-13 01:14:57 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13145.60
+2026-06-13 01:15:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13242.06
+2026-06-13 01:15:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13400.51
+2026-06-13 01:15:10 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13528.34
+2026-06-13 01:15:16 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13731.97
+2026-06-13 01:15:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13825.42
+2026-06-13 01:15:24 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14106.57
+2026-06-13 01:15:30 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14334.19
+2026-06-13 01:15:36 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14773.02
+2026-06-13 01:15:42 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15088.86
+2026-06-13 01:15:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15086.14
+2026-06-13 01:15:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15606.46
+2026-06-13 01:15:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15850.25
+2026-06-13 01:15:54 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=16131.15
+2026-06-13 01:15:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=16497.07
+2026-06-13 01:15:56 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/close_losing_trades_friday_20_30
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=16497.07, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/close_losing_trades_friday_20_30
+2026-06-13 01:15:57 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.8s
+2026-06-13 01:15:57 | INFO | src.backtest.weekend_policy_runner | Weekend variant 7/9 | name=keep_only_trades_above_1r_friday_20_30
+2026-06-13 01:15:57 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=keep_only_trades_above_1r_friday_20_30
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:15:57 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:16:00 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:16:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10690.32
+2026-06-13 01:16:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11117.68
+2026-06-13 01:16:13 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11319.77
+2026-06-13 01:16:18 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11353.81
+2026-06-13 01:16:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11334.18
+2026-06-13 01:16:31 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11545.80
+2026-06-13 01:16:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11584.29
+2026-06-13 01:16:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11950.55
+2026-06-13 01:16:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12206.78
+2026-06-13 01:16:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12507.56
+2026-06-13 01:16:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13101.49
+2026-06-13 01:16:57 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13197.63
+2026-06-13 01:17:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13355.55
+2026-06-13 01:17:05 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13482.95
+2026-06-13 01:17:11 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13730.27
+2026-06-13 01:17:15 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13823.71
+2026-06-13 01:17:19 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14104.82
+2026-06-13 01:17:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14332.42
+2026-06-13 01:17:31 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14771.20
+2026-06-13 01:17:37 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15050.02
+2026-06-13 01:17:41 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15047.31
+2026-06-13 01:17:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15566.29
+2026-06-13 01:17:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15809.45
+2026-06-13 01:17:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=16090.79
+2026-06-13 01:17:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=16455.80
+2026-06-13 01:17:51 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/keep_only_trades_above_1r_friday_20_30
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=16455.80, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/keep_only_trades_above_1r_friday_20_30
+2026-06-13 01:17:52 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.7s
+2026-06-13 01:17:52 | INFO | src.backtest.weekend_policy_runner | Weekend variant 8/9 | name=partial_reduce_50_percent_friday_20_30
+2026-06-13 01:17:52 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=partial_reduce_50_percent_friday_20_30
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:17:52 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:17:54 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:17:58 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10692.35
+2026-06-13 01:18:01 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11119.79
+2026-06-13 01:18:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11321.92
+2026-06-13 01:18:13 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11355.97
+2026-06-13 01:18:18 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11341.02
+2026-06-13 01:18:25 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11552.77
+2026-06-13 01:18:29 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11578.62
+2026-06-13 01:18:33 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11944.71
+2026-06-13 01:18:37 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12200.81
+2026-06-13 01:18:42 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12501.44
+2026-06-13 01:18:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13092.69
+2026-06-13 01:18:52 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13188.76
+2026-06-13 01:18:57 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13361.37
+2026-06-13 01:19:00 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13488.83
+2026-06-13 01:19:05 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13723.64
+2026-06-13 01:19:10 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13797.59
+2026-06-13 01:19:14 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14096.59
+2026-06-13 01:19:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14324.06
+2026-06-13 01:19:26 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14762.57
+2026-06-13 01:19:32 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15056.74
+2026-06-13 01:19:36 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15054.03
+2026-06-13 01:19:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15573.24
+2026-06-13 01:19:41 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15816.51
+2026-06-13 01:19:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=15800.75
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=16159.18
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/partial_reduce_50_percent_friday_20_30
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=16159.18, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/partial_reduce_50_percent_friday_20_30
+2026-06-13 01:19:46 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.8s
+2026-06-13 01:19:46 | INFO | src.backtest.weekend_policy_runner | Weekend variant 9/9 | name=tighten_stop_friday_20_30
+2026-06-13 01:19:46 | INFO | src.backtest.weekend_policy_runner | START run weekend variant | variant=tighten_stop_friday_20_30
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-13 01:19:46 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-13 01:19:47 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.4s
+2026-06-13 01:19:47 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-13 01:19:47 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-13 01:19:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10252.03
+2026-06-13 01:19:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=33, balance=10693.10
+2026-06-13 01:19:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=50, balance=11120.57
+2026-06-13 01:20:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=70, balance=11322.71
+2026-06-13 01:20:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=87, balance=11356.77
+2026-06-13 01:20:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=109, balance=11369.02
+2026-06-13 01:20:19 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=128, balance=11581.30
+2026-06-13 01:20:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=147, balance=11590.83
+2026-06-13 01:20:27 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=164, balance=11957.30
+2026-06-13 01:20:32 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=184, balance=12213.67
+2026-06-13 01:20:36 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=201, balance=12514.62
+2026-06-13 01:20:40 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=218, balance=13125.69
+2026-06-13 01:20:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=233, balance=13222.00
+2026-06-13 01:20:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=249, balance=13380.21
+2026-06-13 01:20:54 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=267, balance=13507.86
+2026-06-13 01:20:59 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=281, balance=13742.74
+2026-06-13 01:21:04 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=294, balance=13816.80
+2026-06-13 01:21:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=315, balance=14116.21
+2026-06-13 01:21:14 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=334, balance=14343.99
+2026-06-13 01:21:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=352, balance=14783.12
+2026-06-13 01:21:26 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=365, balance=15099.17
+2026-06-13 01:21:30 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=385, balance=15096.45
+2026-06-13 01:21:33 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=402, balance=15617.12
+2026-06-13 01:21:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=420, balance=15861.08
+2026-06-13 01:21:37 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=434, balance=15546.65
+2026-06-13 01:21:40 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=450, balance=15899.32
+2026-06-13 01:21:40 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/tighten_stop_friday_20_30
+2026-06-13 01:21:41 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.8s
+2026-06-13 01:21:41 | INFO | src.backtest.backtest_engine | Backtest complete | trades=450, ending_balance=15899.32, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/tighten_stop_friday_20_30
+2026-06-13 01:21:41 | INFO | src.backtest.weekend_policy_runner | DONE run weekend variant | elapsed=114.6s
+2026-06-13 01:21:41 | INFO | __main__ | Pipeline command completed | command=weekend-policy-compare
+Weekend policy comparison: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/weekend_policy_comparison.html

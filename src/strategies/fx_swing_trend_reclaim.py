@@ -4,6 +4,7 @@ from uuid import uuid4
 import polars as pl
 
 from src.config.schemas import StrategyConfig
+from src.risk.weekend_policy import WeekendPolicy
 
 from .signal import Signal
 
@@ -21,6 +22,23 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
     trend_view = trend.select("timestamp", pl.col("mid_close").alias("trend_close"), "ema_200")
     joined = entry.sort("timestamp").join_asof(trend_view.sort("timestamp"), on="timestamp", strategy="backward")
     signals, rejected = [], []
+    weekend = WeekendPolicy(config.weekend_policy)
+
+    def weekend_rejection(row: dict, session: str | None) -> str | None:
+        blocked, reason = weekend.should_block_new_entry(row["timestamp"])
+        if not blocked and row["timestamp"].weekday() == 6:
+            week_open = row["timestamp"].replace(hour=21, minute=0, second=0, microsecond=0)
+            blocked, reason = weekend.should_block_sunday_open_entry(row["timestamp"], week_open)
+        if not blocked:
+            return None
+        rejected.append({
+            "timestamp": row["timestamp"], "timestamp_utc": row["timestamp"],
+            "reason": reason, "rejection_reason": reason,
+            "day_of_week": row["timestamp"].strftime("%A"), "hour_utc": row["timestamp"].hour,
+            "policy_name": weekend.policy_name, "session_label": session,
+        })
+        return reason
+
     rows = joined.with_columns(pl.col("rsi_14").shift(1).alias("previous_rsi")).to_dicts()
     for row in rows:
         if any(row.get(k) is None for k in ("atr_14", "ema_20", "ema_50", "rsi_14", "ema_200")):
@@ -36,7 +54,12 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         elif spread_pips > config.spread_filter["max_spread_pips"]:
             common_reason = "spread_too_high"
         if common_reason:
-            rejected.append({"timestamp": row["timestamp"], "reason": common_reason})
+            rejected.append({
+                "timestamp": row["timestamp"], "timestamp_utc": row["timestamp"],
+                "reason": common_reason, "rejection_reason": common_reason,
+                "day_of_week": row["timestamp"].strftime("%A"), "hour_utc": row["timestamp"].hour,
+                "policy_name": weekend.policy_name, "session_label": session,
+            })
             continue
         bearish = row["mid_close"] < row["mid_open"]
         near_ema = min(abs(row["mid_close"] - row["ema_20"]), abs(row["mid_close"] - row["ema_50"])) <= (
@@ -44,6 +67,8 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         )
         rsi_down = row["rsi_14"] < 50 and row["previous_rsi"] is not None and row["rsi_14"] < row["previous_rsi"]
         if config.entry["short"]["enabled"] and row["trend_close"] < row["ema_200"] and row["mid_close"] < row["ema_50"] and near_ema and rsi_down and bearish:
+            if weekend_rejection(row, session):
+                continue
             stop = max(row["mid_high"], row["mid_close"] + config.stop_loss["atr_multiplier"] * row["atr_14"])
             risk = stop - row["mid_close"]
             signals.append(Signal(
@@ -57,6 +82,8 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             bullish = row["mid_close"] > row["mid_open"]
             rsi_up = row["rsi_14"] > 50 and row["previous_rsi"] is not None and row["rsi_14"] > row["previous_rsi"]
             if row["trend_close"] > row["ema_200"] and row["mid_close"] > row["ema_50"] and near_ema and rsi_up and bullish:
+                if weekend_rejection(row, session):
+                    continue
                 stop = min(row["mid_low"], row["mid_close"] - config.stop_loss["atr_multiplier"] * row["atr_14"])
                 risk = row["mid_close"] - stop
                 signals.append(Signal(

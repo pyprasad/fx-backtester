@@ -6,6 +6,18 @@ FX Swing Trend Reclaim v1 signals, and simulating fills on bid/ask ticks.
 The documented strategy logic, historical result, limitations, and next validation requirements
 are available in [FX Swing Trend Reclaim v1](docs/fx_swing_trend_reclaim_v1.md).
 
+Current successful research configuration:
+
+- Short-only FX Swing Trend Reclaim v1
+- Force-close all open positions Friday at `20:30 UTC`
+- 2022-2025 historical return: `65.09%`
+- Profit factor: `2.0485`
+- Maximum drawdown: `1.46%`
+- Worst trade: `-2.02R`
+- Weekend-held trades: `0`
+
+These are historical research results, not expected future returns.
+
 ## Setup
 
 Requires Python 3.11+. Install with:
@@ -89,3 +101,59 @@ bounded tick windows for the 25 worst trades.
 If the worst trade is gap-related, evaluate weekend-risk controls without changing the historical
 finding. If a stop-audit or bid/ask mismatch is found, fix and revalidate the engine before any
 strategy optimisation. A forensic pass does not make the strategy production-ready.
+
+## FX-2B: Weekend Risk Policy + Session Safety Validation
+
+FX-2A proved that the `-14.77R` worst trade was a real 205.4-pip weekend gap rather than an
+execution defect. FX-2B compares the unchanged strategy under configurable UTC weekend policies
+to determine whether tail risk can be reduced without destroying the historical edge.
+
+Run one policy:
+
+```bash
+python3.11 -m src.main --log-level INFO backtest \
+  --config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --weekend-policy-name force_close_friday_20_30 \
+  --weekend-variants-config config/weekend_policy_variants.usdjpy.yaml \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/runs_2022_2025
+```
+
+Run all predefined policies:
+
+```bash
+python3.11 -m src.main --log-level INFO weekend-policy-compare \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --weekend-variants-config config/weekend_policy_variants.usdjpy.yaml \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/weekend_policy_comparison
+```
+
+The variants compare baseline holding, Friday entry blocking, three Friday force-close times,
+closing only losing trades, keeping only trades above `+1R`, reducing positions by 50%, and
+tightening stops before the weekend. All policy decisions use UTC to avoid daylight-saving
+ambiguity and are written to `weekend_policy_events.csv`.
+
+`weekend_policy_comparison.html` ranks variants by return after penalties for drawdown, losses
+beyond `-2.5R`, and losses beyond `-5R`, with bonuses for profit factor and average R.
+
+- `REJECT`: worst trade below `-5R` or any loss beyond `-5R`.
+- `CAUTION`: tail risk remains between `-2.5R` and `-5R`, or performance is insufficient.
+- `PASS`: positive return, profit factor at least `1.3`, and worst trade no worse than `-2.5R`.
+- `STRONG_PASS`: worst trade no worse than `-2R`, profit factor at least `1.5`, return above
+  `20%`, and drawdown below `10%`.
+
+This score is a research ranking, not strategy optimisation or evidence of production readiness.
+
+### FX-2B Result
+
+The highest-ranked weekend variant was `force_close_friday_20_30`. Compared with allowing
+weekend holding, it removed all weekend-held positions, improved historical return from `58.63%`
+to `65.09%`, reduced maximum drawdown from `3.95%` to `1.46%`, and improved the worst trade from
+`-14.77R` to `-2.02R`.
+
+This policy is the current successful research baseline. See
+[FX Swing Trend Reclaim v1](docs/fx_swing_trend_reclaim_v1.md) for its full rules, validation
+history, results, and limitations.

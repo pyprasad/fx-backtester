@@ -54,6 +54,18 @@ execution:
   slippage_enabled: true
   default_slippage_points: 0.002
 reporting: {output_path: reports/runs, generate_html: true, generate_csv: true}
+weekend_policy:
+  enabled: false
+  policy_name: baseline_allow_weekend
+  block_new_trades_after_friday: {enabled: false, cutoff_utc: "17:00"}
+  force_close_on_friday: {enabled: false, close_time_utc: "20:30", close_reason: weekend_force_close}
+  close_only_if_losing_on_friday: {enabled: false, close_time_utc: "20:30", close_reason: weekend_losing_trade_close}
+  close_only_if_not_in_profit_threshold: {enabled: false, close_time_utc: "20:30", min_open_trade_r_to_keep: 1.0, close_reason: weekend_profit_threshold_close}
+  reduce_position_before_weekend: {enabled: false, close_time_utc: "20:30", close_percent: 50, min_open_trade_r_to_apply: 0.0, close_reason: weekend_partial_reduce}
+  tighten_stop_before_weekend: {enabled: false, apply_time_utc: "20:30", stop_mode: breakeven_or_current_stop, min_open_trade_r_to_apply: 0.5, reason: weekend_stop_tighten}
+  block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  block_late_friday_entries: {enabled: true, cutoff_utc: "17:00"}
+  timezone: {base: UTC}
 forensics:
   enabled: true
   output:

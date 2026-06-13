@@ -5,9 +5,11 @@ from pathlib import Path
 import polars as pl
 
 from src.backtest.backtest_engine import build_candles_for_config, run_backtest
+from src.backtest.weekend_policy_runner import WeekendPolicyVariantRunner
 from src.config.config_loader import (
     apply_data_quality_overrides,
     apply_strategy_overrides,
+    apply_weekend_policy_variant,
     load_data_quality_config,
     load_strategy_config,
     resolve,
@@ -84,12 +86,18 @@ def data_config(args, path):
 
 
 def strategy_config(args, path):
-    return apply_strategy_overrides(
+    config = apply_strategy_overrides(
         load_strategy_config(path),
         normalised_tick_path=getattr(args, "normalised_tick_path", None),
         candle_path=getattr(args, "candle_path", None),
         report_output_path=getattr(args, "report_output_path", None),
     )
+    if getattr(args, "weekend_policy_name", None):
+        config = apply_weekend_policy_variant(
+            config, args.weekend_policy_name,
+            getattr(args, "weekend_variants_config", "config/weekend_policy_variants.usdjpy.yaml"),
+        )
+    return config
 
 
 def main():
@@ -103,6 +111,9 @@ def main():
             add_data_overrides(command)
         if name in ("build-candles", "backtest"):
             add_strategy_overrides(command)
+        if name == "backtest":
+            command.add_argument("--weekend-policy-name")
+            command.add_argument("--weekend-variants-config", default="config/weekend_policy_variants.usdjpy.yaml")
         if name == "normalise":
             command.add_argument("--overwrite", action="store_true")
     all_parser = sub.add_parser("all")
@@ -117,10 +128,22 @@ def main():
     forensic_parser.add_argument("--run-path", required=True)
     forensic_parser.add_argument("--normalised-tick-path", required=True)
     forensic_parser.add_argument("--candle-path", required=True)
+    compare_parser = sub.add_parser("weekend-policy-compare")
+    compare_parser.add_argument("--strategy-config", required=True)
+    compare_parser.add_argument("--weekend-variants-config", required=True)
+    compare_parser.add_argument("--normalised-tick-path", required=True)
+    compare_parser.add_argument("--candle-path", required=True)
+    compare_parser.add_argument("--report-output-path", required=True)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
-    if args.command == "forensics":
+    if args.command == "weekend-policy-compare":
+        output = WeekendPolicyVariantRunner(
+            args.strategy_config, args.weekend_variants_config, args.normalised_tick_path,
+            args.candle_path, args.report_output_path,
+        ).run_all_variants()
+        print(f"Weekend policy comparison: {output / 'weekend_policy_comparison.html'}")
+    elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),
             args.run_path,

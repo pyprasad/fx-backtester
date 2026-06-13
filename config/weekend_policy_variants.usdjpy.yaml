@@ -1,0 +1,60 @@
+variants:
+  - name: baseline_allow_weekend
+    description: Current baseline behaviour. Allows positions to remain open over weekend.
+    weekend_policy: {enabled: false}
+  - name: block_friday_after_17
+    description: Blocks new entries after Friday 17:00 UTC but does not force close existing trades.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      force_close_on_friday: {enabled: false}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: force_close_friday_20_00
+    description: Blocks late Friday entries and force closes positions Friday 20:00 UTC.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      force_close_on_friday: {enabled: true, close_time_utc: "20:00", close_reason: weekend_force_close}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: force_close_friday_20_30
+    description: Blocks late Friday entries and force closes positions Friday 20:30 UTC.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      force_close_on_friday: {enabled: true, close_time_utc: "20:30", close_reason: weekend_force_close}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: force_close_friday_21_00
+    description: Blocks late Friday entries and force closes positions Friday 21:00 UTC.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      force_close_on_friday: {enabled: true, close_time_utc: "21:00", close_reason: weekend_force_close}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: close_losing_trades_friday_20_30
+    description: Only closes losing trades before weekend. Keeps profitable trades open.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      close_only_if_losing_on_friday: {enabled: true, close_time_utc: "20:30", close_reason: weekend_losing_trade_close}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: keep_only_trades_above_1r_friday_20_30
+    description: Closes trades unless already at least +1R in open profit.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      close_only_if_not_in_profit_threshold: {enabled: true, close_time_utc: "20:30", min_open_trade_r_to_keep: 1.0, close_reason: weekend_profit_threshold_close}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: partial_reduce_50_percent_friday_20_30
+    description: Closes 50% before weekend if trade is not negative.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      reduce_position_before_weekend: {enabled: true, close_time_utc: "20:30", close_percent: 50, min_open_trade_r_to_apply: 0.0, close_reason: weekend_partial_reduce}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}
+  - name: tighten_stop_friday_20_30
+    description: Moves stop to breakeven or better before weekend if trade is at least +0.5R.
+    weekend_policy:
+      enabled: true
+      block_new_trades_after_friday: {enabled: true, cutoff_utc: "17:00"}
+      tighten_stop_before_weekend: {enabled: true, apply_time_utc: "20:30", stop_mode: breakeven_or_current_stop, min_open_trade_r_to_apply: 0.5, reason: weekend_stop_tighten}
+      block_sunday_open_entries: {enabled: true, minutes_after_week_open: 60}

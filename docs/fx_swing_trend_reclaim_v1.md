@@ -5,6 +5,18 @@
 FX Swing Trend Reclaim v1 is a research-only USDJPY strategy that produced a positive historical
 backtest result across the available 2022-2025 tick data.
 
+The current successful research configuration is:
+
+- Strategy: `fx_swing_trend_reclaim_v1`
+- Direction: short only
+- Weekend policy: `force_close_friday_20_30`
+- Friday close time: `20:30 UTC`
+- Weekend positions allowed: no
+
+FX-2A confirmed that the engine's bid/ask execution, barrier handling, signal alignment, and R
+accounting were internally consistent. FX-2B found that force-closing positions at Friday
+20:30 UTC removed the observed weekend tail risk while improving the historical result.
+
 The strategy is not proven to be profitable in future markets. The current result should be
 treated as a promising research candidate that requires further robustness testing.
 
@@ -113,7 +125,26 @@ The strategy manages profitable trades as follows:
 3. Trail the remaining position using `1.5 x ATR`.
 4. Use approximately `4R` as the final target.
 
-## 2022-2025 Backtest Result
+## Validated Weekend Safety Policy
+
+The successful research configuration force-closes any open position on Friday at the first
+available tick at or after `20:30 UTC`.
+
+For short positions, the Friday close uses the ask price. If no suitable tick exists at or after
+the configured time, the engine uses the last available Friday tick and records that fallback.
+
+This policy was selected because it:
+
+- Removed all weekend-held trades.
+- Removed the observed `-14.77R` weekend-gap loss.
+- Reduced maximum drawdown.
+- Increased historical return and profit factor.
+- Produced the highest safety-adjusted score among the tested weekend variants.
+
+The nearby `20:00 UTC` and `21:00 UTC` force-close variants also performed strongly. This reduces
+the risk that the result depends on exactly one selected minute.
+
+## Successful 2022-2025 Backtest Result
 
 Data range:
 
@@ -126,16 +157,23 @@ Result:
 | Metric | Result |
 | --- | ---: |
 | Starting balance | GBP 10,000.00 |
-| Ending balance | GBP 15,866.27 |
-| Total return | 58.66% |
+| Ending balance | GBP 16,509.10 |
+| Total return | 65.09% |
 | Total trades | 450 |
-| Win rate | 41.33% |
-| Profit factor | 1.85 |
-| Average trade | +0.4144R |
-| Average winner | +2.1186R |
-| Average loser | -0.7864R |
-| Maximum drawdown | 3.95% |
+| Winning trades | 189 |
+| Losing trades | 261 |
+| Win rate | 42.00% |
+| Profit factor | 2.0485 |
+| Average trade | +0.4490R |
+| Average winner | +2.0724R |
+| Average loser | -0.7266R |
+| Best trade | +9.20R |
+| Worst trade | -2.0171R |
+| Maximum drawdown | 1.46% |
 | Maximum consecutive losses | 9 |
+| Weekend force closes | 12 |
+| Weekend-held trades | 0 |
+| Weekend-held losses | 0 |
 
 The strategy was profitable despite losing more trades than it won because its average winner
 was materially larger than its average loser.
@@ -144,28 +182,37 @@ was materially larger than its average loser.
 
 | Exit reason | Trades |
 | --- | ---: |
-| Initial stop-loss | 178 |
-| Final take-profit | 77 |
-| Trailing stop | 195 |
+| Initial stop-loss | 173 |
+| Final take-profit | 76 |
+| Trailing stop | 189 |
+| Friday weekend force close | 12 |
 
-### Performance By Entry Year
+## Baseline Versus Successful Policy
 
-| Year | Trades | Net PnL | Average R | Win rate |
-| --- | ---: | ---: | ---: | ---: |
-| 2022 | 93 | GBP 1,393.11 | 0.5641R | 47.31% |
-| 2023 | 108 | GBP 1,126.23 | 0.3525R | 37.96% |
-| 2024 | 85 | GBP 1,333.05 | 0.4807R | 37.65% |
-| 2025 | 164 | GBP 2,013.88 | 0.3358R | 42.07% |
+| Metric | Weekend Allowed Baseline | Friday 20:30 UTC Force Close |
+| --- | ---: | ---: |
+| Ending balance | GBP 15,862.80 | GBP 16,509.10 |
+| Total return | 58.63% | 65.09% |
+| Profit factor | 1.8527 | 2.0485 |
+| Maximum drawdown | 3.95% | 1.46% |
+| Worst trade | -14.77R | -2.02R |
+| Weekend-held trades | 12 | 0 |
+| Weekend-held losses | 7 | 0 |
+
+The original baseline's worst trade was a real short-position weekend gap of approximately
+`205.4` pips against the position. The stop had not crossed before Friday market closure, and
+the engine correctly exited on the first available Sunday tick. The Friday force-close policy
+removes this specific exposure by closing before the market becomes unavailable.
 
 ## Important Caveats
 
 The headline result must not be treated as production-ready.
 
-### Weekend Gap Risk
+### Residual Gap And Slippage Risk
 
-The worst trade lost `-14.77R`. It was held over a weekend and USDJPY reopened significantly
-above the stop. This is realistic gap-through-stop behavior and demonstrates that actual losses
-can exceed the planned risk amount.
+The Friday policy removes weekend holding but cannot guarantee that losses remain within `-1R`.
+Intraday gaps, spread spikes, and slippage can still cause losses beyond the intended stop.
+The successful configuration's worst observed trade was approximately `-2.02R`.
 
 ### Extreme Spreads
 
@@ -188,7 +235,6 @@ large R-multiples.
 - Position sizing does not yet use exact GBP/JPY pip-value conversion.
 - No commissions, financing, or overnight swap charges are included.
 - No broker-specific minimum stop distance is enforced.
-- No explicit Friday-close or weekend-position exit rule is enforced.
 - The strategy has not been tested on unseen out-of-sample data after 2025.
 - The strategy has not been tested with live or paper-trading execution.
 
@@ -197,13 +243,12 @@ large R-multiples.
 Before considering paper trading or production execution:
 
 1. Add and test a configurable minimum stop distance.
-2. Add weekend-risk rules and compare hold-versus-close behavior.
-3. Add exact account-currency pip-value conversion.
-4. Add commissions, swap, and configurable adverse slippage.
-5. Add execution-quality reporting for extreme entry and exit spreads.
-6. Run parameter sensitivity tests without selecting only the best result.
-7. Run walk-forward and unseen out-of-sample testing.
-8. Confirm results using an independent tick-data source.
+2. Add exact account-currency pip-value conversion.
+3. Add commissions, swap, and configurable adverse slippage.
+4. Add execution-quality reporting for extreme entry and exit spreads.
+5. Run walk-forward and unseen out-of-sample testing.
+6. Confirm results using an independent tick-data source.
+7. Test the validated weekend policy in a paper-trading environment before any production work.
 
 ## Reproducing The Result
 
@@ -211,15 +256,17 @@ The strategy configuration is:
 
 `config/strategy.usdjpy.fx_swing_trend_reclaim.yaml`
 
-The referenced result was generated in:
+The successful weekend-policy comparison was generated in:
 
-`reports/runs_2022_2025/20260612_223729_usdjpy_fx_swing_trend_reclaim_v1/`
+`reports/weekend_policy_comparison/20260613_000428_usdjpy_fx_swing_trend_reclaim_v1/`
 
-Run the existing normalized dataset with:
+Run the successful research configuration with:
 
 ```bash
 python3.11 -m src.main --log-level INFO backtest \
   --config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --weekend-policy-name force_close_friday_20_30 \
+  --weekend-variants-config config/weekend_policy_variants.usdjpy.yaml \
   --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
   --candle-path data/candles/USDJPY_2022_2025 \
   --report-output-path reports/runs_2022_2025

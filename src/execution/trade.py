@@ -45,3 +45,4 @@ class Trade:
     breakeven_moved: bool = False
     breakeven_timestamp_utc: datetime | None = None
     notes: str = ""
+    weekend_policy_events: list[dict] = field(default_factory=list)
