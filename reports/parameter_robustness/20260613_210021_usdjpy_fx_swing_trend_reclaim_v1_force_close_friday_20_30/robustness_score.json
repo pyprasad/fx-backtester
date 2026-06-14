@@ -1,0 +1,32 @@
+{
+  "robustness_score": 85,
+  "verdict": "STRONG_ROBUSTNESS",
+  "profitable_variant_percent": 100.0,
+  "pass_variant_percent": 88.5714,
+  "median_profit_factor": 2.0628,
+  "median_average_r": 0.4552,
+  "median_drawdown_percent": 1.5429,
+  "median_trade_count": 449,
+  "baseline_return_rank_percentile": 54.2857,
+  "deductions": {
+    "profitable_variant_percent_below_70": 0,
+    "pass_variant_percent_below_60": 0,
+    "median_profit_factor_below_1_3": 0,
+    "median_average_r_not_positive": 0,
+    "median_drawdown_above_10": 0,
+    "otherwise_passing_tail_risk": 15,
+    "baseline_isolated": 0,
+    "one_factor_cliff": 10,
+    "paired_fail": 0,
+    "paired_warning": 5,
+    "low_median_trade_count": 0,
+    "baseline_top_decile_with_poor_median": 0
+  },
+  "additions": {
+    "profitable_variant_percent_at_least_80": 5,
+    "pass_variant_percent_at_least_70": 5,
+    "median_profit_factor_at_least_1_5": 5,
+    "no_cliff_sensitivity": 0,
+    "all_local_neighbourhood_pass": 0
+  }
+}

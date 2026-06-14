@@ -1,0 +1,467 @@
+strategy:
+  name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  mode: research
+  test_mode: short_only
+data:
+  normalised_tick_path: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/normalised_ticks/USDJPY_2022_2025.parquet
+  candle_path: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2022_2025
+  timezone: Europe/London
+timeframes:
+  trend: 4H
+  entry: 1H
+  precision: 15M
+candles:
+  build_timeframes:
+  - 1M
+  - 5M
+  - 15M
+  - 1H
+  - 4H
+  - 1D
+indicators:
+  ema_fast: 20
+  ema_mid: 50
+  ema_slow: 200
+  rsi_period: 14
+  atr_period: 14
+entry:
+  short:
+    enabled: true
+    max_pullback_atr: 1.2
+    rsi_cross_down_level: 50
+  long:
+    enabled: false
+    max_pullback_atr: 1.2
+    rsi_cross_up_level: 50
+risk:
+  starting_balance: 10000
+  account_currency: GBP
+  risk_per_trade_percent: 0.25
+  max_open_trades_total: 1
+  max_open_trades_per_market: 1
+  max_daily_loss_percent: 1.0
+  max_weekly_loss_percent: 3.0
+  max_strategy_drawdown_percent: 10.0
+stop_loss:
+  type: max_of_swing_and_atr
+  atr_multiplier: 1.0
+  swing_lookback_candles: 8
+  swing_buffer_atr_multiplier: 0.2
+exit:
+  partial_take_profit:
+    enabled: true
+    at_r: 2.0
+    close_percent: 50
+  move_stop_to_breakeven:
+    enabled: true
+    after_r: 1.2
+  runner:
+    enabled: true
+    trailing_stop:
+      type: atr
+      atr_multiplier: 1.5
+    final_target_r: 4.0
+session_filter:
+  timezone: Europe/London
+  entry_windows:
+  - name: London morning
+    start: 07:00
+    end: '11:30'
+  - name: London New York overlap
+    start: '13:00'
+    end: '16:30'
+spread_filter:
+  enabled: true
+  max_spread_pips: 2.0
+execution:
+  use_tick_execution: true
+  slippage_enabled: true
+  default_slippage_points: 0.002
+reporting:
+  output_path: reports/runs
+  generate_html: true
+  generate_csv: true
+forensics:
+  enabled: true
+  output:
+    include_tick_windows: true
+    tick_window_minutes_before_entry: 60
+    tick_window_minutes_after_exit: 60
+    tick_window_minutes_around_stop_cross: 30
+    max_ticks_export_per_trade: 20000
+  worst_trade_analysis:
+    enabled: true
+    top_n_worst_trades: 25
+    top_n_best_trades: 10
+    investigate_trade_ids: []
+  stop_audit:
+    enabled: true
+    check_stop_cross_before_exit: true
+    check_take_profit_cross_before_exit: true
+    check_trailing_stop_cross_before_exit: true
+    tolerance_price: 1.0e-06
+  weekend_gap_audit:
+    enabled: true
+    friday_cutoff_utc: '20:30'
+    sunday_open_utc: '21:00'
+    flag_trades_held_over_weekend: true
+  r_multiple_audit:
+    enabled: true
+    max_expected_loss_r_warning: -2.5
+    max_expected_loss_r_fail: -5.0
+  execution_audit:
+    enabled: true
+    price_tolerance: 1.0e-06
+    verify_long_entry_uses_ask: true
+    verify_long_exit_uses_bid: true
+    verify_short_entry_uses_bid: true
+    verify_short_exit_uses_ask: true
+    verify_short_stop_uses_ask: true
+    verify_short_target_uses_ask: true
+    verify_long_stop_uses_bid: true
+    verify_long_target_uses_bid: true
+  signal_alignment_audit:
+    enabled: true
+    verify_entry_tick_after_signal_close: true
+    minimum_entry_delay_seconds: 0
+  report:
+    generate_html: true
+    generate_csv: true
+    generate_json: true
+weekend_policy:
+  enabled: true
+  policy_name: force_close_friday_20_30
+  block_new_trades_after_friday:
+    enabled: true
+    cutoff_utc: '17:00'
+  force_close_on_friday:
+    enabled: true
+    close_time_utc: '20:30'
+    close_reason: weekend_force_close
+  close_only_if_losing_on_friday:
+    enabled: false
+    close_time_utc: '20:30'
+    close_reason: weekend_losing_trade_close
+  close_only_if_not_in_profit_threshold:
+    enabled: false
+    close_time_utc: '20:30'
+    min_open_trade_r_to_keep: 1.0
+    close_reason: weekend_profit_threshold_close
+  reduce_position_before_weekend:
+    enabled: false
+    close_time_utc: '20:30'
+    close_percent: 50
+    min_open_trade_r_to_apply: 0.0
+    close_reason: weekend_partial_reduce
+  tighten_stop_before_weekend:
+    enabled: false
+    apply_time_utc: '20:30'
+    stop_mode: breakeven_or_current_stop
+    min_open_trade_r_to_apply: 0.5
+    reason: weekend_stop_tighten
+  block_sunday_open_entries:
+    enabled: true
+    minutes_after_week_open: 60
+  block_late_friday_entries:
+    enabled: true
+    cutoff_utc: '17:00'
+  timezone:
+    base: UTC
+stability_validation:
+  enabled: true
+  baseline_policy_name: force_close_friday_20_30
+  output:
+    generate_csv: true
+    generate_json: true
+    generate_html: true
+    include_charts: true
+  time_slices:
+    yearly: true
+    monthly: true
+    quarterly: true
+    rolling_windows: true
+  rolling_windows:
+    windows:
+    - name: rolling_3_month
+      months: 3
+    - name: rolling_6_month
+      months: 6
+    - name: rolling_12_month
+      months: 12
+  concentration_analysis:
+    enabled: true
+    top_month_count: 3
+    top_trade_count: 10
+    max_allowed_profit_from_top_3_months_percent: 60
+    max_allowed_profit_from_top_10_trades_percent: 50
+  regime_analysis:
+    enabled: true
+    volatility_regimes:
+      enabled: true
+      source_timeframe: 1D
+      atr_period: 14
+      buckets:
+      - low
+      - medium
+      - high
+    trend_regimes:
+      enabled: true
+      source_timeframe: 1D
+      ema_fast: 50
+      ema_slow: 200
+      slope_lookback_days: 20
+      regimes:
+      - strong_downtrend
+      - weak_downtrend
+      - range
+      - weak_uptrend
+      - strong_uptrend
+    price_location_regimes:
+      enabled: true
+      source_timeframe: 1D
+      lookback_days: 60
+      regimes:
+      - near_60d_low
+      - middle_range
+      - near_60d_high
+    session_regimes:
+      enabled: true
+      use_existing_session_labels: true
+  pass_fail_rules:
+    min_total_return_percent: 20
+    min_profit_factor: 1.3
+    max_drawdown_percent: 10
+    max_worst_trade_r: -2.5
+    min_positive_years_percent: 75
+    min_positive_months_percent: 50
+    max_single_month_profit_contribution_percent: 35
+    max_top_3_month_profit_contribution_percent: 60
+    max_top_10_trade_profit_contribution_percent: 50
+walk_forward_validation:
+  enabled: true
+  baseline_policy_name: force_close_friday_20_30
+  strategy_name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  direction_mode: short_only
+  methodology:
+    no_parameter_optimisation: true
+    no_test_period_tuning: true
+    use_fixed_strategy_parameters: true
+    use_selected_weekend_policy: true
+  anchored_windows:
+    enabled: true
+    windows:
+    - name: train_2022_test_2023
+      train_start: '2022-01-01T00:00:00+00:00'
+      train_end: '2022-12-31T23:59:59+00:00'
+      test_start: '2023-01-01T00:00:00+00:00'
+      test_end: '2023-12-31T23:59:59+00:00'
+    - name: train_2022_2023_test_2024
+      train_start: '2022-01-01T00:00:00+00:00'
+      train_end: '2023-12-31T23:59:59+00:00'
+      test_start: '2024-01-01T00:00:00+00:00'
+      test_end: '2024-12-31T23:59:59+00:00'
+    - name: train_2022_2024_test_2025
+      train_start: '2022-01-01T00:00:00+00:00'
+      train_end: '2024-12-31T23:59:59+00:00'
+      test_start: '2025-01-01T00:00:00+00:00'
+      test_end: '2025-12-31T23:59:59+00:00'
+  rolling_windows:
+    enabled: true
+    definitions:
+    - name: train_12m_test_3m
+      train_months: 12
+      test_months: 3
+      step_months: 3
+    - name: train_18m_test_3m
+      train_months: 18
+      test_months: 3
+      step_months: 3
+    - name: train_24m_test_6m
+      train_months: 24
+      test_months: 6
+      step_months: 6
+  minimums:
+    min_train_trades_warning: 30
+    min_test_trades_warning: 10
+    min_test_windows_required: 3
+  pass_fail_rules:
+    min_positive_test_window_percent: 70
+    min_test_profit_factor: 1.3
+    max_test_drawdown_percent: 10
+    max_test_worst_trade_r: -2.5
+    min_test_average_r: 0.0
+    max_train_test_profit_factor_decay_percent: 50
+    max_train_test_average_r_decay_percent: 60
+    allow_low_trade_count_warning: true
+  output:
+    generate_csv: true
+    generate_json: true
+    generate_html: true
+    include_charts: true
+parameter_robustness:
+  enabled: true
+  baseline_policy_name: force_close_friday_20_30
+  strategy_name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  direction_mode: short_only
+  methodology:
+    no_parameter_optimisation: true
+    do_not_replace_baseline_with_best_variant: true
+    evaluate_nearby_parameter_space: true
+    use_fixed_weekend_policy: true
+    use_same_data_period: true
+    use_same_execution_model: true
+  baseline_parameters:
+    ema_fast: 20
+    ema_mid: 50
+    ema_slow: 200
+    rsi_period: 14
+    rsi_short_trigger: 50
+    atr_period: 14
+    atr_stop_multiplier: 1.2
+    trailing_atr_multiplier: 1.5
+    partial_take_profit_r: 2.0
+    final_target_r: 4.0
+    breakeven_after_r: 1.2
+    max_trade_duration_days: 7
+    pullback_atr_limit: 1.2
+  parameter_grid:
+    ema_slow:
+    - 180
+    - 200
+    - 220
+    ema_mid:
+    - 40
+    - 50
+    - 60
+    rsi_short_trigger:
+    - 45
+    - 50
+    - 55
+    atr_stop_multiplier:
+    - 1.0
+    - 1.2
+    - 1.5
+    trailing_atr_multiplier:
+    - 1.2
+    - 1.5
+    - 1.8
+    partial_take_profit_r:
+    - 1.5
+    - 2.0
+    - 2.5
+    final_target_r:
+    - 3.0
+    - 4.0
+    - 5.0
+    breakeven_after_r:
+    - 1.0
+    - 1.2
+    - 1.5
+  test_modes:
+    full_grid:
+      enabled: false
+      reason: Full Cartesian grid is too expensive and may encourage optimisation.
+    one_factor_at_a_time:
+      enabled: true
+      description: Change one parameter at a time around the baseline.
+    paired_sensitivity:
+      enabled: true
+      description: Test selected two-parameter combinations only.
+    local_neighbourhood:
+      enabled: true
+      description: Test small broad shifts around the baseline.
+  paired_sensitivity_tests:
+  - name: ema_mid_vs_ema_slow
+    parameters:
+      ema_mid:
+      - 40
+      - 50
+      - 60
+      ema_slow:
+      - 180
+      - 200
+      - 220
+  - name: atr_stop_vs_trailing_atr
+    parameters:
+      atr_stop_multiplier:
+      - 1.0
+      - 1.2
+      - 1.5
+      trailing_atr_multiplier:
+      - 1.2
+      - 1.5
+      - 1.8
+  - name: partial_tp_vs_final_target
+    parameters:
+      partial_take_profit_r:
+      - 1.5
+      - 2.0
+      - 2.5
+      final_target_r:
+      - 3.0
+      - 4.0
+      - 5.0
+  - name: rsi_vs_atr_stop
+    parameters:
+      rsi_short_trigger:
+      - 45
+      - 50
+      - 55
+      atr_stop_multiplier:
+      - 1.0
+      - 1.2
+      - 1.5
+  local_neighbourhood_tests:
+  - name: baseline_minus_small
+    overrides:
+      ema_mid: 40
+      ema_slow: 180
+      rsi_short_trigger: 45
+      atr_stop_multiplier: 1.0
+      trailing_atr_multiplier: 1.2
+      partial_take_profit_r: 1.5
+      final_target_r: 3.0
+      breakeven_after_r: 1.0
+  - name: baseline_original
+    overrides:
+      ema_mid: 50
+      ema_slow: 200
+      rsi_short_trigger: 50
+      atr_stop_multiplier: 1.2
+      trailing_atr_multiplier: 1.5
+      partial_take_profit_r: 2.0
+      final_target_r: 4.0
+      breakeven_after_r: 1.2
+  - name: baseline_plus_small
+    overrides:
+      ema_mid: 60
+      ema_slow: 220
+      rsi_short_trigger: 55
+      atr_stop_multiplier: 1.5
+      trailing_atr_multiplier: 1.8
+      partial_take_profit_r: 2.5
+      final_target_r: 5.0
+      breakeven_after_r: 1.5
+  pass_fail_rules:
+    min_profitable_variant_percent: 70
+    min_pass_variant_percent: 60
+    min_median_profit_factor: 1.3
+    min_median_average_r: 0.0
+    max_median_drawdown_percent: 10
+    max_allowed_worst_trade_r: -2.5
+    max_baseline_rank_dependency_percentile: 90
+    max_parameter_cliff_failures: 0
+    min_neighbourhood_pass_percent: 66
+  output:
+    generate_csv: true
+    generate_json: true
+    generate_html: true
+    generate_heatmaps: true
+max_trade_duration_days: 7
+market_open_filter:
+  enabled: true
+  avoid_sunday_open: true
+  avoid_first_minutes_after_week_open: 60

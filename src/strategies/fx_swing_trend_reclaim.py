@@ -19,7 +19,23 @@ def _session(timestamp, windows: list[dict]) -> str | None:
 
 
 def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyConfig) -> tuple[list[Signal], list[dict]]:
-    trend_view = trend.select("timestamp", pl.col("mid_close").alias("trend_close"), "ema_200")
+    aliases = {
+        "ema_fast": f"ema_{config.indicators['ema_fast']}",
+        "ema_mid": f"ema_{config.indicators['ema_mid']}",
+        "ema_slow": f"ema_{config.indicators['ema_slow']}",
+        "rsi": f"rsi_{config.indicators['rsi_period']}",
+        "atr": f"atr_{config.indicators['atr_period']}",
+        "atr_pips": f"atr_{config.indicators['atr_period']}_pips",
+    }
+    entry = entry.with_columns(
+        *(pl.col(source).alias(target) for target, source in aliases.items()
+          if target not in entry.columns and source in entry.columns)
+    )
+    trend = trend.with_columns(
+        *(pl.col(source).alias(target) for target, source in aliases.items()
+          if target not in trend.columns and source in trend.columns)
+    )
+    trend_view = trend.select("timestamp", pl.col("mid_close").alias("trend_close"), "ema_slow")
     joined = entry.sort("timestamp").join_asof(trend_view.sort("timestamp"), on="timestamp", strategy="backward")
     signals, rejected = [], []
     weekend = WeekendPolicy(config.weekend_policy)
@@ -39,9 +55,9 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         })
         return reason
 
-    rows = joined.with_columns(pl.col("rsi_14").shift(1).alias("previous_rsi")).to_dicts()
+    rows = joined.with_columns(pl.col("rsi").shift(1).alias("previous_rsi")).to_dicts()
     for row in rows:
-        if any(row.get(k) is None for k in ("atr_14", "ema_20", "ema_50", "rsi_14", "ema_200")):
+        if any(row.get(k) is None for k in ("atr", "ema_fast", "ema_mid", "rsi", "ema_slow")):
             continue
         london = row["timestamp_london"]
         session = _session(london, config.session_filter["entry_windows"])
@@ -62,35 +78,36 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             })
             continue
         bearish = row["mid_close"] < row["mid_open"]
-        near_ema = min(abs(row["mid_close"] - row["ema_20"]), abs(row["mid_close"] - row["ema_50"])) <= (
-            config.entry["short"]["max_pullback_atr"] * row["atr_14"]
+        near_ema = min(abs(row["mid_close"] - row["ema_fast"]), abs(row["mid_close"] - row["ema_mid"])) <= (
+            config.entry["short"]["max_pullback_atr"] * row["atr"]
         )
-        rsi_down = row["rsi_14"] < 50 and row["previous_rsi"] is not None and row["rsi_14"] < row["previous_rsi"]
-        if config.entry["short"]["enabled"] and row["trend_close"] < row["ema_200"] and row["mid_close"] < row["ema_50"] and near_ema and rsi_down and bearish:
+        rsi_trigger = config.entry["short"]["rsi_cross_down_level"]
+        rsi_down = row["rsi"] < rsi_trigger and row["previous_rsi"] is not None and row["rsi"] < row["previous_rsi"]
+        if config.entry["short"]["enabled"] and row["trend_close"] < row["ema_slow"] and row["mid_close"] < row["ema_mid"] and near_ema and rsi_down and bearish:
             if weekend_rejection(row, session):
                 continue
-            stop = max(row["mid_high"], row["mid_close"] + config.stop_loss["atr_multiplier"] * row["atr_14"])
+            stop = max(row["mid_high"], row["mid_close"] + config.stop_loss["atr_multiplier"] * row["atr"])
             risk = stop - row["mid_close"]
             signals.append(Signal(
                 str(uuid4()), row["timestamp"], london, row["symbol"], "SHORT",
                 "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                 ["trend_below_ema200", "pullback", "rsi_rejection", "bearish_close"],
-                {k: row[k] for k in ("ema_20", "ema_50", "ema_200", "rsi_14", "atr_14", "atr_14_pips")},
+                {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},
                 stop, row["mid_close"] - config.exit["runner"]["final_target_r"] * risk, spread_pips, session,
             ))
         if config.entry["long"]["enabled"]:
             bullish = row["mid_close"] > row["mid_open"]
-            rsi_up = row["rsi_14"] > 50 and row["previous_rsi"] is not None and row["rsi_14"] > row["previous_rsi"]
-            if row["trend_close"] > row["ema_200"] and row["mid_close"] > row["ema_50"] and near_ema and rsi_up and bullish:
+            rsi_up = row["rsi"] > config.entry["long"]["rsi_cross_up_level"] and row["previous_rsi"] is not None and row["rsi"] > row["previous_rsi"]
+            if row["trend_close"] > row["ema_slow"] and row["mid_close"] > row["ema_mid"] and near_ema and rsi_up and bullish:
                 if weekend_rejection(row, session):
                     continue
-                stop = min(row["mid_low"], row["mid_close"] - config.stop_loss["atr_multiplier"] * row["atr_14"])
+                stop = min(row["mid_low"], row["mid_close"] - config.stop_loss["atr_multiplier"] * row["atr"])
                 risk = row["mid_close"] - stop
                 signals.append(Signal(
                     str(uuid4()), row["timestamp"], london, row["symbol"], "LONG",
                     "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                     ["trend_above_ema200", "pullback", "rsi_reclaim", "bullish_close"],
-                    {k: row[k] for k in ("ema_20", "ema_50", "ema_200", "rsi_14", "atr_14", "atr_14_pips")},
+                    {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},
                     stop, row["mid_close"] + config.exit["runner"]["final_target_r"] * risk, spread_pips, session,
                 ))
     return signals, rejected

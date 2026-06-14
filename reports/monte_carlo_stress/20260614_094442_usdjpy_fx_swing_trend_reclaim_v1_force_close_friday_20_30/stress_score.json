@@ -1,0 +1,24 @@
+{
+  "stress_score": 100,
+  "verdict": "STRONG_STRESS_RESILIENCE",
+  "deductions": {
+    "negative_p5_return": 0,
+    "probability_of_loss_above_10": 0,
+    "p95_drawdown_above_10": 0,
+    "p99_drawdown_above_15": 0,
+    "probability_drawdown_above_15_above_5": 0,
+    "median_profit_factor_below_1_3": 0,
+    "negative_execution_stress": 0,
+    "spread_2x_pf_below_1_3": 0,
+    "slippage_1pip_pf_below_1_3": 0,
+    "miss_best_10pct_negative": 0,
+    "extra_minus_5r_drawdown_above_15": 0,
+    "worst_first_drawdown_above_15": 5
+  },
+  "additions": {
+    "positive_p5_return": 5,
+    "p95_drawdown_below_10": 5,
+    "probability_of_loss_below_5": 5,
+    "all_execution_profitable": 5
+  }
+}

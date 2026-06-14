@@ -30,8 +30,8 @@ def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, di
     if not (candle_dir / "USDJPY_1H.parquet").exists():
         build_candles_for_config(config)
     with timed_stage(logger, "load candles and calculate indicators"):
-        entry = add_indicators(pl.read_parquet(candle_dir / "USDJPY_1H.parquet"))
-        trend = add_indicators(pl.read_parquet(candle_dir / "USDJPY_4H.parquet"))
+        entry = add_indicators(pl.read_parquet(candle_dir / "USDJPY_1H.parquet"), parameters=config.indicators)
+        trend = add_indicators(pl.read_parquet(candle_dir / "USDJPY_4H.parquet"), parameters=config.indicators)
     with timed_stage(logger, "generate strategy signals"):
         signals, rejections = generate_signals(entry, trend, config)
     logger.info("Signals generated | accepted=%s, rejected=%s", f"{len(signals):,}", f"{len(rejections):,}")

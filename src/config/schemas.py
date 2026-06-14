@@ -46,6 +46,8 @@ class StrategyConfig(FlexibleConfig):
     weekend_policy: dict[str, Any] = {}
     stability_validation: dict[str, Any] = {}
     walk_forward_validation: dict[str, Any] = {}
+    parameter_robustness: dict[str, Any] = {}
+    monte_carlo_stress: dict[str, Any] = {}
     max_trade_duration_days: int = 7
     market_open_filter: dict[str, Any] = {}
     base_dir: Path = Path(".")

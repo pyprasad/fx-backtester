@@ -204,3 +204,125 @@ walk_forward_validation:
     max_train_test_average_r_decay_percent: 60
     allow_low_trade_count_warning: true
   output: {generate_csv: true, generate_json: true, generate_html: true, include_charts: true}
+parameter_robustness:
+  enabled: true
+  baseline_policy_name: force_close_friday_20_30
+  strategy_name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  direction_mode: short_only
+  methodology:
+    no_parameter_optimisation: true
+    do_not_replace_baseline_with_best_variant: true
+    evaluate_nearby_parameter_space: true
+    use_fixed_weekend_policy: true
+    use_same_data_period: true
+    use_same_execution_model: true
+  baseline_parameters:
+    ema_fast: 20
+    ema_mid: 50
+    ema_slow: 200
+    rsi_period: 14
+    rsi_short_trigger: 50
+    atr_period: 14
+    atr_stop_multiplier: 1.2
+    trailing_atr_multiplier: 1.5
+    partial_take_profit_r: 2.0
+    final_target_r: 4.0
+    breakeven_after_r: 1.2
+    max_trade_duration_days: 7
+    pullback_atr_limit: 1.2
+  parameter_grid:
+    ema_slow: [180, 200, 220]
+    ema_mid: [40, 50, 60]
+    rsi_short_trigger: [45, 50, 55]
+    atr_stop_multiplier: [1.0, 1.2, 1.5]
+    trailing_atr_multiplier: [1.2, 1.5, 1.8]
+    partial_take_profit_r: [1.5, 2.0, 2.5]
+    final_target_r: [3.0, 4.0, 5.0]
+    breakeven_after_r: [1.0, 1.2, 1.5]
+  test_modes:
+    full_grid: {enabled: false, reason: "Full Cartesian grid is too expensive and may encourage optimisation."}
+    one_factor_at_a_time: {enabled: true, description: "Change one parameter at a time around the baseline."}
+    paired_sensitivity: {enabled: true, description: "Test selected two-parameter combinations only."}
+    local_neighbourhood: {enabled: true, description: "Test small broad shifts around the baseline."}
+  paired_sensitivity_tests:
+    - {name: ema_mid_vs_ema_slow, parameters: {ema_mid: [40, 50, 60], ema_slow: [180, 200, 220]}}
+    - {name: atr_stop_vs_trailing_atr, parameters: {atr_stop_multiplier: [1.0, 1.2, 1.5], trailing_atr_multiplier: [1.2, 1.5, 1.8]}}
+    - {name: partial_tp_vs_final_target, parameters: {partial_take_profit_r: [1.5, 2.0, 2.5], final_target_r: [3.0, 4.0, 5.0]}}
+    - {name: rsi_vs_atr_stop, parameters: {rsi_short_trigger: [45, 50, 55], atr_stop_multiplier: [1.0, 1.2, 1.5]}}
+  local_neighbourhood_tests:
+    - name: baseline_minus_small
+      overrides: {ema_mid: 40, ema_slow: 180, rsi_short_trigger: 45, atr_stop_multiplier: 1.0, trailing_atr_multiplier: 1.2, partial_take_profit_r: 1.5, final_target_r: 3.0, breakeven_after_r: 1.0}
+    - name: baseline_original
+      overrides: {ema_mid: 50, ema_slow: 200, rsi_short_trigger: 50, atr_stop_multiplier: 1.2, trailing_atr_multiplier: 1.5, partial_take_profit_r: 2.0, final_target_r: 4.0, breakeven_after_r: 1.2}
+    - name: baseline_plus_small
+      overrides: {ema_mid: 60, ema_slow: 220, rsi_short_trigger: 55, atr_stop_multiplier: 1.5, trailing_atr_multiplier: 1.8, partial_take_profit_r: 2.5, final_target_r: 5.0, breakeven_after_r: 1.5}
+  pass_fail_rules:
+    min_profitable_variant_percent: 70
+    min_pass_variant_percent: 60
+    min_median_profit_factor: 1.3
+    min_median_average_r: 0.0
+    max_median_drawdown_percent: 10
+    max_allowed_worst_trade_r: -2.5
+    max_baseline_rank_dependency_percentile: 90
+    max_parameter_cliff_failures: 0
+    min_neighbourhood_pass_percent: 66
+  output: {generate_csv: true, generate_json: true, generate_html: true, generate_heatmaps: true}
+monte_carlo_stress:
+  enabled: true
+  baseline_policy_name: force_close_friday_20_30
+  strategy_name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  direction_mode: short_only
+  methodology:
+    use_baseline_trade_log: true
+    do_not_change_strategy_parameters: true
+    do_not_optimise: true
+    preserve_baseline_as_reference: true
+    random_seed: 42
+  simulation:
+    iterations: 5000
+    starting_balance: 10000
+    risk_mode: use_trade_log_pnl_r
+    confidence_levels: [50, 75, 90, 95, 99]
+  monte_carlo_methods:
+    trade_shuffle: {enabled: true, description: "Shuffle historical trade order without replacement."}
+    bootstrap_resample: {enabled: true, description: "Sample trades with replacement."}
+    block_bootstrap: {enabled: true, block_size: [5, 10, 20], description: "Preserve some trade clustering."}
+    missed_trade_simulation:
+      enabled: true
+      missed_trade_rates: [0.05, 0.10, 0.20]
+      mode: [random, miss_best_trades, miss_worst_trades]
+    trade_order_stress:
+      enabled: true
+      scenarios: [worst_trades_first, best_trades_first, alternating_loss_clusters, historical_order]
+  execution_stress:
+    enabled: true
+    slippage_stress: {enabled: true, slippage_pips: [0.1, 0.2, 0.5, 1.0], apply_to: [entry, exit, both]}
+    spread_stress: {enabled: true, spread_multiplier: [1.25, 1.50, 2.00], apply_to: [entry, exit, both]}
+    delayed_execution:
+      enabled: true
+      entry_delay_ticks: [1, 3, 5]
+      exit_delay_ticks: [1, 3, 5]
+    friday_close_stress:
+      enabled: true
+      force_close_slippage_pips: [0.5, 1.0, 2.0, 5.0]
+      description: "Apply worse fills to Friday force-close exits."
+    tail_loss_injection:
+      enabled: true
+      scenarios:
+        - {name: one_extra_minus_2_5r, injected_losses_r: [-2.5]}
+        - {name: one_extra_minus_5r, injected_losses_r: [-5.0]}
+        - {name: two_extra_minus_2_5r, injected_losses_r: [-2.5, -2.5]}
+  pass_fail_rules:
+    min_median_return_percent: 20
+    min_5th_percentile_return_percent: 0
+    max_95th_percentile_drawdown_percent: 10
+    max_99th_percentile_drawdown_percent: 15
+    max_probability_of_loss_percent: 10
+    max_probability_drawdown_above_10_percent: 10
+    max_probability_drawdown_above_15_percent: 5
+    min_median_profit_factor: 1.3
+    max_worst_simulated_trade_r: -5.0
+    allow_tail_warning_not_fail: true
+  output: {generate_csv: true, generate_json: true, generate_html: true, generate_charts: true}

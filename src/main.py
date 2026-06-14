@@ -19,7 +19,9 @@ from src.data.tick_loader import scan_ticks
 from src.data.tick_normalizer import normalize_ticks
 from src.forensics.trade_forensics import TradeForensicsEngine
 from src.reporting.html_report import add_forensic_link
+from src.robustness.robustness_runner import ParameterRobustnessRunner
 from src.stability.stability_runner import StabilityValidationRunner
+from src.stress.monte_carlo_runner import MonteCarloStressRunner
 from src.utils.logging import configure_logging, get_logger, timed_stage
 from src.walk_forward.walk_forward_runner import WalkForwardValidationRunner
 
@@ -147,6 +149,26 @@ def main():
     walk_forward_parser.add_argument("--run-path", required=True)
     walk_forward_parser.add_argument("--candle-path", required=True)
     walk_forward_parser.add_argument("--report-output-path", required=True)
+    robustness_parser = sub.add_parser("parameter-robustness")
+    robustness_parser.add_argument("--strategy-config", required=True)
+    robustness_parser.add_argument("--normalised-tick-path", required=True)
+    robustness_parser.add_argument("--candle-path", required=True)
+    robustness_parser.add_argument("--report-output-path", required=True)
+    robustness_parser.add_argument("--max-variants", type=int, default=100)
+    robustness_parser.add_argument("--include-full-grid", action=argparse.BooleanOptionalAction, default=False)
+    robustness_parser.add_argument("--skip-heatmaps", action=argparse.BooleanOptionalAction, default=False)
+    robustness_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
+    robustness_parser.add_argument("--baseline-run-path")
+    stress_parser = sub.add_parser("monte-carlo-stress")
+    stress_parser.add_argument("--strategy-config", required=True)
+    stress_parser.add_argument("--run-path", required=True)
+    stress_parser.add_argument("--normalised-tick-path")
+    stress_parser.add_argument("--candle-path")
+    stress_parser.add_argument("--report-output-path", required=True)
+    stress_parser.add_argument("--iterations", type=int)
+    stress_parser.add_argument("--seed", type=int)
+    stress_parser.add_argument("--skip-charts", action=argparse.BooleanOptionalAction, default=False)
+    stress_parser.add_argument("--quick", action=argparse.BooleanOptionalAction, default=False)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -167,6 +189,20 @@ def main():
             args.strategy_config, args.run_path, args.candle_path, args.report_output_path,
         ).run()
         print(f"Walk-forward report: {output / 'walk_forward_report.html'}")
+    elif args.command == "parameter-robustness":
+        output = ParameterRobustnessRunner(
+            args.strategy_config, args.normalised_tick_path, args.candle_path,
+            args.report_output_path, args.max_variants, args.include_full_grid,
+            args.skip_heatmaps, args.continue_on_error, args.baseline_run_path,
+        ).run()
+        print(f"Parameter robustness report: {output / 'robustness_report.html'}")
+    elif args.command == "monte-carlo-stress":
+        output = MonteCarloStressRunner(
+            args.strategy_config, args.run_path, args.report_output_path,
+            args.normalised_tick_path, args.candle_path, args.iterations, args.seed,
+            args.skip_charts, args.quick,
+        ).run()
+        print(f"Monte Carlo stress report: {output / 'stress_report.html'}")
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

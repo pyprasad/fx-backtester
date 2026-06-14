@@ -78,7 +78,9 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
             remaining -= fraction
             partials.append({"timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction})
         if config.exit["runner"]["enabled"] and remaining < 1.0:
-            trail_distance = signal.indicator_snapshot.get("atr_14", initial_risk) * config.exit["runner"]["trailing_stop"]["atr_multiplier"]
+            trail_distance = signal.indicator_snapshot.get(
+                "atr", signal.indicator_snapshot.get("atr_14", initial_risk)
+            ) * config.exit["runner"]["trailing_stop"]["atr_multiplier"]
             candidate = close_side - trail_distance if is_long else close_side + trail_distance
             candidate = max(final_stop, candidate) if is_long else min(final_stop, candidate)
             if candidate != final_stop:

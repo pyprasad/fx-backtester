@@ -208,3 +208,84 @@ Outputs include anchored and rolling CSVs, aggregate summaries, score JSON/CSV, 
 `walk_forward_report.html`. Scores of `85-100` are `STRONG_WALK_FORWARD`, `70-84` are `PASS`,
 `50-69` are `WARNING`, and lower scores are `FAIL`. This remains historical research and does not
 establish production readiness.
+
+## FX-2E: Parameter Robustness Testing
+
+FX-2E follows walk-forward validation and checks whether the unchanged short-only
+`fx_swing_trend_reclaim_v1` strategy remains acceptable under small nearby parameter changes. The
+fixed reference uses the `force_close_friday_20_30` weekend policy.
+
+This is robustness testing, not parameter optimisation. It looks for a stable cluster of
+acceptable performance and parameter cliffs. A higher-return variant must not automatically
+replace the baseline; the baseline remains the reference unless later research explicitly
+approves a change.
+
+```bash
+python3.11 -m src.main --log-level INFO parameter-robustness \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/parameter_robustness
+```
+
+The command reuses normalised ticks and existing candles, recalculates parameter-dependent
+indicators, and runs the baseline, one-factor, selected paired, and local-neighbourhood variants.
+The full Cartesian grid is disabled by default. Equivalent effective configurations are executed
+once and reused in paired analysis.
+
+Outputs include `robustness_summary.csv/json`, `one_factor_sensitivity.csv`, paired sensitivity
+CSVs and heatmaps, `paired_sensitivity_summary.csv`, `local_neighbourhood_summary.csv`,
+`robustness_score.csv/json`, per-variant backtest reports, and `robustness_report.html`.
+
+- One-factor `LOW`/`MEDIUM`/`HIGH` shows increasing degradation while still passing; `CLIFF` means
+  the nearby variant failed.
+- Paired heatmaps show whether acceptable performance forms a broad region rather than a single
+  best point.
+- `85-100` is `STRONG_ROBUSTNESS`, `70-84` is `PASS`, `50-69` is `WARNING`, and below `50` is
+  `FAIL`.
+- `PASS` supports proceeding to Monte Carlo and execution stress testing. `WARNING` or `FAIL`
+  requires investigation of fragility first.
+
+FX-2E remains historical research only and does not establish production readiness.
+
+## FX-2F: Monte Carlo + Execution Stress Testing
+
+FX-2F follows parameter robustness by testing the unchanged selected baseline against trade
+sequence randomness, resampling, missed trades, worse execution, and injected tail losses. It
+uses the selected `force_close_friday_20_30` baseline trade log and does not optimise or change
+strategy parameters.
+
+Monte Carlo does not predict future returns. In this project it creates alternative paths from
+historical trade-level R outcomes:
+
+- Trade shuffle changes order without replacing trades, isolating sequence and drawdown risk.
+- Bootstrap samples trades with replacement, allowing different mixes of winners and losers.
+- Block bootstrap resamples short trade clusters to preserve some historical dependence.
+- Missed-trade tests remove random trades, the best trades, or the worst trades.
+- Execution stress deducts approximate R costs for wider spreads, slippage, Friday closes, and
+  delayed entries/exits.
+
+Delayed execution currently uses an explicit adverse-slippage approximation of `0.1` pip per
+delayed tick. True delayed tick replay is a future enhancement.
+Stress paths measure drawdown relative to the running equity peak at each point, which may differ
+from the existing backtest summary's drawdown percentage convention.
+
+Run the default 5,000-iteration stress test:
+
+```bash
+python3.11 -m src.main --log-level INFO monte-carlo-stress \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --run-path reports/parameter_robustness/<run_id>/variants/baseline_original \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/monte_carlo_stress
+```
+
+Use `--quick` for a 500-iteration validation run. Outputs include stress summary and score
+CSV/JSON files, Monte Carlo distributions and scenario summaries, sequence/execution/slippage/
+spread/Friday-close/missed-trade/tail-loss summaries, selected equity paths, optional Plotly
+charts, and `stress_report.html`.
+
+Scores of `85-100` are `STRONG_STRESS_RESILIENCE`, `70-84` are `PASS`, `50-69` are `WARNING`,
+and lower scores are `FAIL`. A passing result supports proceeding toward demo-readiness gates,
+but does not make the strategy production-ready.

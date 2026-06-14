@@ -1,0 +1,9 @@
+2026-06-14 10:44:42 | INFO | __main__ | Pipeline command started | command=monte-carlo-stress
+2026-06-14 10:44:42 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=trade_shuffle | iterations=500
+2026-06-14 10:44:44 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=bootstrap_resample | iterations=500
+2026-06-14 10:44:45 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_5 | iterations=500
+2026-06-14 10:44:47 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_10 | iterations=500
+2026-06-14 10:44:49 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_20 | iterations=500
+2026-06-14 10:45:11 | INFO | src.stress.monte_carlo_runner | Monte Carlo stress report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/monte_carlo_stress/20260614_094442_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stress_report.html
+2026-06-14 10:45:11 | INFO | __main__ | Pipeline command completed | command=monte-carlo-stress
+Monte Carlo stress report: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/monte_carlo_stress/20260614_094442_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stress_report.html

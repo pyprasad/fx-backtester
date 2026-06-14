@@ -1,0 +1,13 @@
+{
+  "variant_id": "paired_atr_stop_vs_trailing_atr_1_5_1_2",
+  "variant_name": "paired_atr_stop_vs_trailing_atr_1_5_1_2",
+  "test_type": "paired_sensitivity",
+  "parameter_overrides": {
+    "atr_stop_multiplier": 1.5,
+    "trailing_atr_multiplier": 1.2
+  },
+  "is_baseline": false,
+  "run_status": "SUCCESS",
+  "error_message": "",
+  "report_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/parameter_robustness/20260613_193638_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/variants/paired_atr_stop_vs_trailing_atr_1_5_1_2/html_report.html"
+}
