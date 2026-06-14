@@ -50,6 +50,34 @@ Start with:
 PYTHONPATH=. .venv/bin/python -m src.main ig-demo-auth-check --env-file .env.demo
 ```
 
+The currently identified IG DEMO USDJPY DFB candidate is:
+
+```dotenv
+IG_MARKET_EPIC=CS.D.USDJPY.TODAY.IP
+```
+
+Verify its detailed market rules during normal market hours:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-market-rules \
+  --env-file .env.demo \
+  --epic CS.D.USDJPY.TODAY.IP
+```
+
+Then verify modern `PRICE` streaming and capture DEMO ticks:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-stream-prices \
+  --env-file .env.demo \
+  --epic CS.D.USDJPY.TODAY.IP \
+  --duration-seconds 120
+```
+
+`marketStatus: EDITS_ONLY` does not permit opening new positions and must remain `NOT_READY`;
+verify that it changes to `TRADEABLE` during market hours. Search results may display scaled prices
+such as `16018`; confirm detailed market metadata and streamed decimal scaling before calculating
+spreads or validating dry-run payloads.
+
 Full setup and command sequencing are documented in
 [`docs/broker/ig_demo_integration.md`](docs/broker/ig_demo_integration.md). The maximum possible
 FX-2I readiness is `READY_FOR_DEMO_DRY_RUN`; this phase sends no demo or live orders.
