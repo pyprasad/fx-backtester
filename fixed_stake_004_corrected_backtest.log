@@ -1,0 +1,113 @@
+2026-06-14 22:01:18 | INFO | __main__ | Pipeline command started | command=backtest
+2026-06-14 22:01:18 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-14 22:01:18 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-14 22:01:18 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-14 22:01:18 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.6s
+2026-06-14 22:01:18 | INFO | src.backtest.backtest_engine | Signals generated | accepted=650, rejected=15,493
+2026-06-14 22:01:18 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/650, trades=0, balance=10000.00
+2026-06-14 22:01:22 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/650, trades=14, balance=10005.09
+2026-06-14 22:01:27 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/650, trades=32, balance=10013.16
+2026-06-14 22:01:32 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/650, trades=49, balance=10015.65
+2026-06-14 22:01:40 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/650, trades=69, balance=10019.31
+2026-06-14 22:01:48 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/650, trades=86, balance=10017.74
+2026-06-14 22:01:55 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/650, trades=106, balance=10011.73
+2026-06-14 22:02:06 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/650, trades=125, balance=10018.52
+2026-06-14 22:02:11 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/650, trades=144, balance=10016.26
+2026-06-14 22:02:17 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/650, trades=159, balance=10020.78
+2026-06-14 22:02:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/650, trades=176, balance=10026.07
+2026-06-14 22:02:30 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/650, trades=192, balance=10026.05
+2026-06-14 22:02:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/650, trades=208, balance=10036.84
+2026-06-14 22:02:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/650, trades=221, balance=10029.58
+2026-06-14 22:02:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/650, trades=237, balance=10029.29
+2026-06-14 22:02:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/650, trades=253, balance=10025.35
+2026-06-14 22:03:03 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/650, trades=266, balance=10026.17
+2026-06-14 22:03:08 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/650, trades=279, balance=10027.88
+2026-06-14 22:03:14 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/650, trades=298, balance=10031.73
+2026-06-14 22:03:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/650, trades=316, balance=10040.02
+2026-06-14 22:03:31 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/650, trades=332, balance=10045.74
+2026-06-14 22:03:38 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/650, trades=344, balance=10050.60
+2026-06-14 22:03:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/650, trades=361, balance=10052.81
+2026-06-14 22:03:47 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/650, trades=376, balance=10061.96
+2026-06-14 22:03:50 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/650, trades=392, balance=10067.99
+2026-06-14 22:03:53 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/650, trades=406, balance=10072.40
+2026-06-14 22:03:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=650/650, trades=422, balance=10075.17
+2026-06-14 22:03:56 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2022_2025_final_min_risk_3pips_fixed_004/20260614_210356_usdjpy_fx_swing_trend_reclaim_v1
+2026-06-14 22:03:57 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.9s
+2026-06-14 22:03:57 | INFO | src.backtest.backtest_engine | Backtest complete | trades=422, ending_balance=10075.17, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2022_2025_final_min_risk_3pips_fixed_004/20260614_210356_usdjpy_fx_swing_trend_reclaim_v1
+2026-06-14 22:03:57 | INFO | __main__ | Pipeline command completed | command=backtest
+{
+  "starting_balance": 10000,
+  "ending_balance": 10075.17,
+  "total_return_percent": 0.7517,
+  "total_trades": 422,
+  "winning_trades": 182,
+  "losing_trades": 240,
+  "win_rate": 43.128,
+  "gross_profit": 252.82,
+  "gross_loss": -177.65,
+  "net_profit": 75.17,
+  "profit_factor": 1.4231,
+  "max_drawdown_percent": 0.1702,
+  "max_drawdown_amount": 17.15,
+  "average_r": 0.4775,
+  "expectancy_r": 0.4775,
+  "average_win_r": 2.0129,
+  "average_loss_r": -0.6868,
+  "best_trade_r": 5.1524,
+  "worst_trade_r": -2.0171,
+  "average_trade_duration": 4.0741,
+  "median_trade_duration": 2.981,
+  "trades_per_month": 9.5909,
+  "consecutive_losses_max": 8,
+  "consecutive_wins_max": 8,
+  "short_trade_count": 422,
+  "short_win_rate": 43.128,
+  "long_trade_count": 0,
+  "long_win_rate": 0,
+  "average_spread_pips_at_entry": 0.563,
+  "average_spread_pips_at_exit": 1.053,
+  "stop_loss_exit_count": 155,
+  "take_profit_exit_count": 70,
+  "trailing_stop_exit_count": 185,
+  "max_duration_exit_count": 0,
+  "weekend_force_close_exit_count": 12,
+  "weekend_losing_trade_close_exit_count": 0,
+  "weekend_profit_threshold_close_exit_count": 0,
+  "position_sizing_mode": "fixed_spread_bet_stake",
+  "stake_per_pip_gbp": 0.04,
+  "net_profit_gbp": 75.17,
+  "total_pips": 1879.25,
+  "gross_profit_gbp": 252.82,
+  "gross_loss_gbp": -177.65,
+  "max_drawdown_gbp": 17.15,
+  "average_trade_pips": 4.4532,
+  "average_win_pips": 34.7286,
+  "average_loss_pips": -18.5056,
+  "best_trade_pips": 125.45,
+  "worst_trade_pips": -117.5,
+  "average_trade_gbp": 0.18,
+  "average_win_gbp": 1.39,
+  "average_loss_gbp": -0.74,
+  "best_trade_gbp": 5.02,
+  "worst_trade_gbp": -4.7,
+  "estimated_loss_at_3pip_stop_gbp": 0.12,
+  "estimated_loss_at_5pip_stop_gbp": 0.2,
+  "estimated_loss_at_10pip_stop_gbp": 0.4,
+  "estimated_loss_at_20pip_stop_gbp": 0.8,
+  "config_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/config/strategy.usdjpy.fx_swing_trend_reclaim.fixed_004.yaml",
+  "config_hash": "442b361cc90c88192da204989661e1f13f412863b08da59e8b027622f5c99994",
+  "validation_status": "PASS",
+  "validation_errors": "",
+  "weekend_policy_enabled": true,
+  "weekend_policy_name": "force_close_friday_20_30",
+  "friday_force_close_enabled": true,
+  "friday_force_close_time_utc": "20:30",
+  "selected_guardrail_candidate": "min_risk_3pips",
+  "min_initial_risk_pips": 3.0,
+  "weekend_crossing_trade_count": 0,
+  "weekend_gap_risk_trade_count": 0,
+  "old_weekend_gap_removed": true,
+  "data_period_start": "2022-01-01",
+  "data_period_end": "2025-12-31"
+}
+Reports: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2022_2025_final_min_risk_3pips_fixed_004/20260614_210356_usdjpy_fx_swing_trend_reclaim_v1

@@ -69,7 +69,10 @@ def calculate_metrics(trades: list[Trade], starting_balance: float) -> dict:
         "take_profit_exit_count": sum(t.exit_reason == "take_profit" for t in trades),
         "trailing_stop_exit_count": sum(t.exit_reason == "trailing_stop" for t in trades),
         "max_duration_exit_count": sum(t.exit_reason == "max_duration" for t in trades),
-        "weekend_force_close_exit_count": sum(t.exit_reason == "weekend_force_close" for t in trades),
+        "weekend_force_close_exit_count": sum(
+            str(t.exit_reason).lower() in {"weekend_force_close", "weekend_force_close_exit"}
+            for t in trades
+        ),
         "weekend_losing_trade_close_exit_count": sum(t.exit_reason == "weekend_losing_trade_close" for t in trades),
         "weekend_profit_threshold_close_exit_count": sum(t.exit_reason == "weekend_profit_threshold_close" for t in trades),
     }

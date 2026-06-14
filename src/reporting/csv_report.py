@@ -10,8 +10,7 @@ from src.broker_guardrails.guardrail_metrics import funding_summary
 
 def write_csv_reports(output: Path, trades: list, metrics: dict, rejections: list[dict]) -> None:
     output.mkdir(parents=True, exist_ok=True)
-    _write(output / "strategy_summary.csv", [metrics])
-    (output / "strategy_summary.json").write_text(json.dumps(metrics, indent=2, default=str))
+    write_strategy_summary(output, metrics)
     _write(output / "trade_log.csv", [asdict(t) for t in trades])
     _write(output / "signal_rejection_log.csv", rejections)
     balance = metrics["starting_balance"]
@@ -44,6 +43,11 @@ def write_csv_reports(output: Path, trades: list, metrics: dict, rejections: lis
             "best_trade_pips", "worst_trade_pips",
         ]
         _write(output / "pips_summary.csv", [{key: metrics[key] for key in pips_keys}])
+
+
+def write_strategy_summary(output: Path, metrics: dict) -> None:
+    _write(output / "strategy_summary.csv", [metrics])
+    (output / "strategy_summary.json").write_text(json.dumps(metrics, indent=2, default=str))
 
 
 def write_weekend_policy_reports(output: Path, trades: list, rejections: list[dict], policy: dict) -> dict:

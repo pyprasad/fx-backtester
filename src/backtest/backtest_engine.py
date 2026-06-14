@@ -7,10 +7,23 @@ from src.config.schemas import StrategyConfig
 from src.data.candle_builder import build_and_save_all
 from src.execution.tick_execution_engine import evaluate_executable_entry_guardrail, execute_signal
 from src.indicators.indicator_engine import add_indicators
-from src.reporting.csv_report import write_csv_reports, write_funding_reports, write_weekend_policy_reports
+from src.reporting.csv_report import (
+    write_csv_reports,
+    write_funding_reports,
+    write_strategy_summary,
+    write_weekend_policy_reports,
+)
 from src.reporting.html_report import write_html_report
 from src.reporting.metrics import calculate_metrics
 from src.reporting.fixed_stake_comparison import write_fixed_stake_comparison
+from src.validation.fixed_stake_baseline_validator import (
+    validate_fixed_stake_baseline,
+    write_validation_report,
+)
+from src.validation.weekend_exposure_audit import (
+    weekend_exposure_audit,
+    write_weekend_exposure_audit,
+)
 from src.risk.risk_manager import RiskManager
 from src.strategies.fx_swing_trend_reclaim import generate_signals
 from src.utils.logging import get_logger, timed_stage
@@ -101,16 +114,60 @@ def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, di
     metrics = calculate_metrics(trades, config.risk["starting_balance"])
     run_name = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1")
     output = output_override or (resolve(config, config.reporting["output_path"]) / run_name)
+    audit_rows = []
+    if metrics.get("position_sizing_mode") == "fixed_spread_bet_stake":
+        close_time = config.weekend_policy.get("force_close_on_friday", {}).get(
+            "close_time_utc", "20:30"
+        )
+        audit_rows = weekend_exposure_audit(trades, close_time)
+        metrics.update(validate_fixed_stake_baseline(config, trades, metrics, audit_rows))
     with timed_stage(logger, "write backtest reports", output=output):
         write_csv_reports(output, trades, metrics, rejections)
+        if audit_rows:
+            write_weekend_exposure_audit(output / "weekend_exposure_audit.csv", audit_rows)
+            write_validation_report(output / "fixed_stake_validation.json", {
+                key: metrics[key] for key in (
+                    "validation_status", "validation_errors", "config_path", "config_hash",
+                    "weekend_crossing_trade_count", "weekend_gap_risk_trade_count",
+                    "old_weekend_gap_removed",
+                )
+            })
         write_weekend_policy_reports(output, trades, rejections, config.weekend_policy)
         write_funding_reports(output, trades, metrics, config.broker_execution_guardrails)
         write_html_report(output, metrics)
         comparison = config.reporting.get("comparison_baseline_run_path")
         comparison_output = config.reporting.get("comparison_output_stem")
         if metrics.get("position_sizing_mode") == "fixed_spread_bet_stake" and comparison and comparison_output:
-            write_fixed_stake_comparison(
-                resolve(config, comparison), output, resolve(config, comparison_output)
-            )
+            baseline_path = resolve(config, comparison)
+            if baseline_path.exists():
+                comparison_result = write_fixed_stake_comparison(
+                    baseline_path, output, resolve(config, comparison_output)
+                )
+                validation_output = config.reporting.get("baseline_validation_output_stem")
+                if validation_output:
+                    write_fixed_stake_comparison(
+                        baseline_path, output, resolve(config, validation_output)
+                    )
+                if not comparison_result["strategy_logic_matches"]:
+                    metrics["validation_status"] = "FAILED_VALIDATION"
+                    prior = metrics.get("validation_errors", "")
+                    metrics["validation_errors"] = "|".join(
+                        item for item in (prior, "BASELINE_STRATEGY_LOGIC_MISMATCH") if item
+                    )
+                    write_strategy_summary(output, metrics)
+                    write_validation_report(output / "fixed_stake_validation.json", {
+                        key: metrics[key] for key in (
+                            "validation_status", "validation_errors", "config_path", "config_hash",
+                            "weekend_crossing_trade_count", "weekend_gap_risk_trade_count",
+                            "old_weekend_gap_removed",
+                        )
+                    })
+                    logger.error(
+                        "Fixed-stake baseline comparison failed | strategy_logic_matches=false"
+                    )
+            else:
+                logger.warning("Fixed-stake baseline comparison skipped | missing=%s", baseline_path)
+    if metrics.get("validation_status") == "FAILED_VALIDATION":
+        logger.error("Fixed-stake baseline validation failed | errors=%s", metrics["validation_errors"])
     logger.info("Backtest complete | trades=%s, ending_balance=%.2f, reports=%s", len(trades), metrics["ending_balance"], output)
     return trades, metrics, output

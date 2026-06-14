@@ -20,10 +20,10 @@ def test_comparison_confirms_strategy_logic_and_writes_all_formats(tmp_path):
     }
     _write(baseline / "trade_log.csv", {**common, "net_pnl": 20, "size": 100})
     _write(fixed / "trade_log.csv", {**common, "pnl_pips": 20, "planned_loss_gbp": 0.2})
-    _write(baseline / "strategy_summary.csv", {"total_return_percent": 65})
+    _write(baseline / "strategy_summary.csv", {"total_return_percent": 65, "worst_trade_r": -2})
     _write(fixed / "strategy_summary.csv", {
         "total_return_percent": 0.01, "net_profit_gbp": 0.8, "total_pips": 20,
-        "max_drawdown_gbp": 0,
+        "max_drawdown_gbp": 0, "worst_trade_r": -2,
     })
 
     result = write_fixed_stake_comparison(baseline, fixed, tmp_path / "comparison")

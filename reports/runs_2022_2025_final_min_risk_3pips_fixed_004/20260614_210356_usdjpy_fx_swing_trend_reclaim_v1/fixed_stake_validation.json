@@ -1,0 +1,9 @@
+{
+  "validation_status": "PASS",
+  "validation_errors": "",
+  "config_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/config/strategy.usdjpy.fx_swing_trend_reclaim.fixed_004.yaml",
+  "config_hash": "442b361cc90c88192da204989661e1f13f412863b08da59e8b027622f5c99994",
+  "weekend_crossing_trade_count": 0,
+  "weekend_gap_risk_trade_count": 0,
+  "old_weekend_gap_removed": true
+}

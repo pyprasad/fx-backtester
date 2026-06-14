@@ -30,7 +30,7 @@ def load_data_quality_config(path: str | Path) -> DataQualityConfig:
 
 def load_strategy_config(path: str | Path) -> StrategyConfig:
     data, base_dir = _load(path)
-    return StrategyConfig(**data, base_dir=base_dir)
+    return StrategyConfig(**data, base_dir=base_dir, config_path=Path(path).resolve())
 
 
 def resolve(config: DataQualityConfig | StrategyConfig, path: str) -> Path:

@@ -16,6 +16,20 @@ position_sizing:
   account_currency: GBP
   description: Fixed IG DEMO stake mode for comparing backtest behaviour with small-size DEMO trades.
 
+broker_guardrails:
+  broker: IG
+  selected_guardrail_candidate: min_risk_3pips
+  min_stop_distance_pips: 2.0
+  min_take_profit_distance_pips: 2.0
+  min_initial_risk_pips: 3.0
+  reject_initial_risk_below_minimum: true
+
+time_guards:
+  broker_timezone: Europe/London
+  block_new_entries_after: "21:30"
+  overnight_funding_cutoff: "22:00"
+  intraday_force_close_enabled: false
+
 weekend_policy:
   enabled: true
   policy_name: force_close_friday_20_30
@@ -39,3 +53,4 @@ reporting:
   include_comparison_to_risk_percent_baseline: true
   comparison_baseline_run_path: reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips
   comparison_output_stem: reports/comparisons/usdjpy_final_baseline_vs_fixed_004
+  baseline_validation_output_stem: reports/comparisons/fixed_004_baseline_validation

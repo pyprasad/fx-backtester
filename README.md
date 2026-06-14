@@ -50,6 +50,11 @@ baseline-comparison reports. See
 [`docs/demo/usdjpy_fixed_004_demo_plan.md`](docs/demo/usdjpy_fixed_004_demo_plan.md). This mode is
 backtest-only and places no IG DEMO or live orders.
 
+Every fixed-stake run also writes `weekend_exposure_audit.csv` and validates the final baseline.
+`strategy_summary.csv/json` include the effective config hash, weekend policy, selected guardrail,
+weekend crossing counts, and `validation_status`. Failed weekend/P&L checks or a baseline lifecycle
+mismatch mark the run `FAILED_VALIDATION`.
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule

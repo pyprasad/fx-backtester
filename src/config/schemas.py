@@ -52,4 +52,7 @@ class StrategyConfig(FlexibleConfig):
     position_sizing: dict[str, Any] = {}
     max_trade_duration_days: int = 7
     market_open_filter: dict[str, Any] = {}
+    broker_guardrails: dict[str, Any] = {}
+    time_guards: dict[str, Any] = {}
+    config_path: Path | None = None
     base_dir: Path = Path(".")
