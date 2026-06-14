@@ -8,6 +8,14 @@ from src.backtest.backtest_engine import build_candles_for_config, run_backtest
 from src.backtest.weekend_policy_runner import WeekendPolicyVariantRunner
 from src.bakeoff.candidate_runner import FinalGuardrailBakeOffRunner
 from src.broker_guardrails.guardrail_runner import BrokerGuardrailRunner
+from src.broker.ig.ig_cli import (
+    auth_check as ig_auth_check,
+    dry_run_order as ig_dry_run_order,
+    market_discovery as ig_market_discovery,
+    market_rules as ig_market_rules,
+    readiness as ig_readiness,
+    stream_ticks as ig_stream_ticks,
+)
 from src.config.config_loader import (
     apply_data_quality_overrides,
     apply_strategy_overrides,
@@ -207,6 +215,20 @@ def main():
     bakeoff_parser.add_argument("--continue-on-error", type=boolean, default=True)
     bakeoff_parser.add_argument("--existing-guardrail-run-path")
     bakeoff_parser.add_argument("--existing-bakeoff-run-path")
+    for name in ("ig-demo-auth-check", "ig-demo-market-discovery", "ig-demo-market-rules",
+                 "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-readiness",
+                 "ig-demo-dry-run-order"):
+        ig_parser = sub.add_parser(name)
+        ig_parser.add_argument("--env-file", default=".env.demo")
+        if name == "ig-demo-market-discovery":
+            ig_parser.add_argument("--market", default="USD/JPY")
+        if name in {"ig-demo-market-rules", "ig-demo-stream-prices",
+                    "ig-demo-stream-chart-ticks", "ig-demo-dry-run-order"}:
+            ig_parser.add_argument("--epic", required=True)
+        if name in {"ig-demo-stream-prices", "ig-demo-stream-chart-ticks"}:
+            ig_parser.add_argument("--duration-seconds", type=int, default=120)
+        if name in {"ig-demo-readiness", "ig-demo-dry-run-order"}:
+            ig_parser.add_argument("--strategy-config", required=True)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -258,6 +280,20 @@ def main():
             args.existing_bakeoff_run_path,
         ).run()
         print(f"Final guardrail bake-off report: {output / 'final_guardrail_bakeoff_report.html'}")
+    elif args.command == "ig-demo-auth-check":
+        ig_auth_check(args.env_file)
+    elif args.command == "ig-demo-market-discovery":
+        ig_market_discovery(args.env_file, args.market)
+    elif args.command == "ig-demo-market-rules":
+        ig_market_rules(args.env_file, args.epic)
+    elif args.command == "ig-demo-stream-prices":
+        ig_stream_ticks(args.env_file, args.epic, args.duration_seconds)
+    elif args.command == "ig-demo-stream-chart-ticks":
+        ig_stream_ticks(args.env_file, args.epic, args.duration_seconds, chart=True)
+    elif args.command == "ig-demo-readiness":
+        ig_readiness(args.env_file, args.strategy_config)
+    elif args.command == "ig-demo-dry-run-order":
+        ig_dry_run_order(args.env_file, args.strategy_config, args.epic)
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

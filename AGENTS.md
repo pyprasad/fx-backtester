@@ -18,6 +18,7 @@
 - FX-2F: Monte Carlo and execution stress testing.
 - FX-2G: broker-realistic execution guardrails and overnight funding awareness.
 - FX-2H: final guardrail candidate bake-off.
+- FX-2I: IG DEMO read-only integration and dry-run order validation foundation.
 
 FX-2E is not optimisation. Do not select or replace the baseline merely because a variant has
 higher historical return. Keep the full Cartesian parameter grid disabled by default, reuse
@@ -39,6 +40,11 @@ FX-2H compares exactly `ig_min_stop_only`, `min_risk_3pips`, and
 missing layers, apply hard failures before weighted ranking, and use safety-first tie-breakers.
 Always require human confirmation and never modify the main strategy config or research baseline
 automatically.
+
+FX-2I is DEMO-only and fail-closed. Do not add an IG order-creation endpoint, enable LIVE mode,
+print secrets, or commit `.env.demo`/token caches. Use modern `PRICE:{accountId}:{epic}` or optional
+`CHART:{epic}:TICK`; reject deprecated `MARKET` subscriptions. The highest allowed readiness
+status is `READY_FOR_DEMO_DRY_RUN`.
 
 Human confirmation after the complete FX-2H bake-off selected `min_risk_3pips` as the final
 research baseline. `ig_min_stop_only` is the backup and `recommended_research_guardrail` is not

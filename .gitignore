@@ -7,3 +7,7 @@ reports/**/*.csv
 reports/**/*.html
 reports/runs/*/
 !**/.gitkeep
+.env.demo
+.runtime/
+*.token-cache.json
+data/live_demo_ticks/

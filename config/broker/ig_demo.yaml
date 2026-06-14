@@ -1,0 +1,19 @@
+environment: DEMO
+account_type: DEMO
+rest_base_url: https://demo-api.ig.com/gateway/deal
+session_version: 2
+streaming:
+  enabled: true
+  mode: PRICE
+  price_fields: [BIDPRICE1, ASKPRICE1, TIMESTAMP, DELAY, DLG_FLAG, HIGH, LOW, MID_OPEN]
+  chart_tick_fields: [BID, OFR, LTP, UTM]
+market:
+  search_term: USD/JPY
+  expected_pip_size: 0.01
+safety:
+  order_execution_enabled: false
+  dry_run_only: true
+  live_accounts_supported: false
+output:
+  tick_path: data/live_demo_ticks/usdjpy
+  audit_path: reports/ig_demo_audit

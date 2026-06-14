@@ -34,6 +34,26 @@ The documentation package starts at
 [`docs/strategies/README.md`](docs/strategies/README.md). The next phase is FX-2I Demo-Readiness
 Gate; no live trading or broker order placement is included.
 
+## FX-2I: IG DEMO Integration Foundation
+
+FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule
+extraction, modern Lightstreamer `PRICE`/optional `CHART:TICK` capture, local DEMO tick storage,
+dry-run SELL payload validation, and readiness reporting.
+
+Copy `.env.demo.example` to the gitignored `.env.demo` and add credentials locally. The loader
+rejects LIVE mode, enabled order execution, disabled dry-run mode, and deprecated `MARKET`
+subscriptions. The REST client deliberately has no create-order method.
+
+Start with:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-auth-check --env-file .env.demo
+```
+
+Full setup and command sequencing are documented in
+[`docs/broker/ig_demo_integration.md`](docs/broker/ig_demo_integration.md). The maximum possible
+FX-2I readiness is `READY_FOR_DEMO_DRY_RUN`; this phase sends no demo or live orders.
+
 ## Setup
 
 Requires Python 3.11+. Install with:
