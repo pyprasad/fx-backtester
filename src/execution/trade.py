@@ -46,3 +46,12 @@ class Trade:
     breakeven_timestamp_utc: datetime | None = None
     notes: str = ""
     weekend_policy_events: list[dict] = field(default_factory=list)
+    position_sizing_mode: str = "risk_percent"
+    stake_per_pip_gbp: float | None = None
+    pnl_pips: float = 0.0
+    pnl_gbp: float = 0.0
+    net_pnl_currency: str = "GBP"
+    planned_loss_gbp: float = 0.0
+    stop_loss_distance_pips: float = 0.0
+    take_profit_distance_pips: float = 0.0
+    spread_to_risk_ratio: float = 0.0

@@ -8,7 +8,19 @@ from .schemas import DataQualityConfig, StrategyConfig
 def _load(path: str | Path) -> tuple[dict, Path]:
     path = Path(path).resolve()
     with path.open() as handle:
-        return yaml.safe_load(handle), path.parent.parent
+        data = yaml.safe_load(handle)
+    if data.get("extends"):
+        parent_path = (path.parent / data.pop("extends")).resolve()
+        parent, _ = _load(parent_path)
+
+        def merge(base: dict, override: dict) -> dict:
+            result = dict(base)
+            for key, value in override.items():
+                result[key] = merge(result.get(key, {}), value) if isinstance(value, dict) else value
+            return result
+
+        data = merge(parent, data)
+    return data, path.parent.parent
 
 
 def load_data_quality_config(path: str | Path) -> DataQualityConfig:

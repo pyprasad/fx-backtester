@@ -1,0 +1,21 @@
+{
+  "baseline_run": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips",
+  "fixed_stake_run": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/runs_2022_2025_final_min_risk_3pips_fixed_004/20260614_203158_usdjpy_fx_swing_trend_reclaim_v1",
+  "baseline_trade_count": 422,
+  "fixed_stake_trade_count": 422,
+  "trade_count_matches": true,
+  "entry_timestamp_matches": 422,
+  "exit_timestamp_matches": 410,
+  "exit_reason_matches": 410,
+  "pnl_pips_matches": 410,
+  "strategy_logic_matches": false,
+  "baseline_return_percent": 64.9513,
+  "fixed_stake_return_percent": 0.6426,
+  "fixed_stake_net_profit_gbp": 64.26,
+  "fixed_stake_total_pips": 1606.4,
+  "fixed_stake_max_drawdown_gbp": 19.32,
+  "planned_loss_gbp_min": 0.12400000000002365,
+  "planned_loss_gbp_average": 0.8920269876567614,
+  "planned_loss_gbp_max": 4.656000000000063,
+  "trade_count_difference_explanation": ""
+}

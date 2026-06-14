@@ -34,6 +34,22 @@ The documentation package starts at
 [`docs/strategies/README.md`](docs/strategies/README.md). The next phase is FX-2I Demo-Readiness
 Gate; no live trading or broker order placement is included.
 
+## Fixed £0.04 Stake Backtest
+
+The fixed-stake DEMO-preparation mode preserves final strategy signals and execution logic while
+converting pip outcomes at a constant `£0.04` per pip:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main backtest \
+  --config config/strategy.usdjpy.fx_swing_trend_reclaim.fixed_004.yaml
+```
+
+The fixed config directly embeds the final `force_close_friday_20_30` policy so the command cannot
+fall back to the runtime config's research comparison policy. It writes fixed-stake, pip, and
+baseline-comparison reports. See
+[`docs/demo/usdjpy_fixed_004_demo_plan.md`](docs/demo/usdjpy_fixed_004_demo_plan.md). This mode is
+backtest-only and places no IG DEMO or live orders.
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule

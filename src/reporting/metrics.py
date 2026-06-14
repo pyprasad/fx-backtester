@@ -6,7 +6,11 @@ from src.execution.trade import Trade
 def _round_metrics(metrics: dict) -> dict:
     money = {
         "starting_balance", "ending_balance", "gross_profit", "gross_loss", "net_profit",
-        "max_drawdown_amount",
+        "max_drawdown_amount", "net_profit_gbp", "gross_profit_gbp", "gross_loss_gbp",
+        "max_drawdown_gbp", "average_trade_gbp", "average_win_gbp", "average_loss_gbp",
+        "best_trade_gbp", "worst_trade_gbp", "estimated_loss_at_3pip_stop_gbp",
+        "estimated_loss_at_5pip_stop_gbp", "estimated_loss_at_10pip_stop_gbp",
+        "estimated_loss_at_20pip_stop_gbp",
     }
     spreads = {"average_spread_pips_at_entry", "average_spread_pips_at_exit"}
     return {
@@ -40,7 +44,7 @@ def calculate_metrics(trades: list[Trade], starting_balance: float) -> dict:
     short = [t for t in trades if t.direction == "SHORT"]
     long = [t for t in trades if t.direction == "LONG"]
     months = len({t.exit_timestamp_utc.strftime("%Y-%m") for t in trades})
-    return _round_metrics({
+    metrics = {
         "starting_balance": starting_balance, "ending_balance": ending,
         "total_return_percent": (ending / starting_balance - 1) * 100,
         "total_trades": len(trades), "winning_trades": len(wins), "losing_trades": len(losses),
@@ -68,4 +72,34 @@ def calculate_metrics(trades: list[Trade], starting_balance: float) -> dict:
         "weekend_force_close_exit_count": sum(t.exit_reason == "weekend_force_close" for t in trades),
         "weekend_losing_trade_close_exit_count": sum(t.exit_reason == "weekend_losing_trade_close" for t in trades),
         "weekend_profit_threshold_close_exit_count": sum(t.exit_reason == "weekend_profit_threshold_close" for t in trades),
-    })
+    }
+    if trades and trades[0].position_sizing_mode == "fixed_spread_bet_stake":
+        pips = [t.pnl_pips for t in trades]
+        pip_wins, pip_losses = [x for x in pips if x > 0], [x for x in pips if x <= 0]
+        stake = float(trades[0].stake_per_pip_gbp or 0)
+        metrics.update({
+            "position_sizing_mode": "fixed_spread_bet_stake",
+            "stake_per_pip_gbp": stake,
+            "net_profit_gbp": sum(pnl),
+            "total_pips": sum(pips),
+            "gross_profit_gbp": sum(wins),
+            "gross_loss_gbp": sum(losses),
+            "max_drawdown_gbp": max_dd,
+            "average_trade_pips": mean(pips) if pips else 0,
+            "average_win_pips": mean(pip_wins) if pip_wins else 0,
+            "average_loss_pips": mean(pip_losses) if pip_losses else 0,
+            "best_trade_pips": max(pips, default=0),
+            "worst_trade_pips": min(pips, default=0),
+            "average_trade_gbp": mean(pnl) if pnl else 0,
+            "average_win_gbp": mean(wins) if wins else 0,
+            "average_loss_gbp": mean(losses) if losses else 0,
+            "best_trade_gbp": max(pnl, default=0),
+            "worst_trade_gbp": min(pnl, default=0),
+            "estimated_loss_at_3pip_stop_gbp": 3 * stake,
+            "estimated_loss_at_5pip_stop_gbp": 5 * stake,
+            "estimated_loss_at_10pip_stop_gbp": 10 * stake,
+            "estimated_loss_at_20pip_stop_gbp": 20 * stake,
+        })
+    else:
+        metrics["position_sizing_mode"] = "risk_percent"
+    return _round_metrics(metrics)

@@ -10,6 +10,7 @@ from src.indicators.indicator_engine import add_indicators
 from src.reporting.csv_report import write_csv_reports, write_funding_reports, write_weekend_policy_reports
 from src.reporting.html_report import write_html_report
 from src.reporting.metrics import calculate_metrics
+from src.reporting.fixed_stake_comparison import write_fixed_stake_comparison
 from src.risk.risk_manager import RiskManager
 from src.strategies.fx_swing_trend_reclaim import generate_signals
 from src.utils.logging import get_logger, timed_stage
@@ -105,5 +106,11 @@ def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, di
         write_weekend_policy_reports(output, trades, rejections, config.weekend_policy)
         write_funding_reports(output, trades, metrics, config.broker_execution_guardrails)
         write_html_report(output, metrics)
+        comparison = config.reporting.get("comparison_baseline_run_path")
+        comparison_output = config.reporting.get("comparison_output_stem")
+        if metrics.get("position_sizing_mode") == "fixed_spread_bet_stake" and comparison and comparison_output:
+            write_fixed_stake_comparison(
+                resolve(config, comparison), output, resolve(config, comparison_output)
+            )
     logger.info("Backtest complete | trades=%s, ending_balance=%.2f, reports=%s", len(trades), metrics["ending_balance"], output)
     return trades, metrics, output

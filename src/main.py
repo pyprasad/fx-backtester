@@ -141,6 +141,12 @@ def main():
             command.add_argument("--weekend-variants-config", default="config/weekend_policy_variants.usdjpy.yaml")
         if name == "normalise":
             command.add_argument("--overwrite", action="store_true")
+    fixed_parser = sub.add_parser("fixed-stake-backtest")
+    fixed_parser.add_argument("--config", required=True)
+    fixed_parser.add_argument("--stake-per-pip-gbp", type=float, required=True)
+    add_strategy_overrides(fixed_parser)
+    fixed_parser.add_argument("--weekend-policy-name", default="force_close_friday_20_30")
+    fixed_parser.add_argument("--weekend-variants-config", default="config/weekend_policy_variants.usdjpy.yaml")
     all_parser = sub.add_parser("all")
     all_parser.add_argument("--data-quality-config", required=True)
     all_parser.add_argument("--strategy-config", required=True)
@@ -309,8 +315,16 @@ def main():
     elif args.command == "build-candles":
         frames = build_candles_for_config(strategy_config(args, args.config))
         print({name: frame.height for name, frame in frames.items()})
-    elif args.command == "backtest":
-        _, metrics, output = run_backtest(strategy_config(args, args.config))
+    elif args.command in {"backtest", "fixed-stake-backtest"}:
+        config = strategy_config(args, args.config)
+        if args.command == "fixed-stake-backtest":
+            config.position_sizing = {
+                **config.position_sizing,
+                "mode": "fixed_spread_bet_stake",
+                "stake_per_pip_gbp": args.stake_per_pip_gbp,
+                "account_currency": "GBP",
+            }
+        _, metrics, output = run_backtest(config)
         print(json.dumps(metrics, default=str, indent=2))
         print(f"Reports: {output}")
     else:

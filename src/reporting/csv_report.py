@@ -1,4 +1,5 @@
 import csv
+import json
 from dataclasses import asdict
 from pathlib import Path
 from collections import defaultdict
@@ -10,6 +11,7 @@ from src.broker_guardrails.guardrail_metrics import funding_summary
 def write_csv_reports(output: Path, trades: list, metrics: dict, rejections: list[dict]) -> None:
     output.mkdir(parents=True, exist_ok=True)
     _write(output / "strategy_summary.csv", [metrics])
+    (output / "strategy_summary.json").write_text(json.dumps(metrics, indent=2, default=str))
     _write(output / "trade_log.csv", [asdict(t) for t in trades])
     _write(output / "signal_rejection_log.csv", rejections)
     balance = metrics["starting_balance"]
@@ -28,6 +30,20 @@ def write_csv_reports(output: Path, trades: list, metrics: dict, rejections: lis
     _write(output / "drawdown_report.csv", drawdowns)
     _write(output / "long_short_breakdown.csv", _group_rows(trades, lambda t: t.direction, "direction"))
     _write(output / "session_breakdown.csv", _group_rows(trades, lambda t: t.session or "unknown", "session"))
+    if metrics.get("position_sizing_mode") == "fixed_spread_bet_stake":
+        fixed_keys = [
+            "starting_balance", "ending_balance", "total_return_percent", "net_profit_gbp",
+            "total_pips", "gross_profit_gbp", "gross_loss_gbp", "profit_factor", "total_trades",
+            "max_drawdown_gbp", "max_drawdown_percent", "stake_per_pip_gbp",
+            "estimated_loss_at_3pip_stop_gbp", "estimated_loss_at_5pip_stop_gbp",
+            "estimated_loss_at_10pip_stop_gbp", "estimated_loss_at_20pip_stop_gbp",
+        ]
+        _write(output / "fixed_stake_summary.csv", [{key: metrics[key] for key in fixed_keys}])
+        pips_keys = [
+            "total_pips", "average_trade_pips", "average_win_pips", "average_loss_pips",
+            "best_trade_pips", "worst_trade_pips",
+        ]
+        _write(output / "pips_summary.csv", [{key: metrics[key] for key in pips_keys}])
 
 
 def write_weekend_policy_reports(output: Path, trades: list, rejections: list[dict], policy: dict) -> dict:

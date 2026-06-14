@@ -16,6 +16,13 @@ def write_html_report(output: Path, metrics: dict) -> None:
         "<h2>Research warning</h2><p>This is a historical research backtest, not live trading advice.</p>"
         "</body></html>"
     )
+    if metrics.get("position_sizing_mode") == "fixed_spread_bet_stake":
+        (output / "fixed_stake_backtest_report.html").write_text(
+            f"<html><body><h1>USDJPY Fixed £{metrics['stake_per_pip_gbp']:.2f} Per Pip Backtest</h1>"
+            f"<table>{cards}</table><h2>Purpose</h2><p>This backtest changes monetary sizing only. "
+            "Signals, bid/ask execution, stops, targets, trailing logic, and guardrails are unchanged."
+            "</p><h2>Research warning</h2><p>No IG DEMO or live order was placed.</p></body></html>"
+        )
 
 
 def add_forensic_link(output: Path, summary: dict) -> None:

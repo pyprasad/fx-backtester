@@ -19,6 +19,8 @@
 - FX-2G: broker-realistic execution guardrails and overnight funding awareness.
 - FX-2H: final guardrail candidate bake-off.
 - FX-2I: IG DEMO read-only integration and dry-run order validation foundation.
+- Fixed £0.04 stake backtesting is DEMO-preparation research only. It must preserve the final
+  strategy signals, exits, and guardrails and must not enable order submission.
 
 FX-2E is not optimisation. Do not select or replace the baseline merely because a variant has
 higher historical return. Keep the full Cartesian parameter grid disabled by default, reuse

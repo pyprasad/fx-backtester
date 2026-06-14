@@ -6,7 +6,7 @@ import polars as pl
 
 from src.broker_guardrails.distance_validator import evaluate_proposed_signal
 from src.config.schemas import StrategyConfig
-from src.risk.position_sizer import position_size
+from src.risk.position_sizer import fixed_stake_position_size, position_size
 from src.risk.weekend_policy import WeekendPolicy
 from src.strategies.signal import Signal
 
@@ -43,14 +43,25 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
     initial_risk = abs(entry - stop)
     if initial_risk <= 0:
         return None
-    size, risk_amount = position_size(balance, config.risk["risk_per_trade_percent"], entry, stop)
+    sizing = config.position_sizing or {"mode": "risk_percent"}
+    sizing_mode = sizing.get("mode", "risk_percent")
+    pip_size = float(config.broker_execution_guardrails.get("pip_size", 0.01))
+    stake_per_pip = (
+        float(sizing["stake_per_pip_gbp"]) if sizing_mode == "fixed_spread_bet_stake" else None
+    )
+    if sizing_mode == "fixed_spread_bet_stake":
+        size, risk_amount = fixed_stake_position_size(stake_per_pip, pip_size, entry, stop)
+    elif sizing_mode == "risk_percent":
+        size, risk_amount = position_size(balance, config.risk["risk_per_trade_percent"], entry, stop)
+    else:
+        raise ValueError(f"Unsupported position sizing mode: {sizing_mode}")
     partial_cfg = config.exit["partial_take_profit"]
     be_cfg = config.exit["move_stop_to_breakeven"]
     final_r = config.exit["runner"]["final_target_r"]
     price_tolerance = config.forensics.get("stop_audit", {}).get("tolerance_price", 0.000001)
     weekend = WeekendPolicy(config.weekend_policy)
     target = entry + (initial_risk * final_r * (1 if is_long else -1))
-    remaining, realized, partials = 1.0, 0.0, []
+    remaining, realized_movement, partials = 1.0, 0.0, []
     stop_history = [{"timestamp": first["timestamp_utc"], "price": stop, "reason": "initial"}]
     trailing_history = []
     breakeven_timestamp = None
@@ -104,7 +115,7 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
                 stop_history.append({"timestamp": row["timestamp_utc"], "price": final_stop, "reason": "breakeven"})
         if partial_cfg["enabled"] and remaining == 1.0 and move >= initial_risk * partial_cfg["at_r"]:
             fraction = partial_cfg["close_percent"] / 100
-            realized += move * size * fraction
+            realized_movement += move * fraction
             remaining -= fraction
             partials.append({"timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction})
         if config.exit["runner"]["enabled"] and remaining < 1.0:
@@ -149,14 +160,14 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         reduce, close_percent, reduce_reason = weekend.should_reduce_position(policy_trade, row["timestamp_utc"], open_r)
         if reduce and not weekend_reduced:
             fraction = min(remaining, close_percent / 100)
-            contribution = move * size * fraction
-            realized += contribution
+            contribution_movement = move * fraction
+            realized_movement += contribution_movement
             remaining -= fraction
             weekend_reduced = True
             partials.append({
                 "timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction,
                 "percent_closed": fraction * 100, "reason": reduce_reason,
-                "pnl_r_contribution": contribution / risk_amount,
+                "pnl_r_contribution": contribution_movement / initial_risk,
             })
             weekend_events.append(weekend.event(
                 "TRADE_PARTIALLY_REDUCED_FRIDAY", row["timestamp_utc"], signal_id=signal.signal_id,
@@ -180,7 +191,9 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
                 ))
     if exit_price is None:
         exit_price = exit_row["bid"] if is_long else exit_row["ask"]
-    realized += (exit_price - entry) * (1 if is_long else -1) * size * remaining
+    realized_movement += (exit_price - entry) * (1 if is_long else -1) * remaining
+    trade_pnl_pips = realized_movement / pip_size
+    realized = trade_pnl_pips * stake_per_pip if stake_per_pip is not None else realized_movement * size
     duration = (exit_row["timestamp_utc"] - first["timestamp_utc"]).total_seconds()
     trade = Trade(
         str(uuid4()), signal.signal_id, signal.symbol, signal.direction, first["timestamp_utc"],
@@ -201,6 +214,15 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         breakeven_timestamp_utc=breakeven_timestamp,
         weekend_policy_events=weekend_events,
         notes=f"weekend_policy={weekend.policy_name}" if weekend.enabled else "",
+        position_sizing_mode=sizing_mode,
+        stake_per_pip_gbp=stake_per_pip,
+        pnl_pips=trade_pnl_pips,
+        pnl_gbp=realized,
+        net_pnl_currency=str(sizing.get("account_currency", config.risk["account_currency"])),
+        planned_loss_gbp=risk_amount,
+        stop_loss_distance_pips=initial_risk / pip_size,
+        take_profit_distance_pips=abs(entry - target) / pip_size,
+        spread_to_risk_ratio=first["spread_pips"] / (initial_risk / pip_size),
     )
     for event in trade.weekend_policy_events:
         event["trade_id"] = trade.trade_id
