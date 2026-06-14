@@ -6,6 +6,7 @@ import polars as pl
 
 from src.backtest.backtest_engine import build_candles_for_config, run_backtest
 from src.backtest.weekend_policy_runner import WeekendPolicyVariantRunner
+from src.bakeoff.candidate_runner import FinalGuardrailBakeOffRunner
 from src.broker_guardrails.guardrail_runner import BrokerGuardrailRunner
 from src.config.config_loader import (
     apply_data_quality_overrides,
@@ -27,6 +28,17 @@ from src.utils.logging import configure_logging, get_logger, timed_stage
 from src.walk_forward.walk_forward_runner import WalkForwardValidationRunner
 
 logger = get_logger(__name__)
+
+
+def boolean(value):
+    if isinstance(value, bool):
+        return value
+    lowered = value.lower()
+    if lowered in {"true", "1", "yes"}:
+        return True
+    if lowered in {"false", "0", "no"}:
+        return False
+    raise argparse.ArgumentTypeError("Expected true or false")
 
 
 def quality(config, ticks=None):
@@ -180,6 +192,21 @@ def main():
     guardrail_parser.add_argument("--skip-funding", action=argparse.BooleanOptionalAction, default=False)
     guardrail_parser.add_argument("--variant")
     guardrail_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
+    bakeoff_parser = sub.add_parser("final-guardrail-bakeoff")
+    bakeoff_parser.add_argument("--strategy-config", required=True)
+    bakeoff_parser.add_argument("--bakeoff-config", required=True)
+    bakeoff_parser.add_argument("--guardrail-variants-config", required=True)
+    bakeoff_parser.add_argument("--normalised-tick-path", required=True)
+    bakeoff_parser.add_argument("--candle-path", required=True)
+    bakeoff_parser.add_argument("--report-output-path", required=True)
+    bakeoff_parser.add_argument("--reuse-existing", type=boolean, default=True)
+    bakeoff_parser.add_argument("--run-missing-validations", type=boolean, default=True)
+    bakeoff_parser.add_argument("--skip-monte-carlo", type=boolean, default=False)
+    bakeoff_parser.add_argument("--monte-carlo-iterations", type=int, default=5000)
+    bakeoff_parser.add_argument("--quick", type=boolean, default=False)
+    bakeoff_parser.add_argument("--continue-on-error", type=boolean, default=True)
+    bakeoff_parser.add_argument("--existing-guardrail-run-path")
+    bakeoff_parser.add_argument("--existing-bakeoff-run-path")
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -221,6 +248,16 @@ def main():
             args.skip_funding, args.variant, args.continue_on_error,
         ).run()
         print(f"Broker guardrail report: {output / 'broker_guardrail_report.html'}")
+    elif args.command == "final-guardrail-bakeoff":
+        output = FinalGuardrailBakeOffRunner(
+            args.strategy_config, args.bakeoff_config, args.guardrail_variants_config,
+            args.normalised_tick_path, args.candle_path, args.report_output_path,
+            args.reuse_existing, args.run_missing_validations, args.skip_monte_carlo,
+            args.monte_carlo_iterations, args.quick, args.continue_on_error,
+            args.existing_guardrail_run_path,
+            args.existing_bakeoff_run_path,
+        ).run()
+        print(f"Final guardrail bake-off report: {output / 'final_guardrail_bakeoff_report.html'}")
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

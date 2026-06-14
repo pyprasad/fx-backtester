@@ -321,7 +321,53 @@ include `broker_guardrail_comparison.csv/json`, `broker_guardrail_report.html`, 
 backtest reports and rejection logs, plus `funding_adjusted_trade_log.csv`, `funding_events.csv`,
 and `funding_summary.csv`.
 
-Signal checks use the signal-close spread and proposed mid-price stop/target because the future
-entry tick is unavailable at acceptance time. The default funding cost is zero; supply
-`--daily-funding-pips` for a meaningful cost scenario. FX-2G remains historical research and a
-passing result does not establish demo or production readiness.
+Signal-time checks reject known-invalid proposals and funding-cutoff entries. A second check uses
+the next executable bid/ask tick, actual entry spread, configured slippage, and actual entry-to-stop
+distance before execution. The default funding cost is zero; supply `--daily-funding-pips` for a
+meaningful cost scenario. FX-2G remains historical research and a passing result does not establish
+demo or production readiness.
+
+## FX-2H: Final Guardrail Candidate Bake-Off
+
+FX-2H compares the three surviving FX-2G candidates side by side without changing strategy
+parameters or automatically changing the research baseline:
+
+- `ig_min_stop_only`
+- `min_risk_3pips`
+- `recommended_research_guardrail`
+
+The bake-off combines base and funding-adjusted metrics, broker guardrail statistics, stability,
+walk-forward, Monte Carlo, and execution-stress results. It applies configured hard failures before
+a weighted score. When scores are within five points, tie-breakers prefer better worst-trade R,
+lower drawdown, higher profit factor, and then the simpler guardrail. Human confirmation is always
+required.
+
+Run the full bake-off while reusing the completed FX-2G backtests:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main --log-level INFO final-guardrail-bakeoff \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --bakeoff-config config/final_guardrail_bakeoff.usdjpy.yaml \
+  --guardrail-variants-config config/broker_guardrail_variants.usdjpy.yaml \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/final_guardrail_bakeoff \
+  --existing-guardrail-run-path reports/broker_guardrails/<completed_fx_2g_run> \
+  --reuse-existing true \
+  --run-missing-validations true \
+  --monte-carlo-iterations 5000
+```
+
+Use `--quick true` for 500-iteration Monte Carlo validation. Use
+`--run-missing-validations false` for a fast reuse-only report; missing stability, walk-forward, or
+stress layers will force `HUMAN_REVIEW`. A later run can reuse candidate-specific validation
+outputs with `--existing-bakeoff-run-path`.
+
+Outputs include `candidate_metric_matrix.csv`, `candidate_score_breakdown.csv`,
+`candidate_ranking.csv`, `final_candidate_recommendation.json`,
+`final_guardrail_bakeoff_summary.csv/json`, chart files, and
+`final_guardrail_bakeoff_report.html`. Hard failures include unacceptable worst trade, drawdown,
+profit factor, return, Monte Carlo loss/drawdown probability, or execution-stress tail loss.
+
+FX-2H selects only a proposed next research baseline. It remains historical research and does not
+make the strategy demo-ready or production-ready.

@@ -1,0 +1,60 @@
+final_guardrail_bakeoff:
+  enabled: true
+  strategy_name: fx_swing_trend_reclaim_v1
+  market: USDJPY
+  direction_mode: short_only
+  weekend_policy_name: force_close_friday_20_30
+
+candidates:
+  - name: ig_min_stop_only
+    description: Reject only trades below IG-style 2 pip minimum stop distance.
+    guardrail_variant_name: ig_min_stop_only
+  - name: min_risk_3pips
+    description: Reject trades below 3 pips initial risk.
+    guardrail_variant_name: min_risk_3pips
+  - name: recommended_research_guardrail
+    description: Reject trades below 5 pips risk and max spread/risk above 20%.
+    guardrail_variant_name: recommended_research_guardrail
+
+required_validation_layers:
+  base_backtest: true
+  funding_adjusted_metrics: true
+  yearly_monthly_stability: true
+  walk_forward: true
+  monte_carlo_stress: true
+  execution_stress: true
+  broker_guardrail_metrics: true
+
+ranking_weights:
+  return_after_funding: 0.15
+  profit_factor_after_funding: 0.15
+  average_r_after_funding: 0.10
+  max_drawdown: 0.15
+  worst_trade_r: 0.15
+  monte_carlo_p5_return: 0.10
+  monte_carlo_p95_drawdown: 0.10
+  execution_stress_pass: 0.10
+  trade_count_retention: 0.05
+  simplicity: 0.05
+
+hard_fail_rules:
+  max_worst_trade_r: -2.5
+  max_drawdown_percent: 10
+  min_profit_factor_after_funding: 1.3
+  min_return_after_funding: 0
+  max_monte_carlo_probability_of_loss_percent: 10
+  max_monte_carlo_probability_drawdown_above_10_percent: 10
+  max_execution_stress_tail_trade_r: -5.0
+
+candidate_selection_rules:
+  do_not_select_highest_return_only: true
+  prefer_safety_if_scores_close: true
+  score_close_threshold_points: 5
+  prefer_simpler_guardrail_if_scores_close: true
+  require_human_confirmation_before_final_baseline_change: true
+
+output:
+  generate_csv: true
+  generate_json: true
+  generate_html: true
+  include_charts: true

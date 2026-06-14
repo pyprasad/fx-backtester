@@ -1,0 +1,17 @@
+{
+  "recommended_candidate": "recommended_research_guardrail",
+  "recommendation_confidence": "MEDIUM",
+  "reason_summary": "recommended_research_guardrail ranks first after hard-fail, weighted-score, and safety tie-break checks.",
+  "key_strengths": [
+    "profit factor after funding 2.1375",
+    "maximum drawdown 1.3789%",
+    "worst trade -2.0171R"
+  ],
+  "key_weaknesses": [
+    "missing validation layers: none",
+    "return retention versus FX-2G baseline: 86.6241%"
+  ],
+  "required_human_confirmation": true,
+  "do_not_auto_modify_baseline": true,
+  "next_phase_recommendation": "FX-2I Demo-Readiness Gate"
+}

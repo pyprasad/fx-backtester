@@ -1,0 +1,1 @@
+/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips

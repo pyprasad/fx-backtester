@@ -17,6 +17,7 @@
 - FX-2E: nearby parameter robustness testing.
 - FX-2F: Monte Carlo and execution stress testing.
 - FX-2G: broker-realistic execution guardrails and overnight funding awareness.
+- FX-2H: final guardrail candidate bake-off.
 
 FX-2E is not optimisation. Do not select or replace the baseline merely because a variant has
 higher historical return. Keep the full Cartesian parameter grid disabled by default, reuse
@@ -33,6 +34,12 @@ for every variant. Funding is a configurable pip-cost research model, not live I
 P&L unchanged and report funding-adjusted results separately. Run the recommended variant before
 the full comparison, and do not replace the baseline automatically.
 
+FX-2H compares exactly `ig_min_stop_only`, `min_risk_3pips`, and
+`recommended_research_guardrail`. Reuse prior backtests and validations where possible, run only
+missing layers, apply hard failures before weighted ranking, and use safety-first tie-breakers.
+Always require human confirmation and never modify the main strategy config or research baseline
+automatically.
+
 ## Commands
 
 Run tests from the repository root with:
@@ -42,6 +49,6 @@ PYTHONPATH=. .venv/bin/python -m pytest -q
 PYTHONPATH=. .venv/bin/python -m ruff check .
 ```
 
-Run FX-2E, FX-2F, and FX-2G with the commands documented in `README.md`. Generated reports belong under
-their phase-specific report folders and are historical research artifacts, not evidence of
+Run FX-2E through FX-2H with the commands documented in `README.md`. Generated reports belong
+under their phase-specific report folders and are historical research artifacts, not evidence of
 production readiness.

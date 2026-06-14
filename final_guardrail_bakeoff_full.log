@@ -1,0 +1,261 @@
+2026-06-14 14:06:08 | INFO | __main__ | Pipeline command started | command=final-guardrail-bakeoff
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | Start stability validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/ig_min_stop_only, policy=force_close_friday_20_30
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | Load trades | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/ig_min_stop_only/trade_log.csv
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | Load equity curve | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/ig_min_stop_only/equity_curve.csv
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | Load daily candles | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2022_2025/USDJPY_1D.parquet
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | START period analysis
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | DONE period analysis | elapsed=0.0s
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | Period analysis complete
+2026-06-14 14:06:08 | INFO | src.stability.stability_runner | START regime classification
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | DONE regime classification | elapsed=0.0s
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | Regime classification complete
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | START concentration analysis
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | DONE concentration analysis | elapsed=0.0s
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | Concentration analysis complete
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | START rolling analysis
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | DONE rolling analysis | elapsed=0.2s
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | Rolling analysis complete
+2026-06-14 14:06:09 | INFO | src.stability.stability_runner | Stability report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/ig_min_stop_only/stability/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stability_report.html
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | Start walk-forward validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/ig_min_stop_only
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | Equity curve available | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/ig_min_stop_only/equity_curve.csv; strict entry-window drawdown uses selected trades
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | START anchored walk-forward analysis
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | DONE anchored walk-forward analysis | elapsed=0.0s
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | START rolling walk-forward analysis
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | DONE rolling walk-forward analysis | elapsed=0.2s
+2026-06-14 14:06:09 | INFO | src.walk_forward.walk_forward_runner | Walk-forward report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/ig_min_stop_only/walk_forward/20260614_130609_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/walk_forward_report.html
+2026-06-14 14:06:09 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=trade_shuffle | iterations=5000
+2026-06-14 14:06:12 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=1000/5000
+2026-06-14 14:06:15 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=2000/5000
+2026-06-14 14:06:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=3000/5000
+2026-06-14 14:06:21 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=4000/5000
+2026-06-14 14:06:25 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=bootstrap_resample | iterations=5000
+2026-06-14 14:06:28 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=1000/5000
+2026-06-14 14:06:31 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=2000/5000
+2026-06-14 14:06:34 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=3000/5000
+2026-06-14 14:06:37 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=4000/5000
+2026-06-14 14:06:41 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_5 | iterations=5000
+2026-06-14 14:06:44 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=1000/5000
+2026-06-14 14:06:47 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=2000/5000
+2026-06-14 14:06:51 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=3000/5000
+2026-06-14 14:06:54 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=4000/5000
+2026-06-14 14:06:58 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_10 | iterations=5000
+2026-06-14 14:07:01 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=1000/5000
+2026-06-14 14:07:04 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=2000/5000
+2026-06-14 14:07:08 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=3000/5000
+2026-06-14 14:07:11 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=4000/5000
+2026-06-14 14:07:14 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_20 | iterations=5000
+2026-06-14 14:07:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=1000/5000
+2026-06-14 14:07:21 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=2000/5000
+2026-06-14 14:07:24 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=3000/5000
+2026-06-14 14:07:27 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=4000/5000
+2026-06-14 14:07:33 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=1000/5000
+2026-06-14 14:07:37 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=2000/5000
+2026-06-14 14:07:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=3000/5000
+2026-06-14 14:07:43 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=4000/5000
+2026-06-14 14:07:51 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=1000/5000
+2026-06-14 14:07:55 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=2000/5000
+2026-06-14 14:08:00 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=3000/5000
+2026-06-14 14:08:04 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=4000/5000
+2026-06-14 14:08:13 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=1000/5000
+2026-06-14 14:08:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=2000/5000
+2026-06-14 14:08:22 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=3000/5000
+2026-06-14 14:08:27 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=4000/5000
+2026-06-14 14:08:34 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=1000/5000
+2026-06-14 14:08:37 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=2000/5000
+2026-06-14 14:08:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=3000/5000
+2026-06-14 14:08:43 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=4000/5000
+2026-06-14 14:08:51 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=1000/5000
+2026-06-14 14:08:56 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=2000/5000
+2026-06-14 14:09:00 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=3000/5000
+2026-06-14 14:09:04 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=4000/5000
+2026-06-14 14:09:14 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=1000/5000
+2026-06-14 14:09:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=2000/5000
+2026-06-14 14:09:23 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=3000/5000
+2026-06-14 14:09:27 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=4000/5000
+2026-06-14 14:09:35 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=1000/5000
+2026-06-14 14:09:38 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=2000/5000
+2026-06-14 14:09:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=3000/5000
+2026-06-14 14:09:43 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=4000/5000
+2026-06-14 14:09:50 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=1000/5000
+2026-06-14 14:09:55 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=2000/5000
+2026-06-14 14:09:59 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=3000/5000
+2026-06-14 14:10:03 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=4000/5000
+2026-06-14 14:10:12 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=1000/5000
+2026-06-14 14:10:17 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=2000/5000
+2026-06-14 14:10:21 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=3000/5000
+2026-06-14 14:10:25 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=4000/5000
+2026-06-14 14:11:36 | INFO | src.stress.monte_carlo_runner | Monte Carlo stress report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/ig_min_stop_only/stress/20260614_130609_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stress_report.html
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Start stability validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips, policy=force_close_friday_20_30
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Load trades | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips/trade_log.csv
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Load equity curve | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips/equity_curve.csv
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Load daily candles | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2022_2025/USDJPY_1D.parquet
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | START period analysis
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | DONE period analysis | elapsed=0.0s
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Period analysis complete
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | START regime classification
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | DONE regime classification | elapsed=0.0s
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Regime classification complete
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | START concentration analysis
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | DONE concentration analysis | elapsed=0.0s
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | Concentration analysis complete
+2026-06-14 14:11:36 | INFO | src.stability.stability_runner | START rolling analysis
+2026-06-14 14:11:37 | INFO | src.stability.stability_runner | DONE rolling analysis | elapsed=0.2s
+2026-06-14 14:11:37 | INFO | src.stability.stability_runner | Rolling analysis complete
+2026-06-14 14:11:37 | INFO | src.stability.stability_runner | Stability report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/min_risk_3pips/stability/20260614_131136_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stability_report.html
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | Start walk-forward validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | Equity curve available | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_3pips/equity_curve.csv; strict entry-window drawdown uses selected trades
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | START anchored walk-forward analysis
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | DONE anchored walk-forward analysis | elapsed=0.0s
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | START rolling walk-forward analysis
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | DONE rolling walk-forward analysis | elapsed=0.1s
+2026-06-14 14:11:37 | INFO | src.walk_forward.walk_forward_runner | Walk-forward report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/min_risk_3pips/walk_forward/20260614_131137_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/walk_forward_report.html
+2026-06-14 14:11:37 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=trade_shuffle | iterations=5000
+2026-06-14 14:11:42 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=1000/5000
+2026-06-14 14:11:45 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=2000/5000
+2026-06-14 14:11:49 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=3000/5000
+2026-06-14 14:11:52 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=4000/5000
+2026-06-14 14:11:55 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=bootstrap_resample | iterations=5000
+2026-06-14 14:11:58 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=1000/5000
+2026-06-14 14:12:01 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=2000/5000
+2026-06-14 14:12:04 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=3000/5000
+2026-06-14 14:12:07 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=4000/5000
+2026-06-14 14:12:11 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_5 | iterations=5000
+2026-06-14 14:12:14 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=1000/5000
+2026-06-14 14:12:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=2000/5000
+2026-06-14 14:12:21 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=3000/5000
+2026-06-14 14:12:25 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=4000/5000
+2026-06-14 14:12:29 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_10 | iterations=5000
+2026-06-14 14:12:32 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=1000/5000
+2026-06-14 14:12:36 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=2000/5000
+2026-06-14 14:12:39 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=3000/5000
+2026-06-14 14:12:43 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=4000/5000
+2026-06-14 14:12:46 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_20 | iterations=5000
+2026-06-14 14:12:50 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=1000/5000
+2026-06-14 14:12:53 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=2000/5000
+2026-06-14 14:12:56 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=3000/5000
+2026-06-14 14:12:59 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=4000/5000
+2026-06-14 14:13:08 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=1000/5000
+2026-06-14 14:13:11 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=2000/5000
+2026-06-14 14:13:14 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=3000/5000
+2026-06-14 14:13:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=4000/5000
+2026-06-14 14:13:27 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=1000/5000
+2026-06-14 14:13:31 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=2000/5000
+2026-06-14 14:13:36 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=3000/5000
+2026-06-14 14:13:41 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=4000/5000
+2026-06-14 14:13:52 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=1000/5000
+2026-06-14 14:13:58 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=2000/5000
+2026-06-14 14:14:03 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=3000/5000
+2026-06-14 14:14:08 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=4000/5000
+2026-06-14 14:14:17 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=1000/5000
+2026-06-14 14:14:20 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=2000/5000
+2026-06-14 14:14:23 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=3000/5000
+2026-06-14 14:14:27 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=4000/5000
+2026-06-14 14:14:35 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=1000/5000
+2026-06-14 14:14:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=2000/5000
+2026-06-14 14:14:45 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=3000/5000
+2026-06-14 14:14:50 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=4000/5000
+2026-06-14 14:15:00 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=1000/5000
+2026-06-14 14:15:06 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=2000/5000
+2026-06-14 14:15:10 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=3000/5000
+2026-06-14 14:15:15 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=4000/5000
+2026-06-14 14:15:23 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=1000/5000
+2026-06-14 14:15:26 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=2000/5000
+2026-06-14 14:15:29 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=3000/5000
+2026-06-14 14:15:32 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=4000/5000
+2026-06-14 14:15:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=1000/5000
+2026-06-14 14:15:44 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=2000/5000
+2026-06-14 14:15:49 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=3000/5000
+2026-06-14 14:15:54 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=4000/5000
+2026-06-14 14:16:04 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=1000/5000
+2026-06-14 14:16:08 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=2000/5000
+2026-06-14 14:16:13 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=3000/5000
+2026-06-14 14:16:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=4000/5000
+2026-06-14 14:17:36 | INFO | src.stress.monte_carlo_runner | Monte Carlo stress report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/min_risk_3pips/stress/20260614_131137_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stress_report.html
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Start stability validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/recommended_research_guardrail, policy=force_close_friday_20_30
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Load trades | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/recommended_research_guardrail/trade_log.csv
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Load equity curve | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/recommended_research_guardrail/equity_curve.csv
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Load daily candles | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/data/candles/USDJPY_2022_2025/USDJPY_1D.parquet
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | START period analysis
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | DONE period analysis | elapsed=0.0s
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Period analysis complete
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | START regime classification
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | DONE regime classification | elapsed=0.0s
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Regime classification complete
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | START concentration analysis
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | DONE concentration analysis | elapsed=0.0s
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Concentration analysis complete
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | START rolling analysis
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | DONE rolling analysis | elapsed=0.2s
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Rolling analysis complete
+2026-06-14 14:17:36 | INFO | src.stability.stability_runner | Stability report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/recommended_research_guardrail/stability/20260614_131736_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stability_report.html
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | Start walk-forward validation | run=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/recommended_research_guardrail
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | Equity curve available | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121538_usdjpy_fx_swing_trend_reclaim_v1/variants/recommended_research_guardrail/equity_curve.csv; strict entry-window drawdown uses selected trades
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | START anchored walk-forward analysis
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | DONE anchored walk-forward analysis | elapsed=0.0s
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | START rolling walk-forward analysis
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | DONE rolling walk-forward analysis | elapsed=0.1s
+2026-06-14 14:17:36 | INFO | src.walk_forward.walk_forward_runner | Walk-forward report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/recommended_research_guardrail/walk_forward/20260614_131736_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/walk_forward_report.html
+2026-06-14 14:17:36 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=trade_shuffle | iterations=5000
+2026-06-14 14:17:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=1000/5000
+2026-06-14 14:17:43 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=2000/5000
+2026-06-14 14:17:47 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=3000/5000
+2026-06-14 14:17:50 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=trade_shuffle | iteration=4000/5000
+2026-06-14 14:17:54 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=bootstrap_resample | iterations=5000
+2026-06-14 14:17:58 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=1000/5000
+2026-06-14 14:18:01 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=2000/5000
+2026-06-14 14:18:04 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=3000/5000
+2026-06-14 14:18:07 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=bootstrap_resample | iteration=4000/5000
+2026-06-14 14:18:10 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_5 | iterations=5000
+2026-06-14 14:18:13 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=1000/5000
+2026-06-14 14:18:17 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=2000/5000
+2026-06-14 14:18:20 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=3000/5000
+2026-06-14 14:18:23 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_5 | iteration=4000/5000
+2026-06-14 14:18:27 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_10 | iterations=5000
+2026-06-14 14:18:30 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=1000/5000
+2026-06-14 14:18:34 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=2000/5000
+2026-06-14 14:18:37 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=3000/5000
+2026-06-14 14:18:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_10 | iteration=4000/5000
+2026-06-14 14:18:44 | INFO | src.stress.monte_carlo_runner | Start stress scenario | name=block_bootstrap_20 | iterations=5000
+2026-06-14 14:18:47 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=1000/5000
+2026-06-14 14:18:50 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=2000/5000
+2026-06-14 14:18:53 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=3000/5000
+2026-06-14 14:18:56 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=block_bootstrap_20 | iteration=4000/5000
+2026-06-14 14:19:02 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=1000/5000
+2026-06-14 14:19:05 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=2000/5000
+2026-06-14 14:19:09 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=3000/5000
+2026-06-14 14:19:12 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_5pct | iteration=4000/5000
+2026-06-14 14:19:19 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=1000/5000
+2026-06-14 14:19:24 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=2000/5000
+2026-06-14 14:19:28 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=3000/5000
+2026-06-14 14:19:33 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_5pct | iteration=4000/5000
+2026-06-14 14:19:42 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=1000/5000
+2026-06-14 14:19:46 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=2000/5000
+2026-06-14 14:19:51 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=3000/5000
+2026-06-14 14:19:55 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_5pct | iteration=4000/5000
+2026-06-14 14:20:03 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=1000/5000
+2026-06-14 14:20:06 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=2000/5000
+2026-06-14 14:20:09 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=3000/5000
+2026-06-14 14:20:12 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_10pct | iteration=4000/5000
+2026-06-14 14:20:20 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=1000/5000
+2026-06-14 14:20:24 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=2000/5000
+2026-06-14 14:20:28 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=3000/5000
+2026-06-14 14:20:33 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_10pct | iteration=4000/5000
+2026-06-14 14:20:42 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=1000/5000
+2026-06-14 14:20:46 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=2000/5000
+2026-06-14 14:20:51 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=3000/5000
+2026-06-14 14:20:55 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_10pct | iteration=4000/5000
+2026-06-14 14:21:03 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=1000/5000
+2026-06-14 14:21:05 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=2000/5000
+2026-06-14 14:21:08 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=3000/5000
+2026-06-14 14:21:11 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_random_20pct | iteration=4000/5000
+2026-06-14 14:21:18 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=1000/5000
+2026-06-14 14:21:22 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=2000/5000
+2026-06-14 14:21:27 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=3000/5000
+2026-06-14 14:21:31 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_best_trades_20pct | iteration=4000/5000
+2026-06-14 14:21:40 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=1000/5000
+2026-06-14 14:21:44 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=2000/5000
+2026-06-14 14:21:48 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=3000/5000
+2026-06-14 14:21:52 | INFO | src.stress.monte_carlo_runner | Stress simulation progress | scenario=miss_worst_trades_20pct | iteration=4000/5000
+2026-06-14 14:23:04 | INFO | src.stress.monte_carlo_runner | Monte Carlo stress report written | path=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/candidates/recommended_research_guardrail/stress/20260614_131736_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stress_report.html
+2026-06-14 14:23:05 | INFO | __main__ | Pipeline command completed | command=final-guardrail-bakeoff
+Final guardrail bake-off report: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/final_guardrail_bakeoff/20260614_130608_usdjpy_fx_swing_trend_reclaim_v1/final_guardrail_bakeoff_report.html
