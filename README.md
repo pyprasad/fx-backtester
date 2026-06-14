@@ -76,7 +76,13 @@ PYTHONPATH=. .venv/bin/python -m src.main ig-demo-stream-prices \
 `marketStatus: EDITS_ONLY` does not permit opening new positions and must remain `NOT_READY`;
 verify that it changes to `TRADEABLE` during market hours. Search results may display scaled prices
 such as `16018`; confirm detailed market metadata and streamed decimal scaling before calculating
-spreads or validating dry-run payloads.
+spreads or validating dry-run payloads. For the observed `16018 / 16025` quote, configure
+`IG_PRICE_SCALE_DIVISOR=100` only after confirming the scale; this normalizes it to
+`160.18 / 160.25`, a wide 7-pip spread that the strategy should reject.
+Start modern `PRICE` streaming with the divisor blank. If it rejects an unconfirmed scaled FX
+price and the raw quote matches the verified integer-like format, set `IG_PRICE_SCALE_DIVISOR=100`
+in `.env.demo` and rerun the stream command. Do not apply the divisor when `PRICE` already returns
+decimal quotes such as `160.18 / 160.25`.
 
 Full setup and command sequencing are documented in
 [`docs/broker/ig_demo_integration.md`](docs/broker/ig_demo_integration.md). The maximum possible

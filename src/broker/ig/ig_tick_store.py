@@ -7,7 +7,7 @@ from .models import InternalTick
 
 FIELDS = [
     "timestamp", "bid", "ask", "mid", "bid_vol", "ask_vol",
-    "spread_pips", "source", "epic", "delayed",
+    "spread_pips", "source", "epic", "delayed", "price_scale_divisor",
 ]
 
 
@@ -20,8 +20,13 @@ class IGDemoTickStore:
         folder = self.root / day
         folder.mkdir(parents=True, exist_ok=True)
         csv_path = folder / f"usdjpy_demo_ticks_{tick.timestamp_utc:%Y%m%d}.csv"
+        if csv_path.exists():
+            with csv_path.open(newline="") as handle:
+                if next(csv.reader(handle), []) != FIELDS:
+                    csv_path = csv_path.with_name(f"{csv_path.stem}_v2.csv")
         row = tick.row()
         row["timestamp"] = row.pop("timestamp_utc")
+        row["price_scale_divisor"] = tick.raw.get("normalization_price_scale_divisor")
         exists = csv_path.exists() and csv_path.stat().st_size > 0
         with csv_path.open("a", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=FIELDS, extrasaction="ignore")
@@ -52,4 +57,7 @@ def latest_tick(root: str | Path) -> InternalTick | None:
         row["delayed"].lower() == "true",
         float(row["bid_vol"]) if row.get("bid_vol") else None,
         float(row["ask_vol"]) if row.get("ask_vol") else None,
+        raw={
+            "normalization_price_scale_divisor": float(row["price_scale_divisor"])
+        } if row.get("price_scale_divisor") else {},
     )

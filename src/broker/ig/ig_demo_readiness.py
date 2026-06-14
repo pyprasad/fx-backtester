@@ -37,6 +37,9 @@ def evaluate_demo_readiness(*, config, session=None, accounts=None, market_rules
             )
         ),
         "first_valid_bid_ask_received": bool(first_tick and first_tick.bid and first_tick.ask),
+        "price_scaling_confirmed": bool(
+            first_tick and first_tick.raw.get("normalization_price_scale_divisor")
+        ),
         "price_tick_fresh": fresh,
         "price_not_delayed": bool(first_tick and not first_tick.delayed),
         "min_risk_3pips_active": bool(

@@ -33,3 +33,5 @@ def test_rejects_live_and_execution_enabled(tmp_path, monkeypatch):
         load_ig_demo_config(_env(tmp_path, IG_ORDER_EXECUTION_ENABLED="true"))
     with pytest.raises(ValueError, match="MARKET subscription is deprecated"):
         load_ig_demo_config(_env(tmp_path, IG_STREAMING_MODE="MARKET"))
+    with pytest.raises(ValueError, match="PRICE_SCALE_DIVISOR"):
+        load_ig_demo_config(_env(tmp_path, IG_PRICE_SCALE_DIVISOR="0"))

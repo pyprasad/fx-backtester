@@ -19,8 +19,13 @@ def _rules(status="TRADEABLE", minimum=2):
     })
 
 
-def _tick(hour=12, delayed=False):
-    return InternalTick(datetime(2026, 6, 15, hour, tzinfo=timezone.utc), 150, 150.01, 150.005, 1, "test", "USDJPY", delayed)
+def _tick(hour=12, delayed=False, spread_pips=1):
+    ask = 150 + spread_pips * 0.01
+    return InternalTick(
+        datetime(2026, 6, 15, hour, tzinfo=timezone.utc),
+        150, ask, (150 + ask) / 2, spread_pips, "test", "USDJPY", delayed,
+        raw={"normalization_price_scale_divisor": 1.0},
+    )
 
 
 def _order(**kwargs):
@@ -45,6 +50,10 @@ def test_rejects_buy_tiny_risk_broker_minimum_delayed_closed_and_open_position()
     assert "STOP_DISTANCE_BELOW_BROKER_MINIMUM" in _order(rules=_rules(minimum=4)).validation_errors
     assert "DELAYED_PRICE" in _order(tick=_tick(delayed=True)).validation_errors
     assert "MARKET_NOT_TRADEABLE" in _order(rules=_rules(status="CLOSED")).validation_errors
+    assert "ENTRY_SPREAD_ABOVE_STRATEGY_MAXIMUM" in _order(tick=_tick(spread_pips=7)).validation_errors
+    unconfirmed_tick = _tick()
+    unconfirmed_tick.raw = {}
+    assert "PRICE_SCALING_UNCONFIRMED" in _order(tick=unconfirmed_tick).validation_errors
     assert "MAX_OPEN_POSITIONS_REACHED" in _order(open_positions=1).validation_errors
 
 

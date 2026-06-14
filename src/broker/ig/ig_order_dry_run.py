@@ -36,8 +36,13 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
         errors.append("ENTRY_AFTER_UK_CUTOFF")
     if latest_tick.delayed:
         errors.append("DELAYED_PRICE")
+    if not latest_tick.raw.get("normalization_price_scale_divisor"):
+        errors.append("PRICE_SCALING_UNCONFIRMED")
     if market_rules.status.upper() != "TRADEABLE":
         errors.append("MARKET_NOT_TRADEABLE")
+    max_entry_spread = strategy["spread_guardrails"].get("signal_spread_reject_above_pips")
+    if max_entry_spread is not None and latest_tick.spread_pips > float(max_entry_spread):
+        errors.append("ENTRY_SPREAD_ABOVE_STRATEGY_MAXIMUM")
     if open_positions >= int(strategy["execution"]["max_open_positions"]):
         errors.append("MAX_OPEN_POSITIONS_REACHED")
     warning_ratio = float(strategy["spread_guardrails"]["warn_spread_to_risk_ratio_above"])

@@ -82,11 +82,16 @@ def stream_ticks(env_file, epic, duration_seconds, chart=False):
 
     streaming = IGStreamingClient(config, session)
     try:
+        rules = extract_market_rules(client.get_market(epic))
         streaming.connect()
         if chart:
-            streaming.subscribe_chart_ticks(epic, ChartTickListener(epic, on_tick))
+            streaming.subscribe_chart_ticks(epic, ChartTickListener(
+                epic, on_tick, rules.pip_size, config.price_scale_divisor
+            ))
         else:
-            streaming.subscribe_price(epic, PriceUpdateListener(epic, on_tick))
+            streaming.subscribe_price(epic, PriceUpdateListener(
+                epic, on_tick, rules.pip_size, config.price_scale_divisor
+            ))
         time.sleep(duration_seconds)
         print(json.dumps({"epic": epic, "tick_count": count, "status": streaming.status}, default=str))
         return count

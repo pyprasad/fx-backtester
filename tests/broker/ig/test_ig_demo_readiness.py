@@ -24,7 +24,10 @@ def _result(credentials=True, delayed=False):
         status="TRADEABLE", min_stop_distance_pips=2, pip_size=.01,
         streaming_prices_available=True,
     )
-    tick = InternalTick(datetime.now(timezone.utc), 150, 150.01, 150.005, 1, "test", "USDJPY", delayed)
+    tick = InternalTick(
+        datetime.now(timezone.utc), 150, 150.01, 150.005, 1, "test", "USDJPY", delayed,
+        raw={"normalization_price_scale_divisor": 1.0},
+    )
     order = SimpleNamespace(validation_status="READY_FOR_DEMO_DRY_RUN", dry_run_only=True)
     return evaluate_demo_readiness(
         config=_config(credentials), session=session, accounts={"accounts": [1]},

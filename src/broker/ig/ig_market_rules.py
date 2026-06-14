@@ -36,6 +36,8 @@ class IGMarketRules:
     controlled_risk_allowed: bool | None
     streaming_prices_available: bool | None
     delayed: bool
+    decimal_places_factor: int | None
+    scaling_factor: float | None
     raw: dict[str, Any]
 
     def validation(self, strategy_min_risk_pips: float = 3.0) -> dict:
@@ -81,5 +83,7 @@ def extract_market_rules(metadata: dict, expected_pip_size: float = 0.01) -> IGM
         controlled_risk_allowed=instrument.get("controlledRiskAllowed"),
         streaming_prices_available=instrument.get("streamingPricesAvailable"),
         delayed=bool(snapshot.get("delayTime", 0)),
+        decimal_places_factor=_value(metadata, "instrument.decimalPlacesFactor", "decimalPlacesFactor"),
+        scaling_factor=_distance(_value(metadata, "instrument.scalingFactor", "scalingFactor")),
         raw=metadata,
     )
