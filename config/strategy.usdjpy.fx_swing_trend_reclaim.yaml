@@ -340,11 +340,11 @@ broker_execution_guardrails:
     reject_if_take_profit_distance_below_broker_minimum: true
   minimum_initial_risk:
     enabled: true
-    default_min_initial_risk_pips: 5.0
+    default_min_initial_risk_pips: 3.0
     test_values: [2.0, 3.0, 5.0, 8.0, 10.0]
     reject_if_below_minimum: true
   spread_to_risk_filter:
-    enabled: true
+    enabled: false
     default_max_spread_to_initial_risk_ratio: 0.20
     test_values: [0.10, 0.15, 0.20, 0.25, 0.30]
     reject_if_above_ratio: true

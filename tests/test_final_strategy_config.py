@@ -4,6 +4,7 @@ import yaml
 
 
 CONFIG = Path("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml")
+RUNTIME_CONFIG = Path("config/strategy.usdjpy.fx_swing_trend_reclaim.yaml")
 
 
 def test_final_strategy_config_contains_selected_baseline():
@@ -26,3 +27,12 @@ def test_final_strategy_config_contains_selected_baseline():
         "fx_2e_parameter_robustness", "fx_2f_stress_testing", "fx_2g_broker_guardrails",
         "fx_2h_candidate_bakeoff",
     }
+
+
+def test_executable_runtime_matches_selected_guardrail():
+    config = yaml.safe_load(RUNTIME_CONFIG.read_text())
+    guardrails = config["broker_execution_guardrails"]
+    assert guardrails["minimum_initial_risk"]["default_min_initial_risk_pips"] == 3.0
+    assert guardrails["spread_to_risk_filter"]["enabled"] is False
+    assert guardrails["abnormal_spread_filter"]["max_entry_spread_pips"] == 2.0
+    assert guardrails["entry_time_guard"]["block_new_entries_after"] == "21:30"
