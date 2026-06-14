@@ -326,3 +326,57 @@ monte_carlo_stress:
     max_worst_simulated_trade_r: -5.0
     allow_tail_warning_not_fail: true
   output: {generate_csv: true, generate_json: true, generate_html: true, generate_charts: true}
+broker_execution_guardrails:
+  enabled: true
+  broker: IG
+  market: USDJPY
+  pip_size: 0.01
+  mode: research
+  broker_distance_rules:
+    enabled: true
+    min_stop_distance_pips: 2.0
+    min_take_profit_distance_pips: 2.0
+    reject_if_stop_distance_below_broker_minimum: true
+    reject_if_take_profit_distance_below_broker_minimum: true
+  minimum_initial_risk:
+    enabled: true
+    default_min_initial_risk_pips: 5.0
+    test_values: [2.0, 3.0, 5.0, 8.0, 10.0]
+    reject_if_below_minimum: true
+  spread_to_risk_filter:
+    enabled: true
+    default_max_spread_to_initial_risk_ratio: 0.20
+    test_values: [0.10, 0.15, 0.20, 0.25, 0.30]
+    reject_if_above_ratio: true
+  abnormal_spread_filter:
+    enabled: true
+    max_entry_spread_pips: 2.0
+    warning_entry_spread_pips: 1.0
+    reject_if_entry_spread_above_max: true
+  execution_cost_model:
+    enabled: true
+    default_spread_pips: 1.0
+    default_slippage_pips: 0.2
+    stress_slippage_pips: [0.2, 0.5]
+    apply_cost_adjusted_metrics: true
+  entry_time_guard:
+    enabled: true
+    timezone: Europe/London
+    block_new_entries_after: "21:30"
+    reason: avoid_opening_shortly_before_overnight_funding
+  overnight_funding:
+    enabled: true
+    timezone: Europe/London
+    cutoff_time: "22:00"
+    model_type: configurable_pip_cost
+    default_daily_funding_pips: 0.0
+    stress_daily_funding_pips: [0.0, 0.1, 0.2, 0.5]
+    apply_wednesday_triple_rollover: true
+    track_funding_events: true
+  intraday_mode:
+    enabled: false
+    force_close_before_funding_cutoff: true
+    force_close_time: "21:55"
+    force_close_reason: INTRADAY_FUNDING_AVOIDANCE_CLOSE
+  swing_mode: {enabled: true, allow_overnight_holding: true, track_overnight_funding: true}
+  friday_weekend_policy: {keep_existing_policy: true, policy_name: force_close_friday_20_30}

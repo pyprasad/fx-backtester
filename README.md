@@ -289,3 +289,39 @@ charts, and `stress_report.html`.
 Scores of `85-100` are `STRONG_STRESS_RESILIENCE`, `70-84` are `PASS`, `50-69` are `WARNING`,
 and lower scores are `FAIL`. A passing result supports proceeding toward demo-readiness gates,
 but does not make the strategy production-ready.
+
+## FX-2G: Broker-Realistic Guardrails + Overnight Funding
+
+FX-2G adds configurable research guardrails without changing the selected EMA/RSI/ATR strategy
+logic or replacing the baseline. It tests IG-like minimum stop/take-profit distances, minimum
+initial risk, spread-to-risk limits, abnormal entry spread, and a `21:30 Europe/London` entry
+cutoff before the `22:00` funding boundary. The selected `force_close_friday_20_30` policy remains
+enforced.
+
+Funding is a configurable pip-cost model, not a live IG rate feed. It records daily UK `22:00`
+crossings and Wednesday triple rollover exposure. Raw backtest P&L remains unchanged; separate
+funding-adjusted reports show the modeled effect. Swing mode allows overnight holding by default;
+the optional intraday mode can close positions at `21:55`.
+
+Run the recommended research candidate first:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main --log-level INFO broker-guardrails \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --guardrail-variants-config config/broker_guardrail_variants.usdjpy.yaml \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/broker_guardrails \
+  --daily-funding-pips 0.1 \
+  --variant recommended_research_guardrail
+```
+
+Remove `--variant recommended_research_guardrail` to run all 12 comparison variants. Outputs
+include `broker_guardrail_comparison.csv/json`, `broker_guardrail_report.html`, per-variant
+backtest reports and rejection logs, plus `funding_adjusted_trade_log.csv`, `funding_events.csv`,
+and `funding_summary.csv`.
+
+Signal checks use the signal-close spread and proposed mid-price stop/target because the future
+entry tick is unavailable at acceptance time. The default funding cost is zero; supply
+`--daily-funding-pips` for a meaningful cost scenario. FX-2G remains historical research and a
+passing result does not establish demo or production readiness.

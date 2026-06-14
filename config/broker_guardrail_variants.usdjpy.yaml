@@ -1,0 +1,72 @@
+variants:
+  - name: baseline_no_extra_guardrails
+    description: Existing force_close_friday_20_30 baseline without extra broker guardrails.
+    broker_execution_guardrails: {enabled: false}
+  - name: ig_min_stop_only
+    description: Reject trades below IG-style 2 pip minimum stop distance.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 2.0}
+      spread_to_risk_filter: {enabled: false}
+  - name: min_risk_3pips
+    description: Reject trades with initial risk below 3 pips.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 3.0}
+      spread_to_risk_filter: {enabled: false}
+  - name: min_risk_5pips
+    description: Reject trades with initial risk below 5 pips.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 5.0}
+      spread_to_risk_filter: {enabled: false}
+  - name: min_risk_8pips
+    description: Reject trades with initial risk below 8 pips.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 8.0}
+      spread_to_risk_filter: {enabled: false}
+  - name: min_risk_10pips
+    description: Reject trades with initial risk below 10 pips.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 10.0}
+      spread_to_risk_filter: {enabled: false}
+  - name: min_risk_5pips_spread_ratio_20pct
+    description: Reject trades below 5 pips risk or spread/risk above 20%.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 5.0}
+      spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.20}
+  - name: min_risk_5pips_spread_ratio_15pct
+    description: Reject trades below 5 pips risk or spread/risk above 15%.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 5.0}
+      spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.15}
+  - name: min_risk_8pips_spread_ratio_15pct
+    description: Reject trades below 8 pips risk or spread/risk above 15%.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 8.0}
+      spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.15}
+  - name: min_risk_10pips_spread_ratio_10pct
+    description: Strict guardrail rejecting below 10 pips risk or spread/risk above 10%.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 10.0}
+      spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.10}
+  - name: funding_guard_only
+    description: Block entries after 21:30 UK, track funding, and do not reject minimum risk.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: false}
+      spread_to_risk_filter: {enabled: false}
+      entry_time_guard: {enabled: true, timezone: Europe/London, block_new_entries_after: "21:30"}
+  - name: recommended_research_guardrail
+    description: Research candidate with 5 pip risk, 20% spread/risk, and 21:30 UK entry cutoff.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 5.0}
+      spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.20}
+      entry_time_guard: {enabled: true, timezone: Europe/London, block_new_entries_after: "21:30"}

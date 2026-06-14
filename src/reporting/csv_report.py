@@ -3,6 +3,9 @@ from dataclasses import asdict
 from pathlib import Path
 from collections import defaultdict
 
+from src.broker_guardrails.funding_model import calculate_trade_funding
+from src.broker_guardrails.guardrail_metrics import funding_summary
+
 
 def write_csv_reports(output: Path, trades: list, metrics: dict, rejections: list[dict]) -> None:
     output.mkdir(parents=True, exist_ok=True)
@@ -62,6 +65,20 @@ def write_weekend_policy_reports(output: Path, trades: list, rejections: list[di
     return summary
 
 
+def write_funding_reports(output: Path, trades: list, metrics: dict, settings: dict) -> dict:
+    daily_pips = float(settings["overnight_funding"]["default_daily_funding_pips"])
+    adjusted, events = [], []
+    for trade in trades:
+        row, trade_events = calculate_trade_funding(trade, settings["overnight_funding"], daily_pips)
+        adjusted.append(row)
+        events.extend(trade_events)
+    summary = funding_summary(adjusted, metrics, float(metrics["starting_balance"]))
+    _write(output / "funding_adjusted_trade_log.csv", adjusted)
+    _write(output / "funding_events.csv", events)
+    _write(output / "funding_summary.csv", [summary])
+    return summary
+
+
 def _period_rows(trades: list, pattern: str) -> list[dict]:
     return _group_rows(trades, lambda t: t.exit_timestamp_utc.strftime(pattern), "period")
 
@@ -81,6 +98,10 @@ def _write(path: Path, rows: list[dict]) -> None:
         if not rows:
             handle.write("")
             return
-        writer = csv.DictWriter(handle, fieldnames=rows[0].keys())
+        # Rejection and event logs can contain several valid row types with
+        # different optional fields. Preserve first-seen column order while
+        # ensuring later row types are represented.
+        fieldnames = list(dict.fromkeys(key for row in rows for key in row))
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)

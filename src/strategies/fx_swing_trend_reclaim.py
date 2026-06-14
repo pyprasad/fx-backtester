@@ -4,6 +4,7 @@ from uuid import uuid4
 import polars as pl
 
 from src.config.schemas import StrategyConfig
+from src.broker_guardrails.distance_validator import evaluate_proposed_signal
 from src.risk.weekend_policy import WeekendPolicy
 
 from .signal import Signal
@@ -39,6 +40,38 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
     joined = entry.sort("timestamp").join_asof(trend_view.sort("timestamp"), on="timestamp", strategy="backward")
     signals, rejected = [], []
     weekend = WeekendPolicy(config.weekend_policy)
+    guardrails = config.broker_execution_guardrails
+
+    def guardrail_rejection(row, stop, target, spread_pips, session):
+        if not guardrails.get("enabled"):
+            return False
+        decision = evaluate_proposed_signal(
+            row["timestamp"], row["mid_close"], stop, target, spread_pips, guardrails
+        )
+        if decision.accepted:
+            return False
+        groups = {
+            "REJECT_BELOW_BROKER_MIN_STOP_DISTANCE": "BROKER_DISTANCE",
+            "REJECT_BELOW_BROKER_MIN_TP_DISTANCE": "BROKER_DISTANCE",
+            "REJECT_BELOW_MIN_INITIAL_RISK_PIPS": "MIN_RISK",
+            "REJECT_ENTRY_SPREAD_ABOVE_MAX": "SPREAD_RISK",
+            "REJECT_SPREAD_TO_RISK_RATIO_TOO_HIGH": "SPREAD_RISK",
+            "REJECT_AFTER_FUNDING_ENTRY_CUTOFF": "FUNDING_TIME_GUARD",
+        }
+        for reason in decision.rejection_reasons:
+            rejected.append({
+                "timestamp": row["timestamp"], "timestamp_utc": row["timestamp"],
+                "rejection_reason": reason, "reason": reason, "rejection_group": groups[reason],
+                "initial_risk_pips": decision.initial_risk_pips,
+                "entry_spread_pips": decision.entry_spread_pips,
+                "spread_to_risk_ratio": decision.spread_to_risk_ratio,
+                "min_required_stop_distance_pips": decision.min_stop_distance_pips,
+                "configured_min_initial_risk_pips": guardrails["minimum_initial_risk"]["default_min_initial_risk_pips"],
+                "timestamp_london": decision.timestamp_local, "hour_london": decision.timestamp_local.hour,
+                "day_of_week_london": decision.timestamp_local.strftime("%A"), "session_label": session,
+                "warnings": "|".join(decision.warnings),
+            })
+        return True
 
     def weekend_rejection(row: dict, session: str | None) -> str | None:
         blocked, reason = weekend.should_block_new_entry(row["timestamp"])
@@ -88,12 +121,15 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
                 continue
             stop = max(row["mid_high"], row["mid_close"] + config.stop_loss["atr_multiplier"] * row["atr"])
             risk = stop - row["mid_close"]
+            target = row["mid_close"] - config.exit["runner"]["final_target_r"] * risk
+            if guardrail_rejection(row, stop, target, spread_pips, session):
+                continue
             signals.append(Signal(
                 str(uuid4()), row["timestamp"], london, row["symbol"], "SHORT",
                 "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                 ["trend_below_ema200", "pullback", "rsi_rejection", "bearish_close"],
                 {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},
-                stop, row["mid_close"] - config.exit["runner"]["final_target_r"] * risk, spread_pips, session,
+                stop, target, spread_pips, session,
             ))
         if config.entry["long"]["enabled"]:
             bullish = row["mid_close"] > row["mid_open"]
@@ -103,11 +139,14 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
                     continue
                 stop = min(row["mid_low"], row["mid_close"] - config.stop_loss["atr_multiplier"] * row["atr"])
                 risk = row["mid_close"] - stop
+                target = row["mid_close"] + config.exit["runner"]["final_target_r"] * risk
+                if guardrail_rejection(row, stop, target, spread_pips, session):
+                    continue
                 signals.append(Signal(
                     str(uuid4()), row["timestamp"], london, row["symbol"], "LONG",
                     "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                     ["trend_above_ema200", "pullback", "rsi_reclaim", "bullish_close"],
                     {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},
-                    stop, row["mid_close"] + config.exit["runner"]["final_target_r"] * risk, spread_pips, session,
+                    stop, target, spread_pips, session,
                 ))
     return signals, rejected

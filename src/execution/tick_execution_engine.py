@@ -1,14 +1,34 @@
-from datetime import timedelta
+from datetime import time, timedelta
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import polars as pl
 
+from src.broker_guardrails.distance_validator import evaluate_proposed_signal
 from src.config.schemas import StrategyConfig
 from src.risk.position_sizer import position_size
 from src.risk.weekend_policy import WeekendPolicy
 from src.strategies.signal import Signal
 
 from .trade import Trade
+
+
+def evaluate_executable_entry_guardrail(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig):
+    settings = config.broker_execution_guardrails
+    if not settings.get("enabled"):
+        return None
+    future = ticks.filter(pl.col("timestamp_utc") > signal.timestamp_utc)
+    if future.is_empty():
+        return None
+    first = future.row(0, named=True)
+    slip = config.execution["default_slippage_points"] if config.execution.get("slippage_enabled") else 0
+    is_long = signal.direction == "LONG"
+    entry = first["ask"] + slip if is_long else first["bid"] - slip
+    initial_risk = abs(entry - signal.proposed_stop)
+    target = entry + initial_risk * config.exit["runner"]["final_target_r"] * (1 if is_long else -1)
+    return evaluate_proposed_signal(
+        first["timestamp_utc"], entry, signal.proposed_stop, target, first["spread_pips"], settings
+    )
 
 
 def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, balance: float) -> Trade | None:
@@ -66,6 +86,16 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         close_side = row["bid"] if is_long else row["ask"]
         move = (close_side - entry) * (1 if is_long else -1)
         mfe, mae = max(mfe, move), min(mae, move)
+        intraday = config.broker_execution_guardrails.get("intraday_mode", {})
+        funding = config.broker_execution_guardrails.get("overnight_funding", {})
+        local = row["timestamp_utc"].astimezone(ZoneInfo(funding.get("timezone", "Europe/London")))
+        if (
+            intraday.get("enabled") and intraday.get("force_close_before_funding_cutoff")
+            and local.time() >= time.fromisoformat(intraday["force_close_time"])
+        ):
+            reason = intraday.get("force_close_reason", "INTRADAY_FUNDING_AVOIDANCE_CLOSE")
+            exit_row, exit_price = row, close_side - slip if is_long else close_side + slip
+            break
         if be_cfg["enabled"] and move >= initial_risk * be_cfg["after_r"]:
             candidate = max(final_stop, entry) if is_long else min(final_stop, entry)
             if candidate != final_stop:

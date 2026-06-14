@@ -6,6 +6,7 @@ import polars as pl
 
 from src.backtest.backtest_engine import build_candles_for_config, run_backtest
 from src.backtest.weekend_policy_runner import WeekendPolicyVariantRunner
+from src.broker_guardrails.guardrail_runner import BrokerGuardrailRunner
 from src.config.config_loader import (
     apply_data_quality_overrides,
     apply_strategy_overrides,
@@ -169,6 +170,16 @@ def main():
     stress_parser.add_argument("--seed", type=int)
     stress_parser.add_argument("--skip-charts", action=argparse.BooleanOptionalAction, default=False)
     stress_parser.add_argument("--quick", action=argparse.BooleanOptionalAction, default=False)
+    guardrail_parser = sub.add_parser("broker-guardrails")
+    guardrail_parser.add_argument("--strategy-config", required=True)
+    guardrail_parser.add_argument("--guardrail-variants-config", required=True)
+    guardrail_parser.add_argument("--normalised-tick-path", required=True)
+    guardrail_parser.add_argument("--candle-path", required=True)
+    guardrail_parser.add_argument("--report-output-path", required=True)
+    guardrail_parser.add_argument("--daily-funding-pips", type=float)
+    guardrail_parser.add_argument("--skip-funding", action=argparse.BooleanOptionalAction, default=False)
+    guardrail_parser.add_argument("--variant")
+    guardrail_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -203,6 +214,13 @@ def main():
             args.skip_charts, args.quick,
         ).run()
         print(f"Monte Carlo stress report: {output / 'stress_report.html'}")
+    elif args.command == "broker-guardrails":
+        output = BrokerGuardrailRunner(
+            args.strategy_config, args.guardrail_variants_config, args.normalised_tick_path,
+            args.candle_path, args.report_output_path, args.daily_funding_pips,
+            args.skip_funding, args.variant, args.continue_on_error,
+        ).run()
+        print(f"Broker guardrail report: {output / 'broker_guardrail_report.html'}")
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

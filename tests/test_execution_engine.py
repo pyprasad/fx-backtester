@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from src.execution.tick_execution_engine import execute_signal
+from src.execution.tick_execution_engine import evaluate_executable_entry_guardrail, execute_signal
 from src.strategies.signal import Signal
 
 
@@ -31,3 +31,16 @@ def test_short_stop_triggers_when_ask_equals_float_noisy_stop(ticks, strategy_co
     trade = execute_signal(signal, ticks.sort("timestamp_utc"), strategy_config, 10000)
     assert trade.exit_timestamp_utc == ticks.sort("timestamp_utc")["timestamp_utc"][-1]
     assert trade.exit_reason == "stop_loss"
+
+
+def test_executable_entry_guardrail_rejects_actual_tiny_risk(ticks, strategy_config):
+    strategy_config.execution["slippage_enabled"] = False
+    signal = _signal("SHORT")
+    signal.proposed_stop = 103.105
+
+    decision = evaluate_executable_entry_guardrail(
+        signal, ticks.sort("timestamp_utc"), strategy_config
+    )
+
+    assert decision.initial_risk_pips == 0.5
+    assert "REJECT_BELOW_MIN_INITIAL_RISK_PIPS" in decision.rejection_reasons

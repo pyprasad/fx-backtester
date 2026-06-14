@@ -1,0 +1,39 @@
+2026-06-14 13:11:31 | INFO | __main__ | Pipeline command started | command=broker-guardrails
+2026-06-14 13:11:31 | INFO | src.broker_guardrails.guardrail_runner | Broker guardrail variant 1/1 | name=min_risk_10pips_spread_ratio_10pct
+2026-06-14 13:11:31 | INFO | src.backtest.backtest_engine | START load candles and calculate indicators
+2026-06-14 13:11:31 | INFO | src.backtest.backtest_engine | DONE load candles and calculate indicators | elapsed=0.0s
+2026-06-14 13:11:31 | INFO | src.backtest.backtest_engine | START generate strategy signals
+2026-06-14 13:11:32 | INFO | src.backtest.backtest_engine | DONE generate strategy signals | elapsed=0.6s
+2026-06-14 13:11:32 | INFO | src.backtest.backtest_engine | Signals generated | accepted=649, rejected=15,494
+2026-06-14 13:11:32 | INFO | src.backtest.backtest_engine | Execution progress | signal=1/649, trades=0, balance=10000.00
+2026-06-14 13:11:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=25/649, trades=10, balance=10280.79
+2026-06-14 13:11:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=50/649, trades=25, balance=10576.59
+2026-06-14 13:11:43 | INFO | src.backtest.backtest_engine | Execution progress | signal=75/649, trades=37, balance=10609.85
+2026-06-14 13:11:50 | INFO | src.backtest.backtest_engine | Execution progress | signal=100/649, trades=56, balance=10830.71
+2026-06-14 13:11:57 | INFO | src.backtest.backtest_engine | Execution progress | signal=125/649, trades=69, balance=10787.05
+2026-06-14 13:12:03 | INFO | src.backtest.backtest_engine | Execution progress | signal=150/649, trades=86, balance=10757.30
+2026-06-14 13:12:13 | INFO | src.backtest.backtest_engine | Execution progress | signal=175/649, trades=102, balance=10933.77
+2026-06-14 13:12:18 | INFO | src.backtest.backtest_engine | Execution progress | signal=200/649, trades=119, balance=10861.49
+2026-06-14 13:12:23 | INFO | src.backtest.backtest_engine | Execution progress | signal=225/649, trades=132, balance=11165.02
+2026-06-14 13:12:28 | INFO | src.backtest.backtest_engine | Execution progress | signal=250/649, trades=145, balance=11295.49
+2026-06-14 13:12:34 | INFO | src.backtest.backtest_engine | Execution progress | signal=275/649, trades=158, balance=11403.21
+2026-06-14 13:12:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=300/649, trades=170, balance=11664.48
+2026-06-14 13:12:45 | INFO | src.backtest.backtest_engine | Execution progress | signal=325/649, trades=183, balance=11691.38
+2026-06-14 13:12:52 | INFO | src.backtest.backtest_engine | Execution progress | signal=350/649, trades=197, balance=11782.95
+2026-06-14 13:12:56 | INFO | src.backtest.backtest_engine | Execution progress | signal=375/649, trades=211, balance=11697.08
+2026-06-14 13:13:02 | INFO | src.backtest.backtest_engine | Execution progress | signal=400/649, trades=224, balance=11822.99
+2026-06-14 13:13:07 | INFO | src.backtest.backtest_engine | Execution progress | signal=425/649, trades=236, balance=11814.89
+2026-06-14 13:13:12 | INFO | src.backtest.backtest_engine | Execution progress | signal=450/649, trades=253, balance=11999.79
+2026-06-14 13:13:20 | INFO | src.backtest.backtest_engine | Execution progress | signal=475/649, trades=267, balance=12173.18
+2026-06-14 13:13:27 | INFO | src.backtest.backtest_engine | Execution progress | signal=500/649, trades=283, balance=12492.49
+2026-06-14 13:13:35 | INFO | src.backtest.backtest_engine | Execution progress | signal=525/649, trades=294, balance=12671.39
+2026-06-14 13:13:39 | INFO | src.backtest.backtest_engine | Execution progress | signal=550/649, trades=309, balance=12803.03
+2026-06-14 13:13:44 | INFO | src.backtest.backtest_engine | Execution progress | signal=575/649, trades=321, balance=13088.76
+2026-06-14 13:13:46 | INFO | src.backtest.backtest_engine | Execution progress | signal=600/649, trades=332, balance=13269.07
+2026-06-14 13:13:49 | INFO | src.backtest.backtest_engine | Execution progress | signal=625/649, trades=343, balance=13440.68
+2026-06-14 13:13:51 | INFO | src.backtest.backtest_engine | Execution progress | signal=649/649, trades=356, balance=13505.90
+2026-06-14 13:13:51 | INFO | src.backtest.backtest_engine | START write backtest reports | output=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121131_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_10pips_spread_ratio_10pct
+2026-06-14 13:13:52 | INFO | src.backtest.backtest_engine | DONE write backtest reports | elapsed=0.7s
+2026-06-14 13:13:52 | INFO | src.backtest.backtest_engine | Backtest complete | trades=356, ending_balance=13505.90, reports=/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121131_usdjpy_fx_swing_trend_reclaim_v1/variants/min_risk_10pips_spread_ratio_10pct
+2026-06-14 13:13:52 | INFO | __main__ | Pipeline command completed | command=broker-guardrails
+Broker guardrail report: /Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/broker_guardrails/20260614_121131_usdjpy_fx_swing_trend_reclaim_v1/broker_guardrail_report.html
