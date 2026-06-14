@@ -4,7 +4,7 @@
 
 - This project is a historical USDJPY tick backtester. Do not add live trading behavior.
 - The current research baseline is `fx_swing_trend_reclaim_v1`, `short_only`, with
-  `force_close_friday_20_30`.
+  `force_close_friday_20_30` and the human-confirmed `min_risk_3pips` guardrail.
 - Preserve executable-side pricing: short entries use bid and exits use ask; long entries use ask
   and exits use bid. USDJPY pip size is `0.01`.
 
@@ -39,6 +39,12 @@ FX-2H compares exactly `ig_min_stop_only`, `min_risk_3pips`, and
 missing layers, apply hard failures before weighted ranking, and use safety-first tie-breakers.
 Always require human confirmation and never modify the main strategy config or research baseline
 automatically.
+
+Human confirmation after the complete FX-2H bake-off selected `min_risk_3pips` as the final
+research baseline. `ig_min_stop_only` is the backup and `recommended_research_guardrail` is not
+selected. The versioned information contract under `config/strategies/` is documentation for
+future integration; do not treat it as live-trading approval or silently replace the executable
+research configuration.
 
 ## Commands
 

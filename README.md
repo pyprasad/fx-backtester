@@ -18,6 +18,22 @@ Current successful research configuration:
 
 These are historical research results, not expected future returns.
 
+## Final USDJPY Research Baseline
+
+The human-confirmed final research baseline after FX-2H is:
+
+- Strategy: `FX Swing Trend Reclaim v1`
+- Market and direction: `USDJPY`, short only
+- Selected guardrail: `min_risk_3pips`
+- Weekend policy: `force_close_friday_20_30`
+- Status: historical research only; not production-ready or live-trading approved
+
+The versioned strategy information contract is
+[`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml`](config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml).
+The documentation package starts at
+[`docs/strategies/README.md`](docs/strategies/README.md). The next phase is FX-2I Demo-Readiness
+Gate; no live trading or broker order placement is included.
+
 ## Setup
 
 Requires Python 3.11+. Install with:
@@ -371,3 +387,11 @@ profit factor, return, Monte Carlo loss/drawdown probability, or execution-stres
 
 FX-2H selects only a proposed next research baseline. It remains historical research and does not
 make the strategy demo-ready or production-ready.
+
+### FX-2H Final Decision
+
+After human review of the complete 5,000-iteration bake-off, `min_risk_3pips` was selected as the
+final research baseline. `ig_min_stop_only` remains the backup. The more conservative
+`recommended_research_guardrail` was not selected because its return sacrifice did not materially
+improve execution-stress failures or the worst stressed trade. This decision does not authorize
+demo or live execution.
