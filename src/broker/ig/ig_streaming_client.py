@@ -59,6 +59,7 @@ class IGStreamingClient:
             "MERGE", [f"PRICE:{self.session.account_id}:{epic}"],
             list(self.config.stream_price_fields),
         )
+        subscription.setDataAdapter("Pricing")
         subscription.addListener(listener)
         self.client.subscribe(subscription)
         self.subscriptions.append(subscription)

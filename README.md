@@ -32,17 +32,19 @@ The versioned strategy information contract is
 [`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml`](config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml).
 The documentation package starts at
 [`docs/strategies/README.md`](docs/strategies/README.md). The next phase is FX-2I Demo-Readiness
-Gate; no live trading or broker order placement is included.
+Gate; no live trading is included. DEMO order placement is disabled by default and restricted to
+an explicitly confirmed minimum-size execution-plumbing test.
 
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule
 extraction, modern Lightstreamer `PRICE`/optional `CHART:TICK` capture, local DEMO tick storage,
-dry-run SELL payload validation, and readiness reporting.
+dry-run SELL payload validation, readiness reporting, and an optional DEMO-only execution-plumbing
+test.
 
 Copy `.env.demo.example` to the gitignored `.env.demo` and add credentials locally. The loader
 rejects LIVE mode, enabled order execution, disabled dry-run mode, and deprecated `MARKET`
-subscriptions. The REST client deliberately has no create-order method.
+subscriptions. The REST client cannot create live-account orders.
 
 Start with:
 
@@ -71,6 +73,21 @@ PYTHONPATH=. .venv/bin/python -m src.main ig-demo-stream-prices \
   --env-file .env.demo \
   --epic CS.D.USDJPY.TODAY.IP \
   --duration-seconds 120
+```
+
+```
+python -m src.main ig-demo-stream-prices \
+  --env-file .env.demo \
+  --epic CS.D.USDJPY.TODAY.IP \
+  --duration-seconds 15
+```
+
+```
+python -m src.main ig-demo-place-test-order \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml \
+  --epic CS.D.USDJPY.TODAY.IP \
+  --confirm PLACE_DEMO_ORDER
 ```
 
 `marketStatus: EDITS_ONLY` does not permit opening new positions and must remain `NOT_READY`;
@@ -449,3 +466,5 @@ final research baseline. `ig_min_stop_only` remains the backup. The more conserv
 `recommended_research_guardrail` was not selected because its return sacrifice did not materially
 improve execution-stress failures or the worst stressed trade. This decision does not authorize
 demo or live execution.
+
+

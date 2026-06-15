@@ -13,6 +13,7 @@ from src.broker.ig.ig_cli import (
     dry_run_order as ig_dry_run_order,
     market_discovery as ig_market_discovery,
     market_rules as ig_market_rules,
+    place_demo_test_order_cli as ig_place_demo_test_order,
     readiness as ig_readiness,
     stream_ticks as ig_stream_ticks,
 )
@@ -217,18 +218,21 @@ def main():
     bakeoff_parser.add_argument("--existing-bakeoff-run-path")
     for name in ("ig-demo-auth-check", "ig-demo-market-discovery", "ig-demo-market-rules",
                  "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-readiness",
-                 "ig-demo-dry-run-order"):
+                 "ig-demo-dry-run-order", "ig-demo-place-test-order"):
         ig_parser = sub.add_parser(name)
         ig_parser.add_argument("--env-file", default=".env.demo")
         if name == "ig-demo-market-discovery":
             ig_parser.add_argument("--market", default="USD/JPY")
         if name in {"ig-demo-market-rules", "ig-demo-stream-prices",
-                    "ig-demo-stream-chart-ticks", "ig-demo-dry-run-order"}:
+                    "ig-demo-stream-chart-ticks", "ig-demo-dry-run-order",
+                    "ig-demo-place-test-order"}:
             ig_parser.add_argument("--epic", required=True)
         if name in {"ig-demo-stream-prices", "ig-demo-stream-chart-ticks"}:
             ig_parser.add_argument("--duration-seconds", type=int, default=120)
-        if name in {"ig-demo-readiness", "ig-demo-dry-run-order"}:
+        if name in {"ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order"}:
             ig_parser.add_argument("--strategy-config", required=True)
+        if name == "ig-demo-place-test-order":
+            ig_parser.add_argument("--confirm", required=True)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -294,6 +298,8 @@ def main():
         ig_readiness(args.env_file, args.strategy_config)
     elif args.command == "ig-demo-dry-run-order":
         ig_dry_run_order(args.env_file, args.strategy_config, args.epic)
+    elif args.command == "ig-demo-place-test-order":
+        ig_place_demo_test_order(args.env_file, args.strategy_config, args.epic, args.confirm)
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

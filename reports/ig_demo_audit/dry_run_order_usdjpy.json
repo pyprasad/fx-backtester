@@ -1,0 +1,28 @@
+{
+  "payload": {
+    "deal_reference": "dry-f234ba3f-b721-4719-a1cc-91b410c5aeb0",
+    "epic": "CS.D.USDJPY.TODAY.IP",
+    "direction": "SELL",
+    "size": 0.04,
+    "order_type": "MARKET",
+    "level": null,
+    "stop_distance": 3.0,
+    "stop_level": 160.382,
+    "limit_distance": 12.0,
+    "limit_level": 160.232,
+    "currency": "JPY",
+    "force_open": false,
+    "guaranteed_stop": false,
+    "time_in_force": "FILL_OR_KILL",
+    "expiry": "DFB",
+    "dry_run_only": true
+  },
+  "validation_status": "NOT_READY",
+  "validation_errors": [
+    "ENTRY_AFTER_UK_CUTOFF"
+  ],
+  "validation_warnings": [
+    "SPREAD_TO_RISK_RATIO_ABOVE_WARNING"
+  ],
+  "order_sent": false
+}

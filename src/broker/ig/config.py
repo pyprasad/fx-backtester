@@ -93,8 +93,12 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
     )
     if config.env != "DEMO" or config.acc_type != "DEMO":
         raise ValueError("FX-2I supports IG DEMO only")
-    if config.order_execution_enabled or not config.dry_run_only:
-        raise ValueError("FX-2I requires order execution disabled and dry-run-only enabled")
+    if config.rest_base_url != "https://demo-api.ig.com/gateway/deal":
+        raise ValueError("IG_REST_BASE_URL must be the IG DEMO gateway")
+    if config.order_execution_enabled == config.dry_run_only:
+        raise ValueError(
+            "IG_ORDER_EXECUTION_ENABLED and IG_DRY_RUN_ONLY must be opposite values"
+        )
     if config.streaming_mode == "MARKET":
         raise ValueError("MARKET subscription is deprecated; use PRICE or CHART_TICK")
     if config.price_scale_divisor is not None and config.price_scale_divisor <= 0:

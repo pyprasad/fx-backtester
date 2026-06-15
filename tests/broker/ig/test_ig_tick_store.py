@@ -6,6 +6,15 @@ from src.data.tick_loader import load_ticks
 import pytest
 
 
+class PriceUpdate:
+    values = {"BIDPRICE1": "150", "ASKPRICE1": "150.01", "TIMESTAMP": "1718472000000"}
+
+    def getValue(self, name):
+        if name not in self.values:
+            raise ValueError("unknown field")
+        return self.values[name]
+
+
 def test_tick_store_appends_and_calculates_spread(tmp_path):
     tick = normalise_price_update({
         "BIDPRICE1": "150.00", "ASKPRICE1": "150.01", "TIMESTAMP": "12:00:00", "DELAY": "0",
@@ -31,6 +40,22 @@ def test_scaled_bid_offer_is_normalised_and_spread_is_seven_pips():
     assert tick.ask == 160.25
     assert tick.spread_pips == 7
     assert tick.raw["normalization_price_scale_divisor"] == 100
+
+
+def test_price_timestamp_accepts_epoch_milliseconds():
+    tick = normalise_price_update(
+        {"BIDPRICE1": "150", "ASKPRICE1": "150.01", "TIMESTAMP": "1718472000000"},
+        "USDJPY",
+    )
+
+    assert tick.timestamp_utc.isoformat() == "2024-06-15T17:20:00+00:00"
+
+
+def test_price_update_ignores_unsubscribed_fallback_fields():
+    tick = normalise_price_update(PriceUpdate(), "USDJPY")
+
+    assert tick.bid == 150
+    assert tick.ask == 150.01
 
 
 def test_unconfirmed_scaled_fx_price_is_rejected():

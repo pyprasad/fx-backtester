@@ -1,17 +1,29 @@
+import logging
 from datetime import datetime, timezone
 
 from .models import InternalTick
+
+logger = logging.getLogger(__name__)
 
 
 def _fields(update, names: tuple[str, ...]) -> dict:
     if isinstance(update, dict):
         return update
-    return {name: update.getValue(name) for name in names}
+    values = {}
+    for name in names:
+        try:
+            values[name] = update.getValue(name)
+        except Exception:
+            # Lightstreamer raises when a fallback field was not part of this subscription.
+            continue
+    return values
 
 
 def _timestamp(value, *, epoch_ms: bool = False) -> datetime:
-    if epoch_ms and value not in (None, ""):
-        return datetime.fromtimestamp(float(value) / 1000, timezone.utc)
+    if value not in (None, ""):
+        text = str(value)
+        if epoch_ms or text.replace(".", "", 1).isdigit():
+            return datetime.fromtimestamp(float(value) / 1000, timezone.utc)
     if value:
         for fmt in ("%H:%M:%S", "%H:%M:%S.%f"):
             try:
@@ -74,9 +86,21 @@ class PriceUpdateListener:
         self.price_scale_divisor = price_scale_divisor
 
     def onItemUpdate(self, update):
-        self.callback(normalise_price_update(
-            update, self.epic, self.pip_size, self.price_scale_divisor
-        ))
+        try:
+            self.callback(normalise_price_update(
+                update, self.epic, self.pip_size, self.price_scale_divisor
+            ))
+        except Exception:
+            logger.exception("IG PRICE update rejected | epic=%s", self.epic)
+
+    def onSubscription(self):
+        logger.info("IG PRICE subscription active | epic=%s", self.epic)
+
+    def onSubscriptionError(self, code, message):
+        logger.error(
+            "IG PRICE subscription failed | epic=%s | code=%s | message=%s",
+            self.epic, code, message,
+        )
 
 
 class ChartTickListener:
@@ -86,9 +110,21 @@ class ChartTickListener:
         self.price_scale_divisor = price_scale_divisor
 
     def onItemUpdate(self, update):
-        self.callback(normalise_chart_tick(
-            update, self.epic, self.pip_size, self.price_scale_divisor
-        ))
+        try:
+            self.callback(normalise_chart_tick(
+                update, self.epic, self.pip_size, self.price_scale_divisor
+            ))
+        except Exception:
+            logger.exception("IG CHART:TICK update rejected | epic=%s", self.epic)
+
+    def onSubscription(self):
+        logger.info("IG CHART:TICK subscription active | epic=%s", self.epic)
+
+    def onSubscriptionError(self, code, message):
+        logger.error(
+            "IG CHART:TICK subscription failed | epic=%s | code=%s | message=%s",
+            self.epic, code, message,
+        )
 
 
 class AccountUpdateListener:

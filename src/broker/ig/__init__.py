@@ -1,1 +1,1 @@
-"""Read-only and dry-run-only IG DEMO integration."""
+"""IG DEMO integration with explicitly gated DEMO execution and no live-account support."""

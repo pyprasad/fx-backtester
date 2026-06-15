@@ -11,7 +11,11 @@ class IGAPIError(RuntimeError):
 
 
 class IGAuthenticationError(IGAPIError):
-    pass
+    def __init__(self, message: str, status_code: int | None = None,
+                 error_code: str | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.error_code = error_code
 
 
 class IGRateLimitError(IGAPIError):
@@ -29,7 +33,16 @@ def request_json(url: str, method: str, headers: dict, payload: dict | None = No
     except HTTPError as exc:
         content = exc.read().decode(errors="replace")
         if exc.code in {401, 403}:
-            raise IGAuthenticationError(f"IG authentication failed ({exc.code})") from exc
+            try:
+                error_code = json.loads(content).get("errorCode")
+            except (json.JSONDecodeError, AttributeError):
+                error_code = None
+            detail = f": {error_code}" if error_code else ""
+            raise IGAuthenticationError(
+                f"IG authentication failed ({exc.code}){detail}",
+                status_code=exc.code,
+                error_code=error_code,
+            ) from exc
         if exc.code == 429 or "allowance" in content.lower():
             raise IGRateLimitError(f"IG rate limit reached ({exc.code})") from exc
         raise IGAPIError(f"IG REST error ({exc.code}): {content[:300]}") from exc
@@ -67,6 +80,12 @@ class IGRestClient:
                 opener=self.opener,
             )[0]
 
+    def _post(self, path: str, payload: dict, version: int = 1) -> dict:
+        return request_json(
+            f"{self.config.rest_base_url}{path}", "POST", self._headers(version), payload,
+            opener=self.opener,
+        )[0]
+
     def get_accounts(self):
         return self._get("/accounts", 1)
 
@@ -92,6 +111,13 @@ class IGRestClient:
         return self._get(
             f"/prices/{epic}", 3, {"resolution": resolution, "max": str(num_points)}
         )
+
+    def create_demo_position(self, payload: dict):
+        if self.config.env != "DEMO" or self.config.acc_type != "DEMO":
+            raise ValueError("Position creation is restricted to IG DEMO")
+        if not self.config.order_execution_enabled or self.config.dry_run_only:
+            raise ValueError("IG DEMO order execution is not enabled")
+        return self._post("/positions/otc", payload, 2)
 
     def close(self):
         request_json(

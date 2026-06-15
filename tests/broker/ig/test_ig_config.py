@@ -25,11 +25,20 @@ def test_loads_demo_and_redacts_secrets(tmp_path, monkeypatch):
     assert "secret-api-key" not in text
 
 
-def test_rejects_live_and_execution_enabled(tmp_path, monkeypatch):
+def test_rejects_live_and_inconsistent_execution_flags(tmp_path, monkeypatch):
     monkeypatch.delenv("IG_ENV", raising=False)
     with pytest.raises(ValueError, match="DEMO only"):
         load_ig_demo_config(_env(tmp_path, IG_ENV="LIVE"))
-    with pytest.raises(ValueError, match="order execution disabled"):
+    with pytest.raises(ValueError, match="DEMO gateway"):
+        load_ig_demo_config(_env(
+            tmp_path, IG_REST_BASE_URL="https://api.ig.com/gateway/deal"
+        ))
+    execution = load_ig_demo_config(_env(
+        tmp_path, IG_ORDER_EXECUTION_ENABLED="true", IG_DRY_RUN_ONLY="false"
+    ))
+    assert execution.order_execution_enabled is True
+    assert execution.dry_run_only is False
+    with pytest.raises(ValueError, match="opposite values"):
         load_ig_demo_config(_env(tmp_path, IG_ORDER_EXECUTION_ENABLED="true"))
     with pytest.raises(ValueError, match="MARKET subscription is deprecated"):
         load_ig_demo_config(_env(tmp_path, IG_STREAMING_MODE="MARKET"))

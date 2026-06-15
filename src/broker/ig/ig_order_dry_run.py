@@ -51,10 +51,10 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
     if size <= 0:
         errors.append("INVALID_SIZE")
     order = DryRunOrder(
-        deal_reference=f"dry-{uuid4()}", epic=market_rules.epic, direction=direction, size=size,
+        deal_reference=f"dry-{uuid4().hex[:25]}", epic=market_rules.epic, direction=direction, size=size,
         order_type="MARKET", level=None, stop_distance=round(risk_pips, 8), stop_level=stop,
         limit_distance=round(limit_pips, 8), limit_level=target, currency=market_rules.currency or "JPY",
-        force_open=False, guaranteed_stop=False, time_in_force="FILL_OR_KILL",
+        force_open=True, guaranteed_stop=False, time_in_force="FILL_OR_KILL",
         expiry=market_rules.expiry or "-", validation_errors=errors, validation_warnings=warnings,
     )
     order.validation_status = "READY_FOR_DEMO_DRY_RUN" if not errors else "NOT_READY"

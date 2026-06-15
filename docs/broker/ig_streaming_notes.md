@@ -2,7 +2,7 @@
 
 ## Supported Subscriptions
 
-- Price: `PRICE:{accountId}:{epic}` using `MERGE`
+- Price: `PRICE:{accountId}:{epic}` using `MERGE` and the `Pricing` data adapter
 - Optional chart ticks: `CHART:{epic}:TICK` using `DISTINCT`
 - Optional read-only trade updates: `TRADE:{accountId}` using `CONFIRMS`, `OPU`, and `WOU`
 
@@ -29,5 +29,5 @@ For example, divisor `100` converts `16018 / 16025` to `160.18 / 160.25`; with U
 Lightstreamer SDK handles reconnect/re-subscribe behavior; listeners remain lightweight and append
 ticks immediately. Streaming shutdown always disconnects and logs out.
 
-PRICE `TIMESTAMP` may contain time-of-day without a date. FX-2I combines it with the current UTC
-date; this assumption must be verified against observed DEMO updates before later order testing.
+PRICE `TIMESTAMP` is normalized from UTC epoch milliseconds. Time-of-day strings remain supported
+for compatibility with older observed payloads.

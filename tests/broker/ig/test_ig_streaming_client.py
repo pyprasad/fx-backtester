@@ -34,6 +34,9 @@ class FakeSubscription:
     def __init__(self, mode, items, fields):
         self.mode, self.items, self.fields = mode, items, fields
 
+    def setDataAdapter(self, adapter):
+        self.adapter = adapter
+
     def addListener(self, listener):
         self.listener = listener
 
@@ -52,5 +55,6 @@ def test_streaming_uses_price_and_chart_items(monkeypatch):
     price = client.subscribe_price("USDJPY", object())
     chart = client.subscribe_chart_ticks("USDJPY", object())
     assert price.items == ["PRICE:ABC:USDJPY"]
+    assert price.adapter == "Pricing"
     assert chart.items == ["CHART:USDJPY:TICK"]
     assert all("MARKET:" not in item for subscription in (price, chart) for item in subscription.items)

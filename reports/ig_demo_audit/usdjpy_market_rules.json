@@ -1,0 +1,166 @@
+{
+  "epic": "CS.D.USDJPY.TODAY.IP",
+  "name": "USD/JPY",
+  "status": "TRADEABLE",
+  "expiry": "DFB",
+  "currency": "JPY",
+  "pip_size": 0.01,
+  "min_stop_distance_pips": 2.0,
+  "min_limit_distance_pips": 2.0,
+  "min_deal_size": 0.04,
+  "max_deal_size": 75.0,
+  "margin_factor": 3.33,
+  "controlled_risk_allowed": true,
+  "streaming_prices_available": true,
+  "delayed": false,
+  "decimal_places_factor": null,
+  "scaling_factor": null,
+  "raw": {
+    "instrument": {
+      "epic": "CS.D.USDJPY.TODAY.IP",
+      "expiry": "DFB",
+      "name": "USD/JPY",
+      "forceOpenAllowed": true,
+      "stopsLimitsAllowed": true,
+      "lotSize": 1.0,
+      "unit": "AMOUNT",
+      "type": "CURRENCIES",
+      "controlledRiskAllowed": true,
+      "streamingPricesAvailable": true,
+      "marketId": "USDJPY",
+      "currencies": [
+        {
+          "code": "JPY",
+          "symbol": "\u00a5",
+          "baseExchangeRate": 215.04475,
+          "exchangeRate": 0.007,
+          "isDefault": false
+        },
+        {
+          "code": "EUR",
+          "symbol": "E",
+          "baseExchangeRate": 1.157245,
+          "exchangeRate": 0.9,
+          "isDefault": false
+        },
+        {
+          "code": "USD",
+          "symbol": "$",
+          "baseExchangeRate": 1.34114,
+          "exchangeRate": 0.66,
+          "isDefault": false
+        },
+        {
+          "code": "GBP",
+          "symbol": "\u00a3",
+          "baseExchangeRate": 1.0,
+          "exchangeRate": 1.0,
+          "isDefault": true
+        }
+      ],
+      "sprintMarketsMinimumExpiryTime": null,
+      "sprintMarketsMaximumExpiryTime": null,
+      "marginDepositBands": [
+        {
+          "min": 0,
+          "max": 63424,
+          "margin": 3.33,
+          "currency": "JPY"
+        },
+        {
+          "min": 63424,
+          "max": 317120,
+          "margin": 3.33,
+          "currency": "JPY"
+        },
+        {
+          "min": 317120,
+          "max": 507392,
+          "margin": 3.33,
+          "currency": "JPY"
+        },
+        {
+          "min": 507392,
+          "max": null,
+          "margin": 6,
+          "currency": "JPY"
+        }
+      ],
+      "marginFactor": 3.33,
+      "marginFactorUnit": "PERCENTAGE",
+      "slippageFactor": {
+        "unit": "pct",
+        "value": 50.0
+      },
+      "limitedRiskPremium": {
+        "value": 1.8,
+        "unit": "POINTS"
+      },
+      "openingHours": null,
+      "expiryDetails": {
+        "lastDealingDate": "2029-04-06T19:00",
+        "settlementInfo": "DFBs settle on the Last Dealing Day basis the middle of the IG price at 20:00, plus or minus half the IG spread."
+      },
+      "rolloverDetails": null,
+      "newsCode": "JPY=",
+      "chartCode": "USDJPY",
+      "country": null,
+      "valueOfOnePip": null,
+      "onePipMeans": null,
+      "contractSize": null,
+      "specialInfo": [
+        "DEFAULT KNOCK OUT LEVEL DISTANCE",
+        "MIN KNOCK OUT LEVEL DISTANCE",
+        "MAX KNOCK OUT LEVEL DISTANCE"
+      ]
+    },
+    "dealingRules": {
+      "minStepDistance": {
+        "unit": "POINTS",
+        "value": 5.0
+      },
+      "minDealSize": {
+        "unit": "POINTS",
+        "value": 0.04
+      },
+      "minControlledRiskStopDistance": {
+        "unit": "POINTS",
+        "value": 7.0
+      },
+      "minNormalStopOrLimitDistance": {
+        "unit": "POINTS",
+        "value": 2.0
+      },
+      "maxStopOrLimitDistance": {
+        "unit": "PERCENTAGE",
+        "value": 75.0
+      },
+      "controlledRiskSpacing": {
+        "unit": "POINTS",
+        "value": 30.0
+      },
+      "marketOrderPreference": "AVAILABLE_DEFAULT_OFF",
+      "trailingStopsPreference": "AVAILABLE"
+    },
+    "snapshot": {
+      "marketStatus": "TRADEABLE",
+      "netChange": 13.3,
+      "percentageChange": 0.08,
+      "updateTime": "20:15:05",
+      "delayTime": 0,
+      "bid": 16034.3,
+      "offer": 16035.3,
+      "high": 16040.3,
+      "low": 15970.5,
+      "binaryOdds": null,
+      "decimalPlacesFactor": 1,
+      "scalingFactor": 1,
+      "controlledRiskExtraSpread": 3.6
+    }
+  },
+  "strategy_validation": {
+    "ready": true,
+    "errors": [],
+    "warnings": []
+  }
+}
