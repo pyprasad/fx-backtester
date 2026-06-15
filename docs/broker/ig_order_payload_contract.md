@@ -19,6 +19,7 @@ limit distance/level, currency, `force_open`, `guaranteed_stop`, `time_in_force`
 - Market status is `TRADEABLE`.
 - Latest tick is not delayed.
 - Entry is before `21:30 Europe/London`.
+- Entry is inside the backtested London windows: `07:00-11:30` or `13:00-16:30`.
 - No position is open when maximum positions is one.
 - Size is positive.
 - Spread/risk above `20%` creates a warning.

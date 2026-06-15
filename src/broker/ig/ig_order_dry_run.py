@@ -31,6 +31,15 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
     if market_rules.min_limit_distance_pips is not None and limit_pips < market_rules.min_limit_distance_pips:
         errors.append("LIMIT_DISTANCE_BELOW_BROKER_MINIMUM")
     local = latest_tick.timestamp_utc.astimezone(ZoneInfo(strategy["time_guards"]["broker_timezone"]))
+    sessions = strategy["entry_rules"]["allowed_london_sessions"]
+    in_allowed_session = any(
+        datetime.strptime(item["start"], "%H:%M").time()
+        <= local.time()
+        <= datetime.strptime(item["end"], "%H:%M").time()
+        for item in sessions
+    )
+    if not in_allowed_session:
+        errors.append("OUTSIDE_ALLOWED_LONDON_SESSION")
     cutoff = datetime.strptime(strategy["time_guards"]["block_new_entries_after"], "%H:%M").time()
     if local.time() >= cutoff:
         errors.append("ENTRY_AFTER_UK_CUTOFF")

@@ -58,4 +58,13 @@ def test_rejects_buy_tiny_risk_broker_minimum_delayed_closed_and_open_position()
 
 
 def test_rejects_after_uk_cutoff():
-    assert "ENTRY_AFTER_UK_CUTOFF" in _order(tick=_tick(hour=21)).validation_errors
+    errors = _order(tick=_tick(hour=21)).validation_errors
+    assert "ENTRY_AFTER_UK_CUTOFF" in errors
+    assert "OUTSIDE_ALLOWED_LONDON_SESSION" in errors
+
+
+def test_rejects_outside_backtested_london_sessions():
+    errors = _order(tick=_tick(hour=17)).validation_errors
+
+    assert "OUTSIDE_ALLOWED_LONDON_SESSION" in errors
+    assert "ENTRY_AFTER_UK_CUTOFF" not in errors
