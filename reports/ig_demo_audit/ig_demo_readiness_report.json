@@ -18,14 +18,14 @@
     "effective_order_risk_covers_broker_minimum": true,
     "first_valid_bid_ask_received": true,
     "price_scaling_confirmed": true,
-    "price_tick_fresh": true,
+    "price_tick_fresh": false,
     "price_not_delayed": true,
     "selected_guardrail_candidate_approved": true,
     "strict_spread_to_risk_rejection_active": true,
     "entry_cutoff_active": true,
     "weekend_force_close_active": true,
     "funding_awareness_active": true,
-    "dry_run_order_valid": false,
+    "dry_run_order_valid": true,
     "dry_run_order_not_sent": true,
     "max_open_positions_one": true,
     "risk_per_trade_set": true,
@@ -34,16 +34,13 @@
     "live_account_support_disabled": true
   },
   "failed_checks": [
-    "dry_run_mode",
-    "dry_run_order_valid"
+    "price_tick_fresh"
   ],
   "highest_allowed_status": "READY_FOR_DEMO_ORDER",
   "broker_min_stop_distance_pips": 6.0,
   "configured_min_initial_risk_pips": 3.0,
   "prepared_order_stop_distance_pips": 6.0,
-  "dry_run_validation_errors": [
-    "MAX_OPEN_POSITIONS_REACHED"
-  ],
+  "dry_run_validation_errors": [],
   "ready_for_live": false,
   "orders_sent": false
 }

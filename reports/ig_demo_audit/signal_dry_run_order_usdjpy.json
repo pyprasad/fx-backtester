@@ -1,8 +1,37 @@
 {
-  "status": "BLOCKED_STALE_CANDLE_CACHE",
+  "status": "NO_SIGNAL",
   "epic": "CS.D.USDJPY.TODAY.IP",
-  "latest_closed_1h_candle": "2026-06-16T10:00:00+00:00",
+  "latest_closed_1h_candle": "2026-06-16T16:00:00+00:00",
   "current_signal": null,
   "dry_run_order": null,
-  "order_sent": false
+  "order_sent": false,
+  "last_signal": {
+    "signal_id": "ebb7e8fc-8109-4a98-a06a-264392ebc242",
+    "timestamp_utc": "2026-06-15T03:00:00+00:00",
+    "timestamp_london": "2026-06-15T12:00:00+09:00",
+    "symbol": "USDJPY",
+    "direction": "SHORT",
+    "entry_type": "market_on_next_tick_after_signal_close",
+    "signal_price_mid": 160.056,
+    "trend_timeframe": "4H",
+    "entry_timeframe": "1H",
+    "reason_codes": [
+      "trend_below_ema200",
+      "pullback",
+      "rsi_rejection",
+      "bearish_close"
+    ],
+    "indicator_snapshot": {
+      "ema_fast": 160.13588990930688,
+      "ema_mid": 160.21320214780732,
+      "ema_slow": 160.10529985504562,
+      "rsi": 44.85444371052668,
+      "atr": 0.13477598103159666,
+      "atr_pips": 13.477598103159666
+    },
+    "proposed_stop": 160.21773117723794,
+    "proposed_target": 159.4090752910483,
+    "spread_pips_at_signal": 0.9999999999990905,
+    "session": "Tokyo"
+  }
 }

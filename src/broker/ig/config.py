@@ -1,6 +1,6 @@
 import os
 import warnings
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .models import redact
@@ -54,6 +54,12 @@ class IGDemoConfig:
     token_cache_enabled: bool = False
     token_cache_path: Path = Path(".runtime/ig_demo_session.json")
     price_scale_divisor: float | None = None
+    historical_api_key: str = ""
+    historical_username: str = ""
+    historical_password: str = ""
+    historical_account_id: str = ""
+    historical_token_cache_enabled: bool = False
+    historical_token_cache_path: Path = Path(".runtime/ig_demo_historical_session.json")
 
     def redacted(self) -> dict:
         return {
@@ -62,10 +68,34 @@ class IGDemoConfig:
             "rest_base_url": self.rest_base_url, "streaming_enabled": self.streaming_enabled,
             "streaming_mode": self.streaming_mode, "order_execution_enabled": self.order_execution_enabled,
             "dry_run_only": self.dry_run_only, "price_scale_divisor": self.price_scale_divisor,
+            "historical_data_override_enabled": self.historical_data_override_enabled,
+            "historical_username": redact(self.historical_username),
         }
 
     def __repr__(self) -> str:
         return f"IGDemoConfig({self.redacted()!r})"
+
+    @property
+    def historical_data_override_enabled(self) -> bool:
+        return bool(self.historical_api_key or self.historical_username or self.historical_password)
+
+    def historical_data_config(self) -> "IGDemoConfig":
+        if not all((self.historical_api_key, self.historical_username, self.historical_password)):
+            raise ValueError(
+                "IG_HISTORICAL_API_KEY, IG_HISTORICAL_USERNAME, and "
+                "IG_HISTORICAL_PASSWORD must all be set for historical override"
+            )
+        return replace(
+            self,
+            api_key=self.historical_api_key,
+            username=self.historical_username,
+            password=self.historical_password,
+            account_id=self.historical_account_id,
+            order_execution_enabled=False,
+            dry_run_only=True,
+            token_cache_enabled=self.historical_token_cache_enabled,
+            token_cache_path=self.historical_token_cache_path,
+        )
 
 
 def load_ig_demo_config(env_file: str | None = None, require_credentials: bool = True) -> IGDemoConfig:
@@ -90,6 +120,17 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         token_cache_enabled=_bool(get("IG_TOKEN_CACHE_ENABLED", "false"), False),
         token_cache_path=Path(get("IG_TOKEN_CACHE_PATH", ".runtime/ig_demo_session.json")),
         price_scale_divisor=float(get("IG_PRICE_SCALE_DIVISOR")) if get("IG_PRICE_SCALE_DIVISOR") else None,
+        historical_api_key=get("IG_HISTORICAL_API_KEY"),
+        historical_username=get("IG_HISTORICAL_USERNAME"),
+        historical_password=get("IG_HISTORICAL_PASSWORD"),
+        historical_account_id=get("IG_HISTORICAL_ACCOUNT_ID"),
+        historical_token_cache_enabled=_bool(
+            get("IG_HISTORICAL_TOKEN_CACHE_ENABLED", get("IG_TOKEN_CACHE_ENABLED", "false")),
+            False,
+        ),
+        historical_token_cache_path=Path(
+            get("IG_HISTORICAL_TOKEN_CACHE_PATH", ".runtime/ig_demo_historical_session.json")
+        ),
     )
     if config.env != "DEMO" or config.acc_type != "DEMO":
         raise ValueError("FX-2I supports IG DEMO only")
@@ -103,6 +144,13 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         raise ValueError("MARKET subscription is deprecated; use PRICE or CHART_TICK")
     if config.price_scale_divisor is not None and config.price_scale_divisor <= 0:
         raise ValueError("IG_PRICE_SCALE_DIVISOR must be greater than zero")
+    if config.historical_data_override_enabled and not all((
+        config.historical_api_key, config.historical_username, config.historical_password,
+    )):
+        raise ValueError(
+            "Set all or none of IG_HISTORICAL_API_KEY, IG_HISTORICAL_USERNAME, "
+            "and IG_HISTORICAL_PASSWORD"
+        )
     if require_credentials and not all((config.api_key, config.username, config.password)):
         raise ValueError("IG DEMO API key, username, and password are required")
     if not config.account_id:

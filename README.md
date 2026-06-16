@@ -113,7 +113,8 @@ python -m src.main ig-demo-signal-dry-run-order \
 
 For the long-running process path, use the bot command. It keeps the latest streamed tick in memory,
 persists only audit events, maintains rolling IG historical candle caches under
-`data/live_cache/ig`, and evaluates the strategy after each newly closed 1H candle:
+`data/live_cache/ig`, derives the 4H trend frame from cached 1H candles using UTC backtest anchors,
+and evaluates the strategy after each newly closed 1H candle:
 
 ```
 python -m src.main ig-demo-run-bot \
@@ -123,6 +124,69 @@ python -m src.main ig-demo-run-bot \
   --history-points 1000 \
   --refresh-points 10 \
   --duration-seconds 3900
+```
+
+For an overnight Tokyo/Japan-session DEMO bot run without order placement:
+
+```bash
+STRICT_CONFIG=config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml
+EPIC=CS.D.USDJPY.TODAY.IP
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-open-positions \
+  --env-file .env.demo \
+  --epic "$EPIC"
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-stream-prices \
+  --env-file .env.demo \
+  --epic "$EPIC" \
+  --duration-seconds 30
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-readiness \
+  --env-file .env.demo \
+  --strategy-config "$STRICT_CONFIG"
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-run-bot \
+  --env-file .env.demo \
+  --strategy-config "$STRICT_CONFIG" \
+  --epic "$EPIC" \
+  --history-points 1000 \
+  --refresh-points 5 \
+  --duration-seconds 28800 \
+  --poll-seconds 5
+```
+
+For an explicitly order-enabled DEMO bot run, first set the local gitignored `.env.demo` flags:
+
+```dotenv
+IG_ORDER_EXECUTION_ENABLED=true
+IG_DRY_RUN_ONLY=false
+```
+
+Then run the same bot with confirmation. It still places an order only if a current valid strategy
+signal appears and all guardrails pass:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-run-bot \
+  --env-file .env.demo \
+  --strategy-config "$STRICT_CONFIG" \
+  --epic "$EPIC" \
+  --history-points 1000 \
+  --refresh-points 5 \
+  --duration-seconds 28800 \
+  --poll-seconds 5 \
+  --confirm PLACE_DEMO_ORDER
+```
+
+Inspect the run:
+
+```bash
+cat reports/ig_demo_audit/bot_run_usdjpy.json
+cat reports/ig_demo_audit/signal_dry_run_order_usdjpy.json
+cat reports/ig_demo_audit/demo_execution_test.json
+tail -20 reports/ig_demo_audit/bot_audit_events_usdjpy.jsonl
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-open-positions \
+  --env-file .env.demo \
+  --epic "$EPIC"
 ```
 
 Only after dry-run validation is `READY_FOR_DEMO_DRY_RUN`, `.env.demo` explicitly enables DEMO

@@ -44,3 +44,30 @@ def test_rejects_live_and_inconsistent_execution_flags(tmp_path, monkeypatch):
         load_ig_demo_config(_env(tmp_path, IG_STREAMING_MODE="MARKET"))
     with pytest.raises(ValueError, match="PRICE_SCALE_DIVISOR"):
         load_ig_demo_config(_env(tmp_path, IG_PRICE_SCALE_DIVISOR="0"))
+
+
+def test_optional_historical_credentials_are_separate_and_non_executable(tmp_path, monkeypatch):
+    monkeypatch.delenv("IG_ENV", raising=False)
+    config = load_ig_demo_config(_env(
+        tmp_path,
+        IG_HISTORICAL_API_KEY="hist-api",
+        IG_HISTORICAL_USERNAME="hist-user",
+        IG_HISTORICAL_PASSWORD="hist-password",
+        IG_HISTORICAL_ACCOUNT_ID="HISTACC",
+    ))
+    historical = config.historical_data_config()
+
+    assert config.api_key == "secret-api-key"
+    assert config.username == "demo-user"
+    assert historical.api_key == "hist-api"
+    assert historical.username == "hist-user"
+    assert historical.password == "hist-password"
+    assert historical.account_id == "HISTACC"
+    assert historical.order_execution_enabled is False
+    assert historical.dry_run_only is True
+
+
+def test_rejects_partial_historical_credentials(tmp_path, monkeypatch):
+    monkeypatch.delenv("IG_ENV", raising=False)
+    with pytest.raises(ValueError, match="Set all or none"):
+        load_ig_demo_config(_env(tmp_path, IG_HISTORICAL_USERNAME="hist-user"))

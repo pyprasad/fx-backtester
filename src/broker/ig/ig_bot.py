@@ -69,10 +69,12 @@ class IGDemoBotRunner:
                  epic: str, runtime_strategy_config: str, history_points: int = 1000,
                  cache_path: str | Path = "data/live_cache/ig",
                  poll_seconds: float = 5,
-                 refresh_points: int = 10):
+                 refresh_points: int = 10,
+                 historical_client=None):
         self.config = config
         self.session = session
         self.client = client
+        self.historical_client = historical_client or client
         self.env_file = env_file
         self.strategy_path = strategy_path
         self.epic = epic
@@ -108,7 +110,7 @@ class IGDemoBotRunner:
         self.market_rules = extract_market_rules(self.client.get_market(self.epic))
         points = self.history_points if not self.cache.exists() else self.refresh_points
         return refresh_candle_cache(
-            client=self.client,
+            client=self.historical_client,
             epic=self.epic,
             paths=self.cache,
             scale_divisor=self.config.price_scale_divisor,
@@ -120,7 +122,7 @@ class IGDemoBotRunner:
         refresh = None
         if refresh_cache:
             refresh = refresh_candle_cache(
-                client=self.client,
+                client=self.historical_client,
                 epic=self.epic,
                 paths=self.cache,
                 scale_divisor=self.config.price_scale_divisor,

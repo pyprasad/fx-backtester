@@ -85,6 +85,37 @@ def closed_candles(candles: pl.DataFrame, hours: int, now: datetime | None = Non
     return candles.filter(pl.col("timestamp") + timedelta(hours=hours) <= now)
 
 
+def derive_four_hour_from_hour(hour: pl.DataFrame, keep_last: int = 1000) -> pl.DataFrame:
+    aggregations = [pl.first("symbol").alias("symbol")]
+    for price in ("mid", "bid", "ask"):
+        aggregations += [
+            pl.first(f"{price}_open").alias(f"{price}_open"),
+            pl.max(f"{price}_high").alias(f"{price}_high"),
+            pl.min(f"{price}_low").alias(f"{price}_low"),
+            pl.last(f"{price}_close").alias(f"{price}_close"),
+        ]
+    aggregations += [
+        pl.first("spread_open").alias("spread_open"),
+        pl.max("spread_high").alias("spread_high"),
+        pl.min("spread_low").alias("spread_low"),
+        pl.last("spread_close").alias("spread_close"),
+        pl.mean("spread_avg").alias("spread_avg"),
+        pl.median("spread_median").alias("spread_median"),
+        pl.max("spread_max").alias("spread_max"),
+        pl.sum("tick_count").alias("tick_count"),
+        pl.sum("bid_vol_sum").alias("bid_vol_sum"),
+        pl.sum("ask_vol_sum").alias("ask_vol_sum"),
+    ]
+    return (
+        hour.sort("timestamp")
+        .group_by_dynamic("timestamp", every="4h", label="left", closed="left")
+        .agg(aggregations)
+        .with_columns(pl.col("timestamp").dt.convert_time_zone("Europe/London").alias("timestamp_london"))
+        .sort("timestamp")
+        .tail(keep_last)
+    )
+
+
 def runtime_config_from_contract(contract_path: str | Path, runtime_config_path: str | Path):
     config = load_strategy_config(runtime_config_path)
     contract = yaml.safe_load(Path(contract_path).read_text())
@@ -214,15 +245,12 @@ def evaluate_live_signal_from_candles(*, client, config, contract: dict, epic: s
 
 
 def evaluate_live_signal(*, client, config, contract: dict, ig_config, epic: str,
-                         market_rules, history_points: int = 300) -> dict:
+                         market_rules, history_points: int = 1000) -> dict:
     hour = closed_candles(prices_to_candles(
         client.get_historical_prices(epic, "HOUR", history_points),
         scale_divisor=ig_config.price_scale_divisor,
     ), 1)
-    four_hour = closed_candles(prices_to_candles(
-        client.get_historical_prices(epic, "HOUR_4", history_points),
-        scale_divisor=ig_config.price_scale_divisor,
-    ), 4)
+    four_hour = derive_four_hour_from_hour(hour, history_points)
     return evaluate_live_signal_from_candles(
         client=client,
         config=config,

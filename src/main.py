@@ -262,7 +262,7 @@ def main():
                 "--runtime-strategy-config",
                 default="config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
             )
-            ig_parser.add_argument("--history-points", type=int, default=300)
+            ig_parser.add_argument("--history-points", type=int, default=1000)
         if name == "ig-demo-run-bot":
             ig_parser.add_argument("--strategy-config", required=True)
             ig_parser.add_argument(

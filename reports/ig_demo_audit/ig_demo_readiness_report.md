@@ -19,14 +19,14 @@ Status: **NOT_READY**
 - [x] effective_order_risk_covers_broker_minimum
 - [x] first_valid_bid_ask_received
 - [x] price_scaling_confirmed
-- [x] price_tick_fresh
+- [ ] price_tick_fresh
 - [x] price_not_delayed
 - [x] selected_guardrail_candidate_approved
 - [x] strict_spread_to_risk_rejection_active
 - [x] entry_cutoff_active
 - [x] weekend_force_close_active
 - [x] funding_awareness_active
-- [ ] dry_run_order_valid
+- [x] dry_run_order_valid
 - [x] dry_run_order_not_sent
 - [x] max_open_positions_one
 - [x] risk_per_trade_set

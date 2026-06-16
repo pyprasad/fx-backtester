@@ -34,6 +34,14 @@ from .token_store import load_session, save_session
 logger = logging.getLogger(__name__)
 
 
+class HistoricalPriceOnlyClient:
+    def __init__(self, client):
+        self._client = client
+
+    def get_historical_prices(self, epic: str, resolution: str, num_points: int):
+        return self._client.get_historical_prices(epic, resolution, num_points)
+
+
 def _connect(env_file):
     config = load_ig_demo_config(env_file)
     session = load_session(config.token_cache_path) if config.token_cache_enabled else None
@@ -41,6 +49,21 @@ def _connect(env_file):
     if config.token_cache_enabled:
         save_session(session, config.token_cache_path)
     return config, session, IGRestClient(config, session)
+
+
+def _connect_historical_data_client(config):
+    if not config.historical_data_override_enabled:
+        return None, None, None
+    historical_config = config.historical_data_config()
+    session = (
+        load_session(historical_config.token_cache_path)
+        if historical_config.token_cache_enabled else None
+    )
+    session = session or create_session(historical_config)
+    if historical_config.token_cache_enabled:
+        save_session(session, historical_config.token_cache_path)
+    client = HistoricalPriceOnlyClient(IGRestClient(historical_config, session))
+    return historical_config, session, client
 
 
 def _release_session(config, session):
@@ -375,11 +398,19 @@ def signal_dry_run_order(env_file, strategy_path, epic, runtime_strategy_config,
 def run_bot(env_file, strategy_path, epic, runtime_strategy_config, history_points,
             duration_seconds, poll_seconds, cache_path, refresh_points=10, confirmation=None):
     config, session, client = _connect(env_file)
+    historical_config = historical_session = historical_client = None
     try:
+        historical_config, historical_session, historical_client = _connect_historical_data_client(config)
+        if historical_client:
+            logger.info(
+                "Using IG historical-data override account for candle cache only | username=%s",
+                historical_config.redacted()["historical_username"] or historical_config.redacted()["username"],
+            )
         runner = IGDemoBotRunner(
             config=config,
             session=session,
             client=client,
+            historical_client=historical_client,
             env_file=env_file,
             strategy_path=strategy_path,
             epic=epic,
@@ -410,4 +441,6 @@ def run_bot(env_file, strategy_path, epic, runtime_strategy_config, history_poin
         }, indent=2, default=str))
         return result
     finally:
+        if historical_session and historical_config:
+            _release_session(historical_config, historical_session)
         _release_session(config, client.session)
