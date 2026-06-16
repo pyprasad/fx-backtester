@@ -88,6 +88,24 @@ def test_create_demo_position_requires_execution_mode_and_posts_v2(tmp_path):
     assert requests[0].headers["Version"] == "2"
 
 
+def test_historical_prices_uses_resolution_numpoints_path(tmp_path):
+    requests = []
+
+    def opener(request, timeout):
+        requests.append(request)
+        return Response({"prices": []})
+
+    cfg = config(tmp_path)
+    session = create_session(cfg, lambda *_args, **_kwargs: Response(
+        {"currentAccountId": "ABC123"}, {"CST": "cst", "X-SECURITY-TOKEN": "xst"}
+    ))
+
+    IGRestClient(cfg, session, opener).get_historical_prices("EPIC", "HOUR", 300)
+
+    assert requests[0].full_url.endswith("/prices/EPIC/HOUR/300")
+    assert requests[0].headers["Version"] == "2"
+
+
 def test_authentication_error_includes_ig_error_code():
     def opener(request, timeout):
         raise HTTPError(

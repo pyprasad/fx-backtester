@@ -1,21 +1,5 @@
 {
-  "open_position_count": 1,
+  "open_position_count": 0,
   "epic_filter": "CS.D.USDJPY.TODAY.IP",
-  "positions": [
-    {
-      "deal_id": "DIAAAAXRLU4XRAR",
-      "deal_reference": "demo-220fa03337094dc39cd3521dd",
-      "epic": "CS.D.USDJPY.TODAY.IP",
-      "instrument_name": "USD/JPY",
-      "expiry": "DFB",
-      "market_status": "TRADEABLE",
-      "direction": "SELL",
-      "size": 12.45,
-      "level": 16031.2,
-      "currency": "GBP",
-      "created_date": "2026/06/16 09:46:20:000",
-      "created_date_utc": "2026-06-16T08:46:20",
-      "controlled_risk": false
-    }
-  ]
+  "positions": []
 }

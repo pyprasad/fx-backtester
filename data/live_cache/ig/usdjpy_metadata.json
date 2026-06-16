@@ -1,0 +1,20 @@
+{
+  "epic": "CS.D.USDJPY.TODAY.IP",
+  "refreshed_at": "2026-06-16T12:36:05.316293+00:00",
+  "history_points": 2,
+  "keep_last": 1000,
+  "timeframes": {
+    "HOUR": {
+      "path": "data/live_cache/ig/usdjpy_hour.parquet",
+      "rows": 999,
+      "latest_timestamp": "2026-06-16T10:00:00+00:00",
+      "rate_limited_using_existing_cache": true
+    },
+    "HOUR_4": {
+      "path": "data/live_cache/ig/usdjpy_hour_4.parquet",
+      "rows": 999,
+      "latest_timestamp": "2026-06-16T07:00:00+00:00",
+      "rate_limited_using_existing_cache": true
+    }
+  }
+}

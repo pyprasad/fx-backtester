@@ -46,9 +46,28 @@ PYTHONPATH=. .venv/bin/python -m src.main ig-demo-dry-run-order \
 PYTHONPATH=. .venv/bin/python -m src.main ig-demo-readiness \
   --env-file .env.demo \
   --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-live-signal-check \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic <USDJPY_EPIC>
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-signal-dry-run-order \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic <USDJPY_EPIC>
+
+PYTHONPATH=. .venv/bin/python -m src.main ig-demo-run-bot \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic <USDJPY_EPIC> \
+  --history-points 1000 \
+  --refresh-points 10 \
+  --duration-seconds 3900
 ```
 
 Reports are written under `reports/ig_demo_audit`; ticks under `data/live_demo_ticks/usdjpy`.
+The bot's rolling historical candle cache is written under `data/live_cache/ig`.
 
 ## Safety Boundary
 
@@ -61,6 +80,23 @@ DEMO order placement follows IG's REST flow: `POST /positions/otc` returns a `de
 `reports/ig_demo_audit/demo_execution_test.json` stores those fields plus the dynamic sizing
 calculation. The accepted DEMO order proves broker execution plumbing only; it does not prove
 strategy-signal automation because `strategy_signal_used` remains `false`.
+
+The read-only `ig-demo-live-signal-check` command is the first strategy/live bridge. It fetches IG
+historical `HOUR` and `HOUR_4` prices, normalizes scaled USDJPY prices with `IG_PRICE_SCALE_DIVISOR`,
+applies the strict combined-session strategy contract to the proven runtime strategy engine, and
+checks only the latest closed 1H candle. The adjacent `ig-demo-signal-dry-run-order` command writes
+`reports/ig_demo_audit/signal_dry_run_order_usdjpy.json` from the same evaluation path. Both commands
+write `SIGNAL_READY_FOR_DEMO_DRY_RUN`, `NO_SIGNAL`, or an explicit blocked status, and neither sends
+an order.
+
+The `ig-demo-run-bot` command is the long-running process path. It subscribes to IG `PRICE` updates
+and keeps only the latest execution tick in memory. It writes audit events for milestones instead of
+persisting every tick. IG historical candles remain the signal-generation source of truth: the bot
+bootstraps and refreshes rolling `HOUR` and `HOUR_4` parquet caches, then evaluates the strategy after
+each newly closed 1H candle. Lightstreamer ticks are used for executable-entry validation only.
+`--history-points` controls first-time cache bootstrap size; once cache files exist, `--refresh-points`
+controls the much smaller hourly historical refresh. If IG historical allowance is exceeded and cache
+files already exist, the bot falls back to the existing cache and writes that decision into audit.
 
 The initial session uses IG session version 2 because it returns CST and X-SECURITY-TOKEN needed
 for Lightstreamer. If `IG_ACCOUNT_ID` differs from the authenticated current account, readiness

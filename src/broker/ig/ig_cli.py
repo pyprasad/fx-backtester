@@ -8,6 +8,7 @@ import yaml
 
 from .config import load_ig_demo_config
 from .ig_auth import create_session, logout
+from .ig_bot import IGDemoBotRunner
 from .ig_demo_readiness import evaluate_demo_readiness, write_readiness_report
 from .ig_demo_execution import place_demo_test_order, write_demo_execution_report
 from .ig_market_discovery import (
@@ -16,6 +17,12 @@ from .ig_market_discovery import (
     write_market_rules_report,
 )
 from .ig_market_rules import extract_market_rules
+from .ig_live_signal import (
+    evaluate_live_signal,
+    runtime_config_from_contract,
+    write_live_signal_report,
+    write_signal_dry_run_report,
+)
 from .ig_order_dry_run import build_dry_run_order, write_dry_run_report
 from .ig_position_sizing import account_balance, active_account, dynamic_deal_size
 from .ig_rest_client import IGRestClient
@@ -305,3 +312,102 @@ def readiness(env_file, strategy_path):
     report = write_readiness_report(config.audit_output_path, result)
     print(f"IG DEMO readiness report: {report}")
     return result
+
+
+def live_signal_check(env_file, strategy_path, epic, runtime_strategy_config, history_points):
+    config, session, client = _connect(env_file)
+    try:
+        runtime_config, contract = runtime_config_from_contract(strategy_path, runtime_strategy_config)
+        rules = extract_market_rules(client.get_market(epic))
+        result = evaluate_live_signal(
+            client=client,
+            config=runtime_config,
+            contract=contract,
+            ig_config=config,
+            epic=epic,
+            market_rules=rules,
+            history_points=history_points,
+        )
+        report = write_live_signal_report(config.audit_output_path, result)
+        print(f"IG DEMO live signal report: {report}")
+        print(json.dumps({
+            "status": result["status"],
+            "latest_closed_1h_candle": result.get("latest_closed_1h_candle"),
+            "signal_count": result.get("signal_count"),
+            "order_sent": result.get("order_sent", False),
+        }, indent=2))
+        return result
+    finally:
+        _release_session(config, client.session)
+
+
+def signal_dry_run_order(env_file, strategy_path, epic, runtime_strategy_config, history_points):
+    config, session, client = _connect(env_file)
+    try:
+        runtime_config, contract = runtime_config_from_contract(strategy_path, runtime_strategy_config)
+        rules = extract_market_rules(client.get_market(epic))
+        result = evaluate_live_signal(
+            client=client,
+            config=runtime_config,
+            contract=contract,
+            ig_config=config,
+            epic=epic,
+            market_rules=rules,
+            history_points=history_points,
+        )
+        report = write_signal_dry_run_report(config.audit_output_path, result)
+        print(f"IG DEMO signal dry-run order report: {report}")
+        print(json.dumps({
+            "status": result["status"],
+            "latest_closed_1h_candle": result.get("latest_closed_1h_candle"),
+            "has_current_signal": result.get("current_signal") is not None,
+            "dry_run_status": (
+                result.get("dry_run_order", {}).get("validation_status")
+                if result.get("dry_run_order") else None
+            ),
+            "order_sent": False,
+        }, indent=2))
+        return result
+    finally:
+        _release_session(config, client.session)
+
+
+def run_bot(env_file, strategy_path, epic, runtime_strategy_config, history_points,
+            duration_seconds, poll_seconds, cache_path, refresh_points=10, confirmation=None):
+    config, session, client = _connect(env_file)
+    try:
+        runner = IGDemoBotRunner(
+            config=config,
+            session=session,
+            client=client,
+            env_file=env_file,
+            strategy_path=strategy_path,
+            epic=epic,
+            runtime_strategy_config=runtime_strategy_config,
+            history_points=history_points,
+            cache_path=cache_path,
+            poll_seconds=poll_seconds,
+            refresh_points=refresh_points,
+        )
+        result = runner.run(
+            duration_seconds=duration_seconds,
+            execute_confirmation=confirmation,
+        )
+        print(json.dumps({
+            "status": result.status,
+            "tick_count": result.tick_count,
+            "last_evaluated_candle": result.last_evaluated_candle,
+            "last_signal_status": (
+                result.last_signal_result.get("status")
+                if result.last_signal_result else None
+            ),
+            "order_sent": bool(result.order_execution),
+            "accepted": (
+                result.order_execution.get("accepted")
+                if result.order_execution else False
+            ),
+            "reports": result.reports,
+        }, indent=2, default=str))
+        return result
+    finally:
+        _release_session(config, client.session)

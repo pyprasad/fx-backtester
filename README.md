@@ -91,6 +91,40 @@ python -m src.main ig-demo-dry-run-order \
   --epic CS.D.USDJPY.TODAY.IP
 ```
 
+To check whether the strict strategy has a current live DEMO signal, use the read-only signal
+bridge. It fetches IG historical 1H/4H prices, applies the selected strategy rules, validates only
+the latest closed 1H candle, and writes `reports/ig_demo_audit/live_signal_check_usdjpy.json`.
+
+```
+python -m src.main ig-demo-live-signal-check \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic CS.D.USDJPY.TODAY.IP
+```
+
+To produce the signal-driven order audit without sending anything, run:
+
+```
+python -m src.main ig-demo-signal-dry-run-order \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic CS.D.USDJPY.TODAY.IP
+```
+
+For the long-running process path, use the bot command. It keeps the latest streamed tick in memory,
+persists only audit events, maintains rolling IG historical candle caches under
+`data/live_cache/ig`, and evaluates the strategy after each newly closed 1H candle:
+
+```
+python -m src.main ig-demo-run-bot \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic CS.D.USDJPY.TODAY.IP \
+  --history-points 1000 \
+  --refresh-points 10 \
+  --duration-seconds 3900
+```
+
 Only after dry-run validation is `READY_FOR_DEMO_DRY_RUN`, `.env.demo` explicitly enables DEMO
 order execution, and there are no existing USDJPY positions, the gated execution-plumbing command
 can submit a DEMO order and then poll IG confirms for `dealStatus` and `dealId`:

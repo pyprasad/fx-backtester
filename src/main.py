@@ -13,9 +13,12 @@ from src.broker.ig.ig_cli import (
     dry_run_order as ig_dry_run_order,
     market_discovery as ig_market_discovery,
     market_rules as ig_market_rules,
+    live_signal_check as ig_live_signal_check,
     open_positions as ig_open_positions,
     place_demo_test_order_cli as ig_place_demo_test_order,
     readiness as ig_readiness,
+    run_bot as ig_run_bot,
+    signal_dry_run_order as ig_signal_dry_run_order,
     stream_ticks as ig_stream_ticks,
 )
 from src.config.config_loader import (
@@ -233,23 +236,45 @@ def main():
     bakeoff_parser.add_argument("--existing-bakeoff-run-path")
     for name in ("ig-demo-auth-check", "ig-demo-market-discovery", "ig-demo-market-rules",
                  "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-open-positions",
-                 "ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order"):
+                 "ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order",
+                 "ig-demo-live-signal-check", "ig-demo-signal-dry-run-order",
+                 "ig-demo-run-bot"):
         ig_parser = sub.add_parser(name)
         ig_parser.add_argument("--env-file", default=".env.demo")
         if name == "ig-demo-market-discovery":
             ig_parser.add_argument("--market", default="USD/JPY")
         if name in {"ig-demo-market-rules", "ig-demo-stream-prices",
                     "ig-demo-stream-chart-ticks", "ig-demo-dry-run-order",
-                    "ig-demo-place-test-order"}:
+                    "ig-demo-place-test-order", "ig-demo-live-signal-check",
+                    "ig-demo-signal-dry-run-order", "ig-demo-run-bot"}:
             ig_parser.add_argument("--epic", required=True)
         if name == "ig-demo-open-positions":
             ig_parser.add_argument("--epic")
         if name in {"ig-demo-stream-prices", "ig-demo-stream-chart-ticks"}:
             ig_parser.add_argument("--duration-seconds", type=int, default=120)
-        if name in {"ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order"}:
+        if name in {"ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order",
+                    "ig-demo-live-signal-check", "ig-demo-signal-dry-run-order"}:
             ig_parser.add_argument("--strategy-config", required=True)
         if name == "ig-demo-place-test-order":
             ig_parser.add_argument("--confirm", required=True)
+        if name in {"ig-demo-live-signal-check", "ig-demo-signal-dry-run-order"}:
+            ig_parser.add_argument(
+                "--runtime-strategy-config",
+                default="config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
+            )
+            ig_parser.add_argument("--history-points", type=int, default=300)
+        if name == "ig-demo-run-bot":
+            ig_parser.add_argument("--strategy-config", required=True)
+            ig_parser.add_argument(
+                "--runtime-strategy-config",
+                default="config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
+            )
+            ig_parser.add_argument("--history-points", type=int, default=1000)
+            ig_parser.add_argument("--refresh-points", type=int, default=10)
+            ig_parser.add_argument("--duration-seconds", type=int, default=3900)
+            ig_parser.add_argument("--poll-seconds", type=float, default=5)
+            ig_parser.add_argument("--cache-path", default="data/live_cache/ig")
+            ig_parser.add_argument("--confirm")
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -321,6 +346,23 @@ def main():
         ig_dry_run_order(args.env_file, args.strategy_config, args.epic)
     elif args.command == "ig-demo-place-test-order":
         ig_place_demo_test_order(args.env_file, args.strategy_config, args.epic, args.confirm)
+    elif args.command == "ig-demo-live-signal-check":
+        ig_live_signal_check(
+            args.env_file, args.strategy_config, args.epic,
+            args.runtime_strategy_config, args.history_points,
+        )
+    elif args.command == "ig-demo-signal-dry-run-order":
+        ig_signal_dry_run_order(
+            args.env_file, args.strategy_config, args.epic,
+            args.runtime_strategy_config, args.history_points,
+        )
+    elif args.command == "ig-demo-run-bot":
+        ig_run_bot(
+            args.env_file, args.strategy_config, args.epic,
+            args.runtime_strategy_config, args.history_points,
+            args.duration_seconds, args.poll_seconds, args.cache_path,
+            args.refresh_points, args.confirm,
+        )
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

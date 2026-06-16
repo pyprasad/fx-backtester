@@ -1,0 +1,8 @@
+{
+  "status": "BLOCKED_STALE_CANDLE_CACHE",
+  "epic": "CS.D.USDJPY.TODAY.IP",
+  "latest_closed_1h_candle": "2026-06-16T10:00:00+00:00",
+  "current_signal": null,
+  "dry_run_order": null,
+  "order_sent": false
+}

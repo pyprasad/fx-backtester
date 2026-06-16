@@ -32,6 +32,8 @@ def request_json(url: str, method: str, headers: dict, payload: dict | None = No
             return (json.loads(content) if content else {}), dict(response.headers.items())
     except HTTPError as exc:
         content = exc.read().decode(errors="replace")
+        if exc.code == 429 or "allowance" in content.lower():
+            raise IGRateLimitError(f"IG rate limit reached ({exc.code}): {content[:300]}") from exc
         if exc.code in {401, 403}:
             try:
                 error_code = json.loads(content).get("errorCode")
@@ -43,8 +45,6 @@ def request_json(url: str, method: str, headers: dict, payload: dict | None = No
                 status_code=exc.code,
                 error_code=error_code,
             ) from exc
-        if exc.code == 429 or "allowance" in content.lower():
-            raise IGRateLimitError(f"IG rate limit reached ({exc.code})") from exc
         raise IGAPIError(f"IG REST error ({exc.code}): {content[:300]}") from exc
     except URLError as exc:
         raise IGAPIError(f"IG REST connection failed: {exc.reason}") from exc
@@ -108,9 +108,7 @@ class IGRestClient:
         return self._get(f"/confirms/{deal_reference}", 1)
 
     def get_historical_prices(self, epic: str, resolution: str, num_points: int):
-        return self._get(
-            f"/prices/{epic}", 3, {"resolution": resolution, "max": str(num_points)}
-        )
+        return self._get(f"/prices/{epic}/{resolution}/{num_points}", 2)
 
     def create_demo_position(self, payload: dict):
         if self.config.env != "DEMO" or self.config.acc_type != "DEMO":
