@@ -24,8 +24,10 @@ limit distance/level, currency, `force_open`, `guaranteed_stop`, `time_in_force`
 - Size is positive.
 - Spread/risk above `20%` creates a warning.
 
-The CLI uses the latest stored DEMO tick and a hypothetical minimum-risk stop/4R target. The
-execution-plumbing test uses the broker minimum deal size and active account currency.
+The CLI uses the latest stored DEMO tick and a hypothetical minimum-risk stop/4R target. DEMO
+order size is calculated from active account balance, `risk_per_trade_percent`, current stop
+distance in pips, IG `AMOUNT` unit sizing, and the broker minimum deal size. For example, a
+`0.25%` risk on a `29,898.03` balance with a `6` pip stop sizes to `12.45`.
 
 The dry-run output always includes `order_sent: false`.
 
@@ -33,7 +35,7 @@ The dry-run output always includes `order_sent: false`.
 
 This is not a strategy signal and must not be used as strategy-performance evidence. It is
 restricted to IG DEMO, refuses stale ticks or existing positions, reruns all dry-run guards, uses
-the broker minimum size, and requires the exact confirmation phrase `PLACE_DEMO_ORDER`.
+dynamic risk-based sizing, and requires the exact confirmation phrase `PLACE_DEMO_ORDER`.
 
 Temporarily set `IG_ORDER_EXECUTION_ENABLED=true` and `IG_DRY_RUN_ONLY=false`, capture a fresh
 price, then run:
@@ -41,10 +43,12 @@ price, then run:
 ```bash
 python -m src.main ig-demo-place-test-order \
   --env-file .env.demo \
-  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
   --epic CS.D.USDJPY.TODAY.IP \
   --confirm PLACE_DEMO_ORDER
 ```
 
-Immediately restore `IG_ORDER_EXECUTION_ENABLED=false` and `IG_DRY_RUN_ONLY=true` after the test.
-Production execution remains unsupported.
+The execution report records `deal_reference`, `deal_id`, `deal_status`, `accepted`, `reason`,
+the IG submission payload, the confirmation response, and the sizing calculation. Immediately
+restore `IG_ORDER_EXECUTION_ENABLED=false` and `IG_DRY_RUN_ONLY=true` after the test. Production
+execution remains unsupported.

@@ -33,18 +33,20 @@ The versioned strategy information contract is
 The documentation package starts at
 [`docs/strategies/README.md`](docs/strategies/README.md). The next phase is FX-2I Demo-Readiness
 Gate; no live trading is included. DEMO order placement is disabled by default and restricted to
-an explicitly confirmed minimum-size execution-plumbing test.
+an explicitly confirmed DEMO execution-plumbing test.
 
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule
 extraction, modern Lightstreamer `PRICE`/optional `CHART:TICK` capture, local DEMO tick storage,
 dry-run SELL payload validation, readiness reporting, and an optional DEMO-only execution-plumbing
-test.
+test. The DEMO test order uses the strategy risk percentage, active DEMO account balance, current
+IG stop-distance rules, and IG `AMOUNT` sizing. It is still not a strategy-generated live signal.
 
-Copy `.env.demo.example` to the gitignored `.env.demo` and add credentials locally. The loader
-rejects LIVE mode, enabled order execution, disabled dry-run mode, and deprecated `MARKET`
-subscriptions. The REST client cannot create live-account orders.
+Copy `.env.demo.example` to the gitignored `.env.demo` and add credentials locally. Keep
+`IG_ORDER_EXECUTION_ENABLED=false` and `IG_DRY_RUN_ONLY=true` except during an explicitly confirmed
+DEMO order test. The loader rejects LIVE mode, inconsistent execution flags, and deprecated
+`MARKET` subscriptions. The REST client cannot create live-account orders.
 
 Start with:
 
@@ -83,9 +85,20 @@ python -m src.main ig-demo-stream-prices \
 ```
 
 ```
+python -m src.main ig-demo-dry-run-order \
+  --env-file .env.demo \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+  --epic CS.D.USDJPY.TODAY.IP
+```
+
+Only after dry-run validation is `READY_FOR_DEMO_DRY_RUN`, `.env.demo` explicitly enables DEMO
+order execution, and there are no existing USDJPY positions, the gated execution-plumbing command
+can submit a DEMO order and then poll IG confirms for `dealStatus` and `dealId`:
+
+```
 python -m src.main ig-demo-place-test-order \
   --env-file .env.demo \
-  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml \
+  --strategy-config config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
   --epic CS.D.USDJPY.TODAY.IP \
   --confirm PLACE_DEMO_ORDER
 ```
@@ -102,8 +115,9 @@ in `.env.demo` and rerun the stream command. Do not apply the divisor when `PRIC
 decimal quotes such as `160.18 / 160.25`.
 
 Full setup and command sequencing are documented in
-[`docs/broker/ig_demo_integration.md`](docs/broker/ig_demo_integration.md). The maximum possible
-FX-2I readiness is `READY_FOR_DEMO_DRY_RUN`; this phase sends no demo or live orders.
+[`docs/broker/ig_demo_integration.md`](docs/broker/ig_demo_integration.md). Readiness may report
+`READY_FOR_DEMO_DRY_RUN` or, when `.env.demo` explicitly enables DEMO execution,
+`READY_FOR_DEMO_ORDER`. `READY_FOR_LIVE` is never an allowed status.
 
 ## Setup
 
