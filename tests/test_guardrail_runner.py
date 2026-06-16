@@ -44,3 +44,20 @@ def test_guardrail_runner_two_variants(monkeypatch, tmp_path: Path, strategy_con
                                    tmp_path / "out").run()
     assert (output / "broker_guardrail_comparison.csv").exists()
     assert len(list(csv.DictReader((output / "broker_guardrail_comparison.csv").open()))) == 2
+
+
+def test_guardrail_runner_applies_session_research_override(tmp_path: Path, strategy_config):
+    runner = BrokerGuardrailRunner(
+        "x", "x", tmp_path / "ticks", tmp_path / "candles", tmp_path / "out",
+        session_timezone="Asia/Tokyo",
+        session_windows=[{"name": "Tokyo", "start": "09:00", "end": "18:00"}],
+    )
+    runner.strategy_path = Path("config/strategy.usdjpy.fx_swing_trend_reclaim.yaml")
+    runner.variants_path = Path("config/broker_guardrail_variants.usdjpy.yaml")
+
+    config = runner._config({"broker_execution_guardrails": {}})
+
+    assert config.session_filter["timezone"] == "Asia/Tokyo"
+    assert config.session_filter["entry_windows"] == [
+        {"name": "Tokyo", "start": "09:00", "end": "18:00"}
+    ]

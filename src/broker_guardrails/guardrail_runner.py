@@ -31,7 +31,8 @@ def _read_all(path: Path) -> list[dict]:
 class BrokerGuardrailRunner:
     def __init__(self, strategy_config, variants_config, normalised_tick_path, candle_path,
                  report_output_path, daily_funding_pips=None, skip_funding=False,
-                 variant=None, continue_on_error=True):
+                 variant=None, continue_on_error=True, session_timezone=None,
+                 session_windows=None):
         self.strategy_path = Path(strategy_config)
         self.variants_path = Path(variants_config)
         self.tick_path = str(Path(normalised_tick_path).resolve())
@@ -41,6 +42,8 @@ class BrokerGuardrailRunner:
         self.skip_funding = skip_funding
         self.selected_variant = variant
         self.continue_on_error = continue_on_error
+        self.session_timezone = session_timezone
+        self.session_windows = session_windows
         self.output = self.report_parent / datetime.now(timezone.utc).strftime(
             "%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1"
         )
@@ -48,6 +51,10 @@ class BrokerGuardrailRunner:
     def _config(self, variant: dict):
         config = load_strategy_config(self.strategy_path)
         config.data["normalised_tick_path"], config.data["candle_path"] = self.tick_path, self.candle_path
+        if self.session_timezone:
+            config.session_filter["timezone"] = self.session_timezone
+        if self.session_windows:
+            config.session_filter["entry_windows"] = self.session_windows
         config.broker_execution_guardrails = deep_merge(
             config.broker_execution_guardrails, variant["broker_execution_guardrails"]
         )

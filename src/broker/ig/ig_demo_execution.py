@@ -49,11 +49,27 @@ def place_demo_test_order(client, order: DryRunOrder, *, currency_code: str,
         if confirmation_response.get("dealStatus") in {"ACCEPTED", "REJECTED"}:
             break
         time.sleep(poll_interval_seconds)
+    deal_id = None
+    deal_status = None
+    reason = None
+    if confirmation_response:
+        deal_id = confirmation_response.get("dealId")
+        affected = confirmation_response.get("affectedDeals") or []
+        if not deal_id and affected:
+            deal_id = affected[0].get("dealId")
+        deal_status = confirmation_response.get("dealStatus")
+        reason = confirmation_response.get("reason")
     return {
         "submitted_at": datetime.now(timezone.utc).isoformat(),
         "environment": "DEMO",
         "execution_type": "MINIMUM_SIZE_EXECUTION_PLUMBING_TEST",
         "strategy_signal_used": False,
+        "deal_reference": deal_reference,
+        "deal_id": deal_id,
+        "deal_status": deal_status,
+        "reason": reason,
+        "confirmed": deal_status in {"ACCEPTED", "REJECTED"},
+        "accepted": deal_status == "ACCEPTED",
         "request": payload,
         "submission_response": response,
         "confirmation": confirmation_response,

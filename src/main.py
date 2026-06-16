@@ -13,6 +13,7 @@ from src.broker.ig.ig_cli import (
     dry_run_order as ig_dry_run_order,
     market_discovery as ig_market_discovery,
     market_rules as ig_market_rules,
+    open_positions as ig_open_positions,
     place_demo_test_order_cli as ig_place_demo_test_order,
     readiness as ig_readiness,
     stream_ticks as ig_stream_ticks,
@@ -48,6 +49,16 @@ def boolean(value):
     if lowered in {"false", "0", "no"}:
         return False
     raise argparse.ArgumentTypeError("Expected true or false")
+
+
+def session_window(value):
+    parts = [item.strip() for item in value.split(",")]
+    if len(parts) not in {3, 4}:
+        raise argparse.ArgumentTypeError("Expected NAME,START,END[,TIMEZONE]")
+    result = {"name": parts[0], "start": parts[1], "end": parts[2]}
+    if len(parts) == 4:
+        result["timezone"] = parts[3]
+    return result
 
 
 def quality(config, ticks=None):
@@ -181,6 +192,8 @@ def main():
     robustness_parser.add_argument("--skip-heatmaps", action=argparse.BooleanOptionalAction, default=False)
     robustness_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
     robustness_parser.add_argument("--baseline-run-path")
+    robustness_parser.add_argument("--session-timezone")
+    robustness_parser.add_argument("--session-window", action="append", type=session_window)
     stress_parser = sub.add_parser("monte-carlo-stress")
     stress_parser.add_argument("--strategy-config", required=True)
     stress_parser.add_argument("--run-path", required=True)
@@ -201,6 +214,8 @@ def main():
     guardrail_parser.add_argument("--skip-funding", action=argparse.BooleanOptionalAction, default=False)
     guardrail_parser.add_argument("--variant")
     guardrail_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
+    guardrail_parser.add_argument("--session-timezone")
+    guardrail_parser.add_argument("--session-window", action="append", type=session_window)
     bakeoff_parser = sub.add_parser("final-guardrail-bakeoff")
     bakeoff_parser.add_argument("--strategy-config", required=True)
     bakeoff_parser.add_argument("--bakeoff-config", required=True)
@@ -217,8 +232,8 @@ def main():
     bakeoff_parser.add_argument("--existing-guardrail-run-path")
     bakeoff_parser.add_argument("--existing-bakeoff-run-path")
     for name in ("ig-demo-auth-check", "ig-demo-market-discovery", "ig-demo-market-rules",
-                 "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-readiness",
-                 "ig-demo-dry-run-order", "ig-demo-place-test-order"):
+                 "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-open-positions",
+                 "ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order"):
         ig_parser = sub.add_parser(name)
         ig_parser.add_argument("--env-file", default=".env.demo")
         if name == "ig-demo-market-discovery":
@@ -227,6 +242,8 @@ def main():
                     "ig-demo-stream-chart-ticks", "ig-demo-dry-run-order",
                     "ig-demo-place-test-order"}:
             ig_parser.add_argument("--epic", required=True)
+        if name == "ig-demo-open-positions":
+            ig_parser.add_argument("--epic")
         if name in {"ig-demo-stream-prices", "ig-demo-stream-chart-ticks"}:
             ig_parser.add_argument("--duration-seconds", type=int, default=120)
         if name in {"ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order"}:
@@ -258,6 +275,7 @@ def main():
             args.strategy_config, args.normalised_tick_path, args.candle_path,
             args.report_output_path, args.max_variants, args.include_full_grid,
             args.skip_heatmaps, args.continue_on_error, args.baseline_run_path,
+            args.session_timezone, args.session_window,
         ).run()
         print(f"Parameter robustness report: {output / 'robustness_report.html'}")
     elif args.command == "monte-carlo-stress":
@@ -272,6 +290,7 @@ def main():
             args.strategy_config, args.guardrail_variants_config, args.normalised_tick_path,
             args.candle_path, args.report_output_path, args.daily_funding_pips,
             args.skip_funding, args.variant, args.continue_on_error,
+            args.session_timezone, args.session_window,
         ).run()
         print(f"Broker guardrail report: {output / 'broker_guardrail_report.html'}")
     elif args.command == "final-guardrail-bakeoff":
@@ -290,6 +309,8 @@ def main():
         ig_market_discovery(args.env_file, args.market)
     elif args.command == "ig-demo-market-rules":
         ig_market_rules(args.env_file, args.epic)
+    elif args.command == "ig-demo-open-positions":
+        ig_open_positions(args.env_file, args.epic)
     elif args.command == "ig-demo-stream-prices":
         ig_stream_ticks(args.env_file, args.epic, args.duration_seconds)
     elif args.command == "ig-demo-stream-chart-ticks":

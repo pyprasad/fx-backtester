@@ -38,6 +38,12 @@ variants:
       enabled: true
       minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 5.0}
       spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.20}
+  - name: min_risk_3pips_spread_ratio_20pct
+    description: Reject trades below 3 pips risk or spread/risk above 20%.
+    broker_execution_guardrails:
+      enabled: true
+      minimum_initial_risk: {enabled: true, default_min_initial_risk_pips: 3.0}
+      spread_to_risk_filter: {enabled: true, default_max_spread_to_initial_risk_ratio: 0.20}
   - name: min_risk_5pips_spread_ratio_15pct
     description: Reject trades below 5 pips risk or spread/risk above 15%.
     broker_execution_guardrails:

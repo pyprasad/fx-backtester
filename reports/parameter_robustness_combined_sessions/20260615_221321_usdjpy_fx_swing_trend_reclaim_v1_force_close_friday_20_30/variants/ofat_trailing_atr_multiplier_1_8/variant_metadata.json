@@ -1,0 +1,12 @@
+{
+  "variant_id": "ofat_trailing_atr_multiplier_1_8",
+  "variant_name": "ofat_trailing_atr_multiplier_1_8",
+  "test_type": "one_factor_at_a_time",
+  "parameter_overrides": {
+    "trailing_atr_multiplier": 1.8
+  },
+  "is_baseline": false,
+  "run_status": "SUCCESS",
+  "error_message": "",
+  "report_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/parameter_robustness_combined_sessions/20260615_221321_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/variants/ofat_trailing_atr_multiplier_1_8/html_report.html"
+}

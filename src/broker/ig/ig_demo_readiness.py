@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-ALLOWED_STATUSES = {"READY_FOR_DEMO_DRY_RUN", "NOT_READY"}
+ALLOWED_STATUSES = {"READY_FOR_DEMO_DRY_RUN", "READY_FOR_DEMO_ORDER", "NOT_READY"}
 
 
 def evaluate_demo_readiness(*, config, session=None, accounts=None, market_rules=None,
@@ -12,9 +12,23 @@ def evaluate_demo_readiness(*, config, session=None, accounts=None, market_rules
         first_tick
         and abs((datetime.now(timezone.utc) - first_tick.timestamp_utc).total_seconds()) <= 300
     )
+    selected_guardrail = strategy["broker_guardrails"]["selected_guardrail_candidate"] if strategy else ""
+    spread_reject = strategy["spread_guardrails"].get("reject_spread_to_risk_ratio_above") if strategy else None
+    strict_candidate = selected_guardrail == "min_risk_3pips_spread_ratio_20pct"
+    broker_min_stop = market_rules.min_stop_distance_pips if market_rules else None
+    configured_min_risk = strategy["broker_guardrails"]["min_initial_risk_pips"] if strategy else None
+    prepared_stop_distance = getattr(dry_run_order, "stop_distance", None)
+    effective_risk_covers_broker_minimum = bool(
+        market_rules and (
+            broker_min_stop is None
+            or (configured_min_risk is not None and configured_min_risk >= broker_min_stop)
+            or (prepared_stop_distance is not None and prepared_stop_distance >= broker_min_stop)
+        )
+    )
     checks = {
         "environment_demo_only": config.env == "DEMO" and config.acc_type == "DEMO",
-        "dry_run_only": config.dry_run_only and not config.order_execution_enabled,
+        "dry_run_mode": config.dry_run_only and not config.order_execution_enabled,
+        "demo_order_mode": config.order_execution_enabled and not config.dry_run_only,
         "credentials_loaded": bool(config.api_key and config.username and config.password),
         "session_created": session is not None,
         "accounts_retrieved": bool(accounts),
@@ -30,20 +44,18 @@ def evaluate_demo_readiness(*, config, session=None, accounts=None, market_rules
             market_rules and market_rules.streaming_prices_available is not False
         ),
         "min_stop_available_or_research_fallback_documented": bool(market_rules),
-        "strategy_min_risk_covers_broker_minimum": bool(
-            market_rules and (
-                market_rules.min_stop_distance_pips is None
-                or strategy["broker_guardrails"]["min_initial_risk_pips"] >= market_rules.min_stop_distance_pips
-            )
-        ),
+        "effective_order_risk_covers_broker_minimum": effective_risk_covers_broker_minimum,
         "first_valid_bid_ask_received": bool(first_tick and first_tick.bid and first_tick.ask),
         "price_scaling_confirmed": bool(
             first_tick and first_tick.raw.get("normalization_price_scale_divisor")
         ),
         "price_tick_fresh": fresh,
         "price_not_delayed": bool(first_tick and not first_tick.delayed),
-        "min_risk_3pips_active": bool(
-            strategy and strategy["broker_guardrails"]["selected_guardrail_candidate"] == "min_risk_3pips"
+        "selected_guardrail_candidate_approved": bool(
+            selected_guardrail in {"min_risk_3pips", "min_risk_3pips_spread_ratio_20pct"}
+        ),
+        "strict_spread_to_risk_rejection_active": bool(
+            not strict_candidate or spread_reject == 0.20
         ),
         "entry_cutoff_active": bool(strategy and strategy["time_guards"]["block_new_entries_after"] == "21:30"),
         "weekend_force_close_active": bool(
@@ -58,12 +70,28 @@ def evaluate_demo_readiness(*, config, session=None, accounts=None, market_rules
         "kill_switch_placeholder_documented": True,
         "live_account_support_disabled": config.env == "DEMO",
     }
-    required = [key for key in checks if key != "kill_switch_placeholder_documented"]
-    status = "READY_FOR_DEMO_DRY_RUN" if all(checks[key] for key in required) else "NOT_READY"
+    required = [
+        key for key in checks
+        if key not in {"kill_switch_placeholder_documented", "dry_run_mode", "demo_order_mode"}
+    ]
+    shared_ready = all(checks[key] for key in required)
+    if shared_ready and checks["demo_order_mode"]:
+        status = "READY_FOR_DEMO_ORDER"
+    elif shared_ready and checks["dry_run_mode"]:
+        status = "READY_FOR_DEMO_DRY_RUN"
+    else:
+        status = "NOT_READY"
+    failed_checks = [key for key in required if not checks[key]]
+    if not checks["dry_run_mode"] and not checks["demo_order_mode"]:
+        failed_checks.extend(["dry_run_mode", "demo_order_mode"])
     return {
         "status": status, "checks": checks,
-        "failed_checks": [key for key, passed in checks.items() if not passed],
-        "highest_allowed_status": "READY_FOR_DEMO_DRY_RUN",
+        "failed_checks": failed_checks,
+        "highest_allowed_status": "READY_FOR_DEMO_ORDER" if checks["demo_order_mode"] else "READY_FOR_DEMO_DRY_RUN",
+        "broker_min_stop_distance_pips": broker_min_stop,
+        "configured_min_initial_risk_pips": configured_min_risk,
+        "prepared_order_stop_distance_pips": prepared_stop_distance,
+        "dry_run_validation_errors": getattr(dry_run_order, "validation_errors", []),
         "ready_for_live": False, "orders_sent": False,
     }
 
@@ -78,6 +106,6 @@ def write_readiness_report(output: str | Path, result: dict) -> Path:
     checks = "\n".join(f"- [{'x' if value else ' '}] {key}" for key, value in result["checks"].items())
     path.write_text(
         f"# IG DEMO Readiness Report\n\nStatus: **{result['status']}**\n\n{checks}\n\n"
-        "No demo or live order was sent. READY_FOR_LIVE is not an allowed FX-2I status.\n"
+        "No order was sent by this readiness command. READY_FOR_LIVE is not an allowed FX-2I status.\n"
     )
     return path

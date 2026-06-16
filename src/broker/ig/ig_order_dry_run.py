@@ -5,6 +5,25 @@ from zoneinfo import ZoneInfo
 from .models import DryRunOrder, InternalTick
 
 
+def _allowed_session_check(timestamp_utc, strategy: dict) -> bool:
+    entry_rules = strategy["entry_rules"]
+    if "allowed_sessions" in entry_rules:
+        sessions = entry_rules["allowed_sessions"]
+        return any(
+            datetime.strptime(item["start"], "%H:%M").time()
+            <= timestamp_utc.astimezone(ZoneInfo(item["timezone"])).time()
+            <= datetime.strptime(item["end"], "%H:%M").time()
+            for item in sessions
+        )
+    local = timestamp_utc.astimezone(ZoneInfo(strategy["time_guards"]["broker_timezone"]))
+    return any(
+        datetime.strptime(item["start"], "%H:%M").time()
+        <= local.time()
+        <= datetime.strptime(item["end"], "%H:%M").time()
+        for item in entry_rules["allowed_london_sessions"]
+    )
+
+
 def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_tick: InternalTick,
                         size: float, open_positions: int = 0) -> DryRunOrder:
     direction = str(signal.get("direction", "")).upper()
@@ -30,17 +49,13 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
         errors.append("STOP_DISTANCE_BELOW_BROKER_MINIMUM")
     if market_rules.min_limit_distance_pips is not None and limit_pips < market_rules.min_limit_distance_pips:
         errors.append("LIMIT_DISTANCE_BELOW_BROKER_MINIMUM")
-    local = latest_tick.timestamp_utc.astimezone(ZoneInfo(strategy["time_guards"]["broker_timezone"]))
-    sessions = strategy["entry_rules"]["allowed_london_sessions"]
-    in_allowed_session = any(
-        datetime.strptime(item["start"], "%H:%M").time()
-        <= local.time()
-        <= datetime.strptime(item["end"], "%H:%M").time()
-        for item in sessions
-    )
-    if not in_allowed_session:
-        errors.append("OUTSIDE_ALLOWED_LONDON_SESSION")
+    if not _allowed_session_check(latest_tick.timestamp_utc, strategy):
+        if "allowed_sessions" in strategy["entry_rules"]:
+            errors.append("OUTSIDE_ALLOWED_ENTRY_SESSION")
+        else:
+            errors.append("OUTSIDE_ALLOWED_LONDON_SESSION")
     cutoff = datetime.strptime(strategy["time_guards"]["block_new_entries_after"], "%H:%M").time()
+    local = latest_tick.timestamp_utc.astimezone(ZoneInfo(strategy["time_guards"]["broker_timezone"]))
     if local.time() >= cutoff:
         errors.append("ENTRY_AFTER_UK_CUTOFF")
     if latest_tick.delayed:
@@ -57,6 +72,9 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
     warning_ratio = float(strategy["spread_guardrails"]["warn_spread_to_risk_ratio_above"])
     if spread_ratio > warning_ratio:
         warnings.append("SPREAD_TO_RISK_RATIO_ABOVE_WARNING")
+    reject_ratio = strategy["spread_guardrails"].get("reject_spread_to_risk_ratio_above")
+    if reject_ratio is not None and spread_ratio > float(reject_ratio):
+        errors.append("SPREAD_TO_RISK_RATIO_ABOVE_SELECTED_MAXIMUM")
     if size <= 0:
         errors.append("INVALID_SIZE")
     order = DryRunOrder(
@@ -70,7 +88,7 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
     return order
 
 
-def write_dry_run_report(path, order: DryRunOrder):
+def write_dry_run_report(path, order: DryRunOrder, context: dict | None = None):
     import json
     from pathlib import Path
     path = Path(path)
@@ -78,6 +96,6 @@ def write_dry_run_report(path, order: DryRunOrder):
     path.write_text(json.dumps({
         "payload": order.payload(), "validation_status": order.validation_status,
         "validation_errors": order.validation_errors, "validation_warnings": order.validation_warnings,
-        "order_sent": False,
+        "validation_context": context or {}, "order_sent": False,
     }, indent=2, default=str))
     return path

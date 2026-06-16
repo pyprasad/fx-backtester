@@ -52,6 +52,8 @@ def write_market_rules_report(output: str | Path, rules) -> Path:
     path.write_text(
         "# IG DEMO USDJPY Market Rules\n\n"
         f"- EPIC: `{rules.epic}`\n- Status: {rules.status}\n- Pip size: {rules.pip_size}\n"
+        f"- Currency code: {rules.currency}\n"
+        f"- Minimum deal size: {rules.min_deal_size}\n"
         f"- Minimum stop distance: {rules.min_stop_distance_pips}\n"
         f"- Strategy validation: `{rules.validation()}`\n\nNo order was sent.\n"
     )

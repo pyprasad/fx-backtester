@@ -1,0 +1,13 @@
+{
+  "variant_id": "paired_rsi_vs_atr_stop_55_1_0",
+  "variant_name": "paired_rsi_vs_atr_stop_55_1_0",
+  "test_type": "paired_sensitivity",
+  "parameter_overrides": {
+    "rsi_short_trigger": 55,
+    "atr_stop_multiplier": 1.0
+  },
+  "is_baseline": false,
+  "run_status": "SUCCESS",
+  "error_message": "",
+  "report_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/parameter_robustness_combined_sessions/20260615_221321_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/variants/paired_rsi_vs_atr_stop_55_1_0/html_report.html"
+}

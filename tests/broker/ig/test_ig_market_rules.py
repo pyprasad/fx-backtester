@@ -5,7 +5,10 @@ def _metadata(minimum=2):
     return {
         "instrument": {
             "epic": "CS.D.USDJPY.CFD.IP", "name": "USD/JPY", "expiry": "-",
-            "pipSize": 0.01, "currencies": [{"code": "JPY"}],
+            "pipSize": 0.01, "currencies": [
+                {"code": "JPY", "isDefault": False},
+                {"code": "GBP", "isDefault": True},
+            ],
         },
         "snapshot": {"marketStatus": "TRADEABLE", "delayTime": 0},
         "dealingRules": {"minNormalStopOrLimitDistance": {"value": minimum}},
@@ -15,6 +18,7 @@ def _metadata(minimum=2):
 def test_extracts_usdjpy_rules_and_validates_minimum():
     rules = extract_market_rules(_metadata())
     assert rules.pip_size == 0.01
+    assert rules.currency == "GBP"
     assert rules.min_stop_distance_pips == 2
     assert rules.validation(3)["ready"] is True
 

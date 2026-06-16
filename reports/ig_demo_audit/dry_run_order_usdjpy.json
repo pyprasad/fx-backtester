@@ -1,28 +1,42 @@
 {
   "payload": {
-    "deal_reference": "dry-f234ba3f-b721-4719-a1cc-91b410c5aeb0",
+    "deal_reference": "dry-90828abe32884eccbd9619da3",
     "epic": "CS.D.USDJPY.TODAY.IP",
     "direction": "SELL",
-    "size": 0.04,
+    "size": 12.45,
     "order_type": "MARKET",
     "level": null,
-    "stop_distance": 3.0,
-    "stop_level": 160.382,
-    "limit_distance": 12.0,
-    "limit_level": 160.232,
-    "currency": "JPY",
-    "force_open": false,
+    "stop_distance": 6.0,
+    "stop_level": 160.369,
+    "limit_distance": 24.0,
+    "limit_level": 160.069,
+    "currency": "GBP",
+    "force_open": true,
     "guaranteed_stop": false,
     "time_in_force": "FILL_OR_KILL",
     "expiry": "DFB",
     "dry_run_only": true
   },
-  "validation_status": "NOT_READY",
-  "validation_errors": [
-    "ENTRY_AFTER_UK_CUTOFF"
-  ],
-  "validation_warnings": [
-    "SPREAD_TO_RISK_RATIO_ABOVE_WARNING"
-  ],
+  "validation_status": "READY_FOR_DEMO_DRY_RUN",
+  "validation_errors": [],
+  "validation_warnings": [],
+  "validation_context": {
+    "open_positions": 0,
+    "broker_min_stop_distance_pips": 6.0,
+    "configured_min_initial_risk_pips": 3.0,
+    "effective_order_risk_pips": 6.0,
+    "sizing": {
+      "sizing_mode": "dynamic_risk_percent",
+      "account_balance": 29898.03,
+      "risk_percent": 0.25,
+      "risk_amount": 74.745075,
+      "stop_distance_pips": 6.0,
+      "instrument_unit": "AMOUNT",
+      "min_deal_size": 0.04,
+      "raw_deal_size": 12.4575125,
+      "deal_size": 12.45,
+      "size_precision": 2
+    }
+  },
   "order_sent": false
 }

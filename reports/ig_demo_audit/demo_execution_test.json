@@ -1,0 +1,69 @@
+{
+  "submitted_at": "2026-06-16T08:46:20.071660+00:00",
+  "environment": "DEMO",
+  "execution_type": "MINIMUM_SIZE_EXECUTION_PLUMBING_TEST",
+  "strategy_signal_used": false,
+  "deal_reference": "demo-220fa03337094dc39cd3521dd",
+  "deal_id": "DIAAAAXRLU4XRAR",
+  "deal_status": "ACCEPTED",
+  "reason": "SUCCESS",
+  "confirmed": true,
+  "accepted": true,
+  "request": {
+    "currencyCode": "GBP",
+    "dealReference": "demo-220fa03337094dc39cd3521dd",
+    "direction": "SELL",
+    "epic": "CS.D.USDJPY.TODAY.IP",
+    "expiry": "DFB",
+    "forceOpen": true,
+    "guaranteedStop": false,
+    "limitDistance": 24.0,
+    "orderType": "MARKET",
+    "size": 12.45,
+    "stopDistance": 6.0,
+    "timeInForce": "FILL_OR_KILL",
+    "trailingStop": false
+  },
+  "submission_response": {
+    "dealReference": "demo-220fa03337094dc39cd3521dd"
+  },
+  "confirmation": {
+    "date": "2026-06-16T08:46:20.138",
+    "status": "OPEN",
+    "reason": "SUCCESS",
+    "dealStatus": "ACCEPTED",
+    "epic": "CS.D.USDJPY.TODAY.IP",
+    "expiry": "DFB",
+    "dealReference": "demo-220fa03337094dc39cd3521dd",
+    "dealId": "DIAAAAXRLU4XRAR",
+    "affectedDeals": [
+      {
+        "dealId": "DIAAAAXRLU4XRAR",
+        "status": "OPENED"
+      }
+    ],
+    "level": 16031.2,
+    "size": 12.45,
+    "direction": "SELL",
+    "stopLevel": 16037.2,
+    "limitLevel": 16007.2,
+    "stopDistance": null,
+    "limitDistance": null,
+    "guaranteedStop": false,
+    "trailingStop": false,
+    "profit": null,
+    "profitCurrency": null
+  },
+  "sizing": {
+    "sizing_mode": "dynamic_risk_percent",
+    "account_balance": 29898.03,
+    "risk_percent": 0.25,
+    "risk_amount": 74.745075,
+    "stop_distance_pips": 6.0,
+    "instrument_unit": "AMOUNT",
+    "min_deal_size": 0.04,
+    "raw_deal_size": 12.4575125,
+    "deal_size": 12.45,
+    "size_precision": 2
+  }
+}

@@ -12,6 +12,10 @@ def _strategy():
     return yaml.safe_load(open("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml"))
 
 
+def _strict_strategy():
+    return yaml.safe_load(open("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml"))
+
+
 def _rules(status="TRADEABLE", minimum=2):
     return extract_market_rules({
         "instrument": {"epic": "USDJPY", "name": "USD/JPY", "expiry": "-", "pipSize": .01},
@@ -32,7 +36,8 @@ def _order(**kwargs):
     tick = kwargs.pop("tick", _tick())
     signal = kwargs.pop("signal", {"direction": "SELL", "stop_price": 150.03, "target_price": 149.88})
     return build_dry_run_order(
-        signal=signal, market_rules=kwargs.pop("rules", _rules()), strategy=_strategy(),
+        signal=signal, market_rules=kwargs.pop("rules", _rules()),
+        strategy=kwargs.pop("strategy", _strategy()),
         latest_tick=tick, size=1, **kwargs,
     )
 
@@ -68,3 +73,16 @@ def test_rejects_outside_backtested_london_sessions():
 
     assert "OUTSIDE_ALLOWED_LONDON_SESSION" in errors
     assert "ENTRY_AFTER_UK_CUTOFF" not in errors
+
+
+def test_strict_combined_demo_accepts_tokyo_session_and_rejects_spread_ratio():
+    strategy = _strict_strategy()
+
+    tokyo_order = _order(strategy=strategy, tick=_tick(hour=0, spread_pips=0.5))
+    assert tokyo_order.validation_status == "READY_FOR_DEMO_DRY_RUN"
+
+    wide_spread_errors = _order(strategy=strategy, tick=_tick(hour=0, spread_pips=1.0)).validation_errors
+    assert "SPREAD_TO_RISK_RATIO_ABOVE_SELECTED_MAXIMUM" in wide_spread_errors
+
+    session_errors = _order(strategy=strategy, tick=_tick(hour=22, spread_pips=0.5)).validation_errors
+    assert "OUTSIDE_ALLOWED_ENTRY_SESSION" in session_errors

@@ -28,6 +28,8 @@ class IGMarketRules:
     expiry: str
     currency: str
     pip_size: float
+    unit: str
+    lot_size: float | None
     min_stop_distance_pips: float | None
     min_limit_distance_pips: float | None
     min_deal_size: float | None
@@ -67,7 +69,12 @@ def extract_market_rules(metadata: dict, expected_pip_size: float = 0.01) -> IGM
         metadata.get("instrument", {}), metadata.get("snapshot", {}), metadata.get("dealingRules", {})
     )
     currencies = instrument.get("currencies") or []
-    currency = currencies[0].get("code", "") if currencies and isinstance(currencies[0], dict) else ""
+    default_currency = next(
+        (item for item in currencies if isinstance(item, dict) and item.get("isDefault")),
+        None,
+    )
+    currency_source = default_currency or (currencies[0] if currencies and isinstance(currencies[0], dict) else {})
+    currency = currency_source.get("code", "")
     return IGMarketRules(
         epic=_value(metadata, "instrument.epic", "epic", default=""),
         name=_value(metadata, "instrument.name", "instrumentName", default=""),
@@ -75,6 +82,8 @@ def extract_market_rules(metadata: dict, expected_pip_size: float = 0.01) -> IGM
         expiry=_value(metadata, "instrument.expiry", "expiry", default="-"),
         currency=currency or _value(metadata, "currency", default=""),
         pip_size=float(_value(metadata, "instrument.pipSize", default=expected_pip_size)),
+        unit=_value(metadata, "instrument.unit", default=""),
+        lot_size=_distance(instrument.get("lotSize")),
         min_stop_distance_pips=_distance(dealing.get("minNormalStopOrLimitDistance")),
         min_limit_distance_pips=_distance(dealing.get("minNormalStopOrLimitDistance")),
         min_deal_size=_distance(dealing.get("minDealSize")),

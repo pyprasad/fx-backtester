@@ -3,7 +3,8 @@
 Status: **NOT_READY**
 
 - [x] environment_demo_only
-- [x] dry_run_only
+- [ ] dry_run_mode
+- [x] demo_order_mode
 - [x] credentials_loaded
 - [x] session_created
 - [x] accounts_retrieved
@@ -15,12 +16,13 @@ Status: **NOT_READY**
 - [x] pip_size_confirmed
 - [x] streaming_prices_not_disabled
 - [x] min_stop_available_or_research_fallback_documented
-- [x] strategy_min_risk_covers_broker_minimum
+- [x] effective_order_risk_covers_broker_minimum
 - [x] first_valid_bid_ask_received
 - [x] price_scaling_confirmed
 - [x] price_tick_fresh
 - [x] price_not_delayed
-- [x] min_risk_3pips_active
+- [x] selected_guardrail_candidate_approved
+- [x] strict_spread_to_risk_rejection_active
 - [x] entry_cutoff_active
 - [x] weekend_force_close_active
 - [x] funding_awareness_active
@@ -32,4 +34,4 @@ Status: **NOT_READY**
 - [x] kill_switch_placeholder_documented
 - [x] live_account_support_disabled
 
-No demo or live order was sent. READY_FOR_LIVE is not an allowed FX-2I status.
+No order was sent by this readiness command. READY_FOR_LIVE is not an allowed FX-2I status.

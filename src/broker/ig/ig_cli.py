@@ -17,6 +17,7 @@ from .ig_market_discovery import (
 )
 from .ig_market_rules import extract_market_rules
 from .ig_order_dry_run import build_dry_run_order, write_dry_run_report
+from .ig_position_sizing import account_balance, active_account, dynamic_deal_size
 from .ig_rest_client import IGRestClient
 from .ig_streaming_client import IGStreamingClient
 from .ig_subscriptions import ChartTickListener, PriceUpdateListener
@@ -69,6 +70,44 @@ def market_rules(env_file, epic):
         report = write_market_rules_report(config.audit_output_path, rules)
         print(f"IG DEMO market rules report: {report}")
         return rules
+    finally:
+        _release_session(config, client.session)
+
+
+def _summarize_position(item):
+    position = item.get("position", {})
+    market = item.get("market", {})
+    return {
+        "deal_id": position.get("dealId"),
+        "deal_reference": position.get("dealReference"),
+        "epic": market.get("epic"),
+        "instrument_name": market.get("instrumentName"),
+        "expiry": market.get("expiry"),
+        "market_status": market.get("marketStatus"),
+        "direction": position.get("direction"),
+        "size": position.get("dealSize") or position.get("size"),
+        "level": position.get("level"),
+        "currency": position.get("currency"),
+        "created_date": position.get("createdDate"),
+        "created_date_utc": position.get("createdDateUTC"),
+        "controlled_risk": position.get("controlledRisk"),
+    }
+
+
+def open_positions(env_file, epic=None):
+    config, session, client = _connect(env_file)
+    try:
+        positions = client.get_open_positions().get("positions", [])
+        rows = [_summarize_position(item) for item in positions]
+        if epic:
+            rows = [row for row in rows if row["epic"] == epic]
+        result = {"open_position_count": len(rows), "epic_filter": epic, "positions": rows}
+        path = config.audit_output_path / "open_positions.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, indent=2, default=str))
+        print(json.dumps(result, indent=2, default=str))
+        print(f"IG DEMO open positions report: {path}")
+        return result
     finally:
         _release_session(config, client.session)
 
@@ -126,12 +165,29 @@ def dry_run_order(env_file, strategy_path, epic):
         stop = tick.bid + risk_pips * strategy["strategy"]["pip_size"]
         target = tick.bid - risk_pips * strategy["risk_management"]["final_target_r"] * strategy["strategy"]["pip_size"]
         positions = client.get_open_positions().get("positions", [])
+        accounts = client.get_accounts()
+        account = active_account(accounts, client.session.account_id)
+        if not account:
+            raise RuntimeError("Unable to resolve active IG DEMO account")
+        size, sizing = dynamic_deal_size(
+            balance=account_balance(account),
+            risk_percent=float(strategy["risk_management"]["risk_per_trade_percent"]),
+            stop_distance_pips=risk_pips,
+            min_deal_size=rules.min_deal_size,
+            instrument_unit=rules.unit,
+        )
         order = build_dry_run_order(
             signal={"direction": "SELL", "stop_price": stop, "target_price": target},
-            market_rules=rules, strategy=strategy, latest_tick=tick, size=rules.min_deal_size or 1,
+            market_rules=rules, strategy=strategy, latest_tick=tick, size=size,
             open_positions=len(positions),
         )
-        report = write_dry_run_report(config.audit_output_path / "dry_run_order_usdjpy.json", order)
+        report = write_dry_run_report(config.audit_output_path / "dry_run_order_usdjpy.json", order, {
+            "open_positions": len(positions),
+            "broker_min_stop_distance_pips": rules.min_stop_distance_pips,
+            "configured_min_initial_risk_pips": strategy["broker_guardrails"]["min_initial_risk_pips"],
+            "effective_order_risk_pips": risk_pips,
+            "sizing": sizing,
+        })
         print(f"IG DEMO dry-run order report: {report}")
         return order
     finally:
@@ -156,16 +212,20 @@ def place_demo_test_order_cli(env_file, strategy_path, epic, confirmation):
         if abs((datetime.now(timezone.utc) - tick.timestamp_utc).total_seconds()) > 300:
             raise RuntimeError("DEMO order blocked because the latest stored tick is stale")
         positions = client.get_open_positions().get("positions", [])
-        accounts = client.get_accounts().get("accounts", [])
-        account = next(
-            (item for item in accounts if item.get("accountId") == client.session.account_id),
-            None,
-        )
-        if not account or not account.get("currency"):
-            raise RuntimeError("Unable to resolve active IG DEMO account currency")
+        accounts = client.get_accounts()
+        account = active_account(accounts, client.session.account_id)
+        if not account:
+            raise RuntimeError("Unable to resolve active IG DEMO account")
         risk_pips = max(
             float(strategy["broker_guardrails"]["min_initial_risk_pips"]),
             float(rules.min_stop_distance_pips or 0),
+        )
+        size, sizing = dynamic_deal_size(
+            balance=account_balance(account),
+            risk_percent=float(strategy["risk_management"]["risk_per_trade_percent"]),
+            stop_distance_pips=risk_pips,
+            min_deal_size=rules.min_deal_size,
+            instrument_unit=rules.unit,
         )
         order = build_dry_run_order(
             signal={
@@ -177,16 +237,19 @@ def place_demo_test_order_cli(env_file, strategy_path, epic, confirmation):
             market_rules=rules,
             strategy=strategy,
             latest_tick=tick,
-            size=rules.min_deal_size or 1,
+            size=size,
             open_positions=len(positions),
         )
         if order.validation_status != "READY_FOR_DEMO_DRY_RUN":
             raise RuntimeError(
                 f"DEMO order blocked by validation: {', '.join(order.validation_errors)}"
             )
+        if not order.currency:
+            raise RuntimeError("Unable to resolve IG market currency for the DEMO order")
         result = place_demo_test_order(
-            client, order, currency_code=account["currency"], confirmation=confirmation
+            client, order, currency_code=order.currency, confirmation=confirmation
         )
+        result["sizing"] = sizing
         report = write_demo_execution_report(config.audit_output_path, result)
         print(f"IG DEMO execution test report: {report}")
         return result
@@ -212,6 +275,14 @@ def readiness(env_file, strategy_path):
             rules = extract_market_rules(metadata)
             if tick and tick.epic == rules.epic:
                 risk = max(strategy["broker_guardrails"]["min_initial_risk_pips"], rules.min_stop_distance_pips or 0)
+                account = active_account(accounts, client.session.account_id)
+                size, _sizing = dynamic_deal_size(
+                    balance=account_balance(account),
+                    risk_percent=float(strategy["risk_management"]["risk_per_trade_percent"]),
+                    stop_distance_pips=risk,
+                    min_deal_size=rules.min_deal_size,
+                    instrument_unit=rules.unit,
+                ) if account else (rules.min_deal_size or 1, {})
                 order = build_dry_run_order(
                     signal={
                         "direction": "SELL",
@@ -219,7 +290,7 @@ def readiness(env_file, strategy_path):
                         "target_price": tick.bid - risk * strategy["risk_management"]["final_target_r"] * strategy["strategy"]["pip_size"],
                     },
                     market_rules=rules, strategy=strategy, latest_tick=tick,
-                    size=rules.min_deal_size or 1,
+                    size=size,
                     open_positions=len(client.get_open_positions().get("positions", [])),
                 )
     except Exception as exc:

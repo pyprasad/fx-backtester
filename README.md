@@ -323,6 +323,8 @@ once and reused in paired analysis.
 Outputs include `robustness_summary.csv/json`, `one_factor_sensitivity.csv`, paired sensitivity
 CSVs and heatmaps, `paired_sensitivity_summary.csv`, `local_neighbourhood_summary.csv`,
 `robustness_score.csv/json`, per-variant backtest reports, and `robustness_report.html`.
+For session research, `parameter-robustness` also accepts `--session-timezone` and repeated
+`--session-window` arguments, matching the broker guardrail runner.
 
 - One-factor `LOW`/`MEDIUM`/`HIGH` shows increasing degradation while still passing; `CLIFF` means
   the nearby variant failed.
@@ -403,10 +405,17 @@ PYTHONPATH=. .venv/bin/python -m src.main --log-level INFO broker-guardrails \
   --variant recommended_research_guardrail
 ```
 
-Remove `--variant recommended_research_guardrail` to run all 12 comparison variants. Outputs
+Remove `--variant recommended_research_guardrail` to run all comparison variants. Outputs
 include `broker_guardrail_comparison.csv/json`, `broker_guardrail_report.html`, per-variant
 backtest reports and rejection logs, plus `funding_adjusted_trade_log.csv`, `funding_events.csv`,
 and `funding_summary.csv`.
+
+For isolated session research, keep UTC source data unchanged and override only the timezone and
+local entry window. For example, test the Tokyo cash-market hours (`09:00-18:00 Asia/Tokyo`) with
+`--session-timezone Asia/Tokyo --session-window "Tokyo,09:00,18:00"`. Session overrides are
+research-only and do not modify the selected London-session baseline.
+For combined research, a fourth window value can specify its timezone, for example
+`--session-window "Tokyo,09:00,18:00,Asia/Tokyo"`.
 
 Signal-time checks reject known-invalid proposals and funding-cutoff entries. A second check uses
 the next executable bid/ask tick, actual entry spread, configured slippage, and actual entry-to-stop
@@ -466,5 +475,3 @@ final research baseline. `ig_min_stop_only` remains the backup. The more conserv
 `recommended_research_guardrail` was not selected because its return sacrifice did not materially
 improve execution-stress failures or the worst stressed trade. This decision does not authorize
 demo or live execution.
-
-

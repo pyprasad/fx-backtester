@@ -30,11 +30,16 @@ def _write_csv(path: Path, rows: list[dict]) -> None:
 class ParameterRobustnessRunner:
     def __init__(self, strategy_config, normalised_tick_path, candle_path, report_output_path,
                  max_variants=100, include_full_grid=False, skip_heatmaps=False,
-                 continue_on_error=True, baseline_run_path=None):
+                 continue_on_error=True, baseline_run_path=None,
+                 session_timezone=None, session_windows=None):
         self.config = load_strategy_config(strategy_config)
         self.settings = self.config.parameter_robustness
         self.config.data["normalised_tick_path"] = str(Path(normalised_tick_path).resolve())
         self.config.data["candle_path"] = str(Path(candle_path).resolve())
+        if session_timezone:
+            self.config.session_filter["timezone"] = session_timezone
+        if session_windows:
+            self.config.session_filter["entry_windows"] = session_windows
         self.report_parent = Path(report_output_path).resolve()
         self.max_variants = max_variants
         self.skip_heatmaps = skip_heatmaps

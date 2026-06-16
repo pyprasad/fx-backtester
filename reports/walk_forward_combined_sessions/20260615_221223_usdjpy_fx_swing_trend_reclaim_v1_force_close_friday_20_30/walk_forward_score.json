@@ -1,0 +1,24 @@
+{
+  "walk_forward_score": 100,
+  "verdict": "STRONG_WALK_FORWARD",
+  "rolling_positive_test_window_percent": 100.0,
+  "largest_positive_test_window_contribution_percent": 14.821,
+  "deductions": {
+    "negative_anchored_test": 0,
+    "rolling_positive_below_70_percent": 0,
+    "rolling_average_profit_factor_below_1_3": 0,
+    "test_worst_trade_below_minus_2_5r": 0,
+    "test_drawdown_above_10_percent": 0,
+    "profit_factor_decay": 0,
+    "average_r_decay": 0,
+    "anchored_low_sample": 0,
+    "rolling_low_sample": 5,
+    "single_window_concentration": 0
+  },
+  "additions": {
+    "all_anchored_tests_positive": 5,
+    "all_rolling_definitions_pass": 5,
+    "worst_test_trade_at_least_minus_2_5r": 5,
+    "average_test_profit_factor_at_least_1_5": 5
+  }
+}

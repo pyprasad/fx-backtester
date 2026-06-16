@@ -1,5 +1,6 @@
 from datetime import time
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import polars as pl
 
@@ -10,13 +11,14 @@ from src.risk.weekend_policy import WeekendPolicy
 from .signal import Signal
 
 
-def _session(timestamp, windows: list[dict]) -> str | None:
-    current = timestamp.time()
+def _session(timestamp_utc, windows: list[dict], default_timezone: str) -> tuple[str | None, object]:
     for window in windows:
+        local = timestamp_utc.astimezone(ZoneInfo(window.get("timezone", default_timezone)))
+        current = local.time()
         start, end = time.fromisoformat(window["start"]), time.fromisoformat(window["end"])
         if start <= current <= end:
-            return window["name"]
-    return None
+            return window["name"], local
+    return None, timestamp_utc.astimezone(ZoneInfo(default_timezone))
 
 
 def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyConfig) -> tuple[list[Signal], list[dict]]:
@@ -92,13 +94,15 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
     for row in rows:
         if any(row.get(k) is None for k in ("atr", "ema_fast", "ema_mid", "rsi", "ema_slow")):
             continue
-        london = row["timestamp_london"]
-        session = _session(london, config.session_filter["entry_windows"])
+        session, session_local = _session(
+            row["timestamp"], config.session_filter["entry_windows"],
+            config.session_filter["timezone"],
+        )
         spread_pips = row["spread_avg"] / 0.01
         common_reason = None
         if not session:
             common_reason = "outside_session"
-        elif config.market_open_filter.get("avoid_sunday_open") and london.weekday() == 6:
+        elif config.market_open_filter.get("avoid_sunday_open") and session_local.weekday() == 6:
             common_reason = "sunday_open"
         elif spread_pips > config.spread_filter["max_spread_pips"]:
             common_reason = "spread_too_high"
@@ -125,7 +129,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             if guardrail_rejection(row, stop, target, spread_pips, session):
                 continue
             signals.append(Signal(
-                str(uuid4()), row["timestamp"], london, row["symbol"], "SHORT",
+                str(uuid4()), row["timestamp"], session_local, row["symbol"], "SHORT",
                 "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                 ["trend_below_ema200", "pullback", "rsi_rejection", "bearish_close"],
                 {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},
@@ -143,7 +147,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
                 if guardrail_rejection(row, stop, target, spread_pips, session):
                     continue
                 signals.append(Signal(
-                    str(uuid4()), row["timestamp"], london, row["symbol"], "LONG",
+                    str(uuid4()), row["timestamp"], session_local, row["symbol"], "LONG",
                     "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                     ["trend_above_ema200", "pullback", "rsi_reclaim", "bullish_close"],
                     {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},

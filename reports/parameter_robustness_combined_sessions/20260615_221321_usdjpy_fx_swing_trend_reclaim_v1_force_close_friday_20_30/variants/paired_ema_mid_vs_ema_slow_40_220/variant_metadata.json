@@ -1,0 +1,13 @@
+{
+  "variant_id": "paired_ema_mid_vs_ema_slow_40_220",
+  "variant_name": "paired_ema_mid_vs_ema_slow_40_220",
+  "test_type": "paired_sensitivity",
+  "parameter_overrides": {
+    "ema_mid": 40,
+    "ema_slow": 220
+  },
+  "is_baseline": false,
+  "run_status": "SUCCESS",
+  "error_message": "",
+  "report_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/parameter_robustness_combined_sessions/20260615_221321_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/variants/paired_ema_mid_vs_ema_slow_40_220/html_report.html"
+}
