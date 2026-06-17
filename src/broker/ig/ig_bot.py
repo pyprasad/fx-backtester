@@ -3,6 +3,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Lock
 
 from .ig_candle_cache import CandleCachePaths, load_cached_candles, refresh_candle_cache
 from .ig_demo_execution import place_demo_test_order, write_demo_execution_report
@@ -13,7 +14,13 @@ from .ig_live_signal import (
 )
 from .ig_market_rules import extract_market_rules
 from .ig_streaming_client import IGStreamingClient
-from .ig_subscriptions import PriceUpdateListener
+from .ig_subscriptions import PriceUpdateListener, TradeUpdateListener
+from .ig_trade_lifecycle import (
+    IGTradeLifecycleExecutor,
+    IGTradeLifecycleManager,
+    LifecycleJSONWriter,
+    ManagedPosition,
+)
 from .models import DryRunOrder, InternalTick
 
 
@@ -95,12 +102,21 @@ class IGDemoBotRunner:
         self.runtime_config = None
         self.contract = None
         self.market_rules = None
+        self.lifecycle_manager: IGTradeLifecycleManager | None = None
+        self.lifecycle_executor: IGTradeLifecycleExecutor | None = None
+        self.lifecycle_writer = LifecycleJSONWriter(self.config.audit_output_path)
+        self._lock = Lock()
 
     def _on_tick(self, tick: InternalTick) -> None:
-        self.price_state.latest_tick = tick
-        self.price_state.tick_count += 1
-        if not self.price_state.first_tick_seen:
-            self.price_state.first_tick_seen = True
+        with self._lock:
+            self.price_state.latest_tick = tick
+            self.price_state.tick_count += 1
+            first_tick = not self.price_state.first_tick_seen
+            if first_tick:
+                self.price_state.first_tick_seen = True
+            if self.lifecycle_manager:
+                self.lifecycle_manager.on_tick(tick)
+        if first_tick:
             write_bot_audit_event(self.config.audit_output_path, {
                 "event": "FIRST_TICK",
                 "epic": tick.epic,
@@ -109,6 +125,17 @@ class IGDemoBotRunner:
                 "spread_pips": tick.spread_pips,
                 "delayed": tick.delayed,
             })
+
+    def _on_trade_update(self, update_type: str, payload: dict) -> None:
+        with self._lock:
+            if self.lifecycle_manager:
+                self.lifecycle_manager.on_trade_update(update_type, payload)
+                self.lifecycle_writer.write(self.lifecycle_manager)
+        write_bot_audit_event(self.config.audit_output_path, {
+            "event": "TRADE_STREAM_UPDATE",
+            "update_type": update_type,
+            "payload": payload,
+        })
 
     def _prepare(self) -> dict:
         self.runtime_config, self.contract = runtime_config_from_contract(
@@ -171,6 +198,51 @@ class IGDemoBotRunner:
         })
         return result
 
+    def _scaled_confirmation_level(self, confirmation: dict | None, fallback: float) -> float:
+        if not confirmation or confirmation.get("level") is None:
+            return fallback
+        level = float(confirmation["level"])
+        return level / self.config.price_scale_divisor if self.config.price_scale_divisor else level
+
+    def _attach_lifecycle_manager(self, result: dict, execution: dict, order: DryRunOrder) -> None:
+        if not execution.get("accepted") or not execution.get("deal_id"):
+            return
+        signal = result.get("current_signal") or {}
+        indicator = signal.get("indicator_snapshot") or {}
+        entry = self._scaled_confirmation_level(execution.get("confirmation"), self.price_state.latest_tick.bid)
+        initial_stop = float(signal["proposed_stop"])
+        target = float(signal["proposed_target"])
+        manager = IGTradeLifecycleManager(config=self.runtime_config.model_dump(), pip_size=self.market_rules.pip_size)
+        manager.attach(ManagedPosition(
+            deal_id=execution["deal_id"],
+            deal_reference=execution["deal_reference"],
+            epic=self.epic,
+            direction=order.direction,
+            size=float(order.size),
+            remaining_size=float(order.size),
+            entry_price=entry,
+            initial_stop=initial_stop,
+            current_stop=initial_stop,
+            target_price=target,
+            initial_risk=abs(initial_stop - entry),
+            atr=float(indicator.get("atr") or indicator.get("atr_14")),
+            opened_at=datetime.now(timezone.utc),
+            currency=order.currency,
+            expiry=order.expiry,
+        ))
+        self.lifecycle_manager = manager
+        self.lifecycle_executor = IGTradeLifecycleExecutor(
+            client=self.client,
+            config=self.config,
+            price_scale_divisor=self.config.price_scale_divisor,
+        )
+        path = self.lifecycle_writer.write(manager)
+        write_bot_audit_event(self.config.audit_output_path, {
+            "event": "LIFECYCLE_MANAGER_ATTACHED",
+            "deal_id": execution["deal_id"],
+            "report": str(path),
+        })
+
     def _maybe_execute(self, result: dict, confirmation: str | None) -> dict | None:
         if result.get("status") != "SIGNAL_READY_FOR_DEMO_DRY_RUN":
             return None
@@ -186,6 +258,7 @@ class IGDemoBotRunner:
         execution["execution_type"] = "STRATEGY_SIGNAL_DEMO_ORDER"
         execution["strategy_signal_used"] = True
         execution["signal"] = result.get("current_signal")
+        self._attach_lifecycle_manager(result, execution, order)
         report = write_demo_execution_report(self.config.audit_output_path, execution)
         write_bot_audit_event(self.config.audit_output_path, {
             "event": "ORDER_SUBMITTED",
@@ -195,6 +268,45 @@ class IGDemoBotRunner:
             "report": str(report),
         })
         return execution
+
+    def _process_lifecycle_action(self) -> dict | None:
+        with self._lock:
+            if not self.lifecycle_manager or not self.lifecycle_executor:
+                return None
+            action = self.lifecycle_manager.pop_pending_action()
+            position = self.lifecycle_manager.position
+        if not action or not position:
+            return None
+        try:
+            result = self.lifecycle_executor.execute(action, position)
+            with self._lock:
+                self.lifecycle_manager.mark_action_applied(action, result)
+                report = self.lifecycle_writer.write(self.lifecycle_manager)
+            write_bot_audit_event(self.config.audit_output_path, {
+                "event": "LIFECYCLE_ACTION_SUBMITTED",
+                "action": action.action_type,
+                "reason": action.reason,
+                "deal_id": action.deal_id,
+                "report": str(report),
+                "result": result,
+            })
+            return result
+        except Exception as exc:
+            with self._lock:
+                if self.lifecycle_manager:
+                    self.lifecycle_manager.mark_action_rejected(action, {"error": str(exc)})
+                    report = self.lifecycle_writer.write(self.lifecycle_manager)
+                else:
+                    report = None
+            write_bot_audit_event(self.config.audit_output_path, {
+                "event": "LIFECYCLE_ACTION_FAILED",
+                "action": action.action_type,
+                "reason": action.reason,
+                "deal_id": action.deal_id,
+                "error": str(exc),
+                "report": str(report) if report else None,
+            })
+            return {"error": str(exc), "action": action.action_type}
 
     def run(self, *, duration_seconds: int, execute_confirmation: str | None = None) -> BotRunResult:
         started = datetime.now(timezone.utc)
@@ -218,8 +330,10 @@ class IGDemoBotRunner:
                     self.config.price_scale_divisor,
                 ),
             )
+            streaming.subscribe_trade_updates(TradeUpdateListener(self._on_trade_update))
             monotonic_deadline = time.monotonic() + duration_seconds
             while within_run_duration(started, duration_seconds, monotonic_deadline):
+                self._process_lifecycle_action()
                 candle = latest_closed_hour()
                 if self.price_state.latest_tick and candle != last_evaluated:
                     signal_result = self._evaluate(
@@ -232,8 +346,6 @@ class IGDemoBotRunner:
                     result.order_execution = execution
                     last_evaluated = candle
                     first_evaluation = False
-                    if execution and execution.get("accepted"):
-                        break
                 time.sleep(self.poll_seconds)
             result.status = "COMPLETED"
             return result

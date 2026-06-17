@@ -46,3 +46,7 @@ class Trade:
     breakeven_timestamp_utc: datetime | None = None
     notes: str = ""
     weekend_policy_events: list[dict] = field(default_factory=list)
+    stop_amend_count: int = 0
+    stop_amend_skipped_count: int = 0
+    stop_amend_skip_reasons: list[str] = field(default_factory=list)
+    partial_close_request_count: int = 0

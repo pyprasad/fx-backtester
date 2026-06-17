@@ -59,6 +59,76 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
     mfe = mae = 0.0
     last_friday_row = None
     deadline = signal.timestamp_utc + timedelta(days=config.max_trade_duration_days)
+    lifecycle = config.broker_execution_guardrails.get("trade_lifecycle", {})
+    lifecycle_enabled = bool(lifecycle.get("enabled", False))
+    pip_size = float(config.strategy.get("pip_size", 0.01))
+    min_amend_interval = float(lifecycle.get("stop_amend_min_interval_seconds", 0))
+    min_amend_move = float(lifecycle.get("stop_amend_min_move_pips", 0)) * pip_size
+    max_amends = int(lifecycle.get("max_stop_amends_per_trade", 1_000_000))
+    max_amends_per_minute = int(lifecycle.get("max_stop_amends_per_minute", 1_000_000))
+    broker_min_stop = (
+        config.broker_execution_guardrails
+        .get("broker_distance_rules", {})
+        .get("min_stop_distance_pips")
+    )
+    broker_min_stop_distance = float(broker_min_stop) * pip_size if broker_min_stop is not None else 0.0
+    stop_amend_count = 0
+    stop_amend_skipped_count = 0
+    stop_amend_skip_reasons = []
+    stop_amend_timestamps = []
+    partial_close_request_count = 0
+
+    def try_amend_stop(candidate: float, row: dict, amend_reason: str) -> bool:
+        nonlocal final_stop, stop_amend_count, stop_amend_skipped_count, stop_amend_skip_reasons
+        if candidate == final_stop:
+            return False
+        if not lifecycle_enabled:
+            final_stop = candidate
+            stop_history.append({"timestamp": row["timestamp_utc"], "price": final_stop, "reason": amend_reason})
+            return True
+
+        timestamp = row["timestamp_utc"]
+        skip_reason = None
+        if stop_amend_count >= max_amends:
+            skip_reason = "MAX_STOP_AMENDS_PER_TRADE"
+        elif stop_amend_timestamps and (
+            timestamp - stop_amend_timestamps[-1]
+        ).total_seconds() < min_amend_interval:
+            skip_reason = "STOP_AMEND_INTERVAL_THROTTLED"
+        elif min_amend_move and abs(candidate - final_stop) < min_amend_move:
+            skip_reason = "STOP_AMEND_MOVE_BELOW_MINIMUM"
+        else:
+            recent = [
+                item for item in stop_amend_timestamps
+                if (timestamp - item).total_seconds() < 60
+            ]
+            if len(recent) >= max_amends_per_minute:
+                skip_reason = "STOP_AMEND_PER_MINUTE_THROTTLED"
+        if skip_reason is None and broker_min_stop_distance:
+            close_side = row["bid"] if is_long else row["ask"]
+            if is_long and candidate > close_side - broker_min_stop_distance:
+                skip_reason = "STOP_AMEND_TOO_CLOSE_TO_MARKET"
+            elif not is_long and candidate < close_side + broker_min_stop_distance:
+                skip_reason = "STOP_AMEND_TOO_CLOSE_TO_MARKET"
+
+        if skip_reason:
+            stop_amend_skipped_count += 1
+            stop_amend_skip_reasons.append(skip_reason)
+            return False
+
+        old_stop = final_stop
+        final_stop = candidate
+        stop_amend_count += 1
+        stop_amend_timestamps.append(timestamp)
+        stop_history.append({
+            "timestamp": timestamp,
+            "old_stop": old_stop,
+            "price": final_stop,
+            "reason": amend_reason,
+            "broker_lifecycle_amend": True,
+        })
+        return True
+
     for row in future.iter_rows(named=True):
         force_section = config.weekend_policy.get("force_close_on_friday", {})
         if (
@@ -98,14 +168,13 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
             break
         if be_cfg["enabled"] and move >= initial_risk * be_cfg["after_r"]:
             candidate = max(final_stop, entry) if is_long else min(final_stop, entry)
-            if candidate != final_stop:
-                final_stop = candidate
+            if try_amend_stop(candidate, row, "breakeven"):
                 breakeven_timestamp = row["timestamp_utc"]
-                stop_history.append({"timestamp": row["timestamp_utc"], "price": final_stop, "reason": "breakeven"})
         if partial_cfg["enabled"] and remaining == 1.0 and move >= initial_risk * partial_cfg["at_r"]:
             fraction = partial_cfg["close_percent"] / 100
             realized += move * size * fraction
             remaining -= fraction
+            partial_close_request_count += 1
             partials.append({"timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction})
         if config.exit["runner"]["enabled"] and remaining < 1.0:
             trail_distance = signal.indicator_snapshot.get(
@@ -113,10 +182,8 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
             ) * config.exit["runner"]["trailing_stop"]["atr_multiplier"]
             candidate = close_side - trail_distance if is_long else close_side + trail_distance
             candidate = max(final_stop, candidate) if is_long else min(final_stop, candidate)
-            if candidate != final_stop:
-                final_stop = candidate
+            if try_amend_stop(candidate, row, "trailing"):
                 trailing_history.append({"timestamp": row["timestamp_utc"], "price": final_stop})
-                stop_history.append({"timestamp": row["timestamp_utc"], "price": final_stop, "reason": "trailing"})
         stop_hit = (
             close_side <= final_stop + price_tolerance
             if is_long else close_side >= final_stop - price_tolerance
@@ -152,6 +219,7 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
             contribution = move * size * fraction
             realized += contribution
             remaining -= fraction
+            partial_close_request_count += 1
             weekend_reduced = True
             partials.append({
                 "timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction,
@@ -167,15 +235,10 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         if tighten and not weekend_tightened:
             candidate = max(final_stop, entry) if is_long else min(final_stop, entry)
             weekend_tightened = True
-            if candidate != final_stop:
-                old_stop, final_stop = final_stop, candidate
-                stop_history.append({
-                    "timestamp": row["timestamp_utc"], "old_stop": old_stop, "price": final_stop,
-                    "new_stop": final_stop, "reason": tighten_reason,
-                })
+            if try_amend_stop(candidate, row, tighten_reason):
                 weekend_events.append(weekend.event(
                     "TRADE_STOP_TIGHTENED_FRIDAY", row["timestamp_utc"], signal_id=signal.signal_id,
-                    direction=signal.direction, open_r=open_r, old_stop=old_stop,
+                    direction=signal.direction, open_r=open_r, old_stop=stop_history[-1].get("old_stop"),
                     new_stop=final_stop, reason=tighten_reason,
                 ))
     if exit_price is None:
@@ -200,6 +263,10 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         breakeven_moved=breakeven_timestamp is not None,
         breakeven_timestamp_utc=breakeven_timestamp,
         weekend_policy_events=weekend_events,
+        stop_amend_count=stop_amend_count,
+        stop_amend_skipped_count=stop_amend_skipped_count,
+        stop_amend_skip_reasons=stop_amend_skip_reasons,
+        partial_close_request_count=partial_close_request_count,
         notes=f"weekend_policy={weekend.policy_name}" if weekend.enabled else "",
     )
     for event in trade.weekend_policy_events:

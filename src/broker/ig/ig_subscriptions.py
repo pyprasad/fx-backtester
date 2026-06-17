@@ -1,4 +1,5 @@
 import logging
+import json
 from datetime import datetime, timezone
 
 from .models import InternalTick
@@ -137,3 +138,15 @@ class AccountUpdateListener:
 
 class TradeUpdateListener(AccountUpdateListener):
     """Read-only listener; never submits or amends orders."""
+
+    def onItemUpdate(self, update):
+        raw = _fields(update, ("CONFIRMS", "OPU", "WOU"))
+        for update_type in ("CONFIRMS", "OPU", "WOU"):
+            payload = raw.get(update_type)
+            if payload in (None, ""):
+                continue
+            try:
+                parsed = json.loads(payload)
+            except (TypeError, json.JSONDecodeError):
+                parsed = {"raw": payload}
+            self.callback(update_type, parsed)

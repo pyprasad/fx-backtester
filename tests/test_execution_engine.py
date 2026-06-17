@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import polars as pl
+
 from src.execution.tick_execution_engine import evaluate_executable_entry_guardrail, execute_signal
 from src.strategies.signal import Signal
 
@@ -44,3 +46,35 @@ def test_executable_entry_guardrail_rejects_actual_tiny_risk(ticks, strategy_con
 
     assert decision.initial_risk_pips == 0.5
     assert "REJECT_BELOW_MIN_INITIAL_RISK_PIPS" in decision.rejection_reasons
+
+
+def test_trade_lifecycle_throttles_stop_amends(strategy_config):
+    strategy_config.execution["slippage_enabled"] = False
+    strategy_config.broker_execution_guardrails["trade_lifecycle"] = {
+        "enabled": True,
+        "stop_amend_min_interval_seconds": 60,
+        "stop_amend_min_move_pips": 0.0,
+        "max_stop_amends_per_trade": 10,
+        "max_stop_amends_per_minute": 10,
+    }
+    signal = _signal("SHORT")
+    signal.indicator_snapshot = {"atr_14": 0.1}
+    ticks = pl.DataFrame({
+        "timestamp_utc": [
+            datetime(2021, 1, 4, 9, 0, 0, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 0, 10, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 0, 20, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 0, 30, tzinfo=timezone.utc),
+        ],
+        "bid": [103.10, 102.96, 102.86, 103.08],
+        "ask": [103.12, 102.98, 102.88, 103.10],
+        "spread_pips": [2.0, 2.0, 2.0, 2.0],
+    })
+
+    trade = execute_signal(signal, ticks, strategy_config, 10000)
+
+    assert trade.exit_reason == "trailing_stop"
+    assert trade.stop_amend_count == 1
+    assert trade.stop_amend_skipped_count > 0
+    assert "STOP_AMEND_INTERVAL_THROTTLED" in trade.stop_amend_skip_reasons
+    assert trade.partial_close_request_count == 1

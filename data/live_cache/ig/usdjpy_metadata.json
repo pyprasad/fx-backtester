@@ -1,23 +1,23 @@
 {
   "epic": "CS.D.USDJPY.TODAY.IP",
-  "refreshed_at": "2026-06-17T09:00:02.148613+00:00",
+  "refreshed_at": "2026-06-17T11:25:18.928664+00:00",
   "history_points": 5,
   "keep_last": 1000,
   "timeframes": {
     "HOUR": {
       "path": "data/live_cache/ig/usdjpy_hour.parquet",
       "rows": 1000,
-      "latest_timestamp": "2026-06-17T08:00:00+00:00",
+      "latest_timestamp": "2026-06-17T10:00:00+00:00",
       "rate_limited_using_existing_cache": false,
-      "request_points": 3,
+      "request_points": 4,
       "request_plan": {
         "reason": "incremental_from_existing_cache",
-        "latest_cached_timestamp": "2026-06-17T07:00:00+00:00",
-        "target_closed_hour": "2026-06-17T08:00:00+00:00",
-        "missing_hours_estimate": 1,
+        "latest_cached_timestamp": "2026-06-17T08:00:00+00:00",
+        "target_closed_hour": "2026-06-17T10:00:00+00:00",
+        "missing_hours_estimate": 2,
         "overlap_hours": 2
       },
-      "incoming_rows": 2
+      "incoming_rows": 3
     },
     "HOUR_4": {
       "path": "data/live_cache/ig/usdjpy_hour_4.parquet",

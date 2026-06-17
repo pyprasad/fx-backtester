@@ -68,4 +68,10 @@ def calculate_metrics(trades: list[Trade], starting_balance: float) -> dict:
         "weekend_force_close_exit_count": sum(t.exit_reason == "weekend_force_close" for t in trades),
         "weekend_losing_trade_close_exit_count": sum(t.exit_reason == "weekend_losing_trade_close" for t in trades),
         "weekend_profit_threshold_close_exit_count": sum(t.exit_reason == "weekend_profit_threshold_close" for t in trades),
+        "stop_amend_count": sum(t.stop_amend_count for t in trades),
+        "stop_amend_skipped_count": sum(t.stop_amend_skipped_count for t in trades),
+        "average_stop_amends_per_trade": mean([t.stop_amend_count for t in trades]) if trades else 0,
+        "max_stop_amends_per_trade": max((t.stop_amend_count for t in trades), default=0),
+        "trades_with_stop_amends": sum(t.stop_amend_count > 0 for t in trades),
+        "partial_close_request_count": sum(t.partial_close_request_count for t in trades),
     })

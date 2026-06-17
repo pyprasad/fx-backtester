@@ -86,6 +86,22 @@ class IGRestClient:
             opener=self.opener,
         )[0]
 
+    def _put(self, path: str, payload: dict, version: int = 1) -> dict:
+        return request_json(
+            f"{self.config.rest_base_url}{path}", "PUT", self._headers(version), payload,
+            opener=self.opener,
+        )[0]
+
+    def _delete(self, path: str, payload: dict, version: int = 1) -> dict:
+        return request_json(
+            f"{self.config.rest_base_url}{path}", "DELETE", self._headers(version), payload,
+            opener=self.opener,
+        )[0]
+
+    def _ensure_execution_enabled(self) -> None:
+        if not self.config.order_execution_enabled or self.config.dry_run_only:
+            raise ValueError("IG order execution is not enabled")
+
     def get_accounts(self):
         return self._get("/accounts", 1)
 
@@ -113,9 +129,16 @@ class IGRestClient:
     def create_demo_position(self, payload: dict):
         if self.config.env != "DEMO" or self.config.acc_type != "DEMO":
             raise ValueError("Position creation is restricted to IG DEMO")
-        if not self.config.order_execution_enabled or self.config.dry_run_only:
-            raise ValueError("IG DEMO order execution is not enabled")
+        self._ensure_execution_enabled()
         return self._post("/positions/otc", payload, 2)
+
+    def amend_position(self, deal_id: str, payload: dict):
+        self._ensure_execution_enabled()
+        return self._put(f"/positions/otc/{deal_id}", payload, 2)
+
+    def close_position(self, payload: dict):
+        self._ensure_execution_enabled()
+        return self._delete("/positions/otc", payload, 1)
 
     def close(self):
         request_json(

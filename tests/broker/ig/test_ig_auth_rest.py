@@ -88,6 +88,37 @@ def test_create_demo_position_requires_execution_mode_and_posts_v2(tmp_path):
     assert requests[0].headers["Version"] == "2"
 
 
+def test_amend_and_close_position_require_execution_mode(tmp_path):
+    requests = []
+
+    def opener(request, timeout):
+        requests.append(request)
+        return Response({"dealReference": "ref"})
+
+    cfg = config(tmp_path)
+    session = create_session(cfg, lambda *_args, **_kwargs: Response(
+        {"currentAccountId": "ABC123"}, {"CST": "cst", "X-SECURITY-TOKEN": "xst"}
+    ))
+    client = IGRestClient(cfg, session, opener)
+    with pytest.raises(ValueError, match="not enabled"):
+        client.amend_position("DEAL1", {"stopLevel": 16037.2})
+    with pytest.raises(ValueError, match="not enabled"):
+        client.close_position({"dealId": "DEAL1"})
+
+    execution = replace(cfg, order_execution_enabled=True, dry_run_only=False)
+    client = IGRestClient(execution, session, opener)
+
+    client.amend_position("DEAL1", {"stopLevel": 16037.2})
+    client.close_position({"dealId": "DEAL1", "direction": "BUY", "size": 1})
+
+    assert requests[0].method == "PUT"
+    assert requests[0].full_url.endswith("/positions/otc/DEAL1")
+    assert requests[0].headers["Version"] == "2"
+    assert requests[1].method == "DELETE"
+    assert requests[1].full_url.endswith("/positions/otc")
+    assert requests[1].headers["Version"] == "1"
+
+
 def test_historical_prices_uses_resolution_numpoints_path(tmp_path):
     requests = []
 
