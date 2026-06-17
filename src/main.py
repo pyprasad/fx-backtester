@@ -21,6 +21,7 @@ from src.broker.ig.ig_cli import (
     signal_dry_run_order as ig_signal_dry_run_order,
     stream_ticks as ig_stream_ticks,
 )
+from src.broker.ig.telegram_controller import run_webhook_controller as ig_telegram_controller
 from src.config.config_loader import (
     apply_data_quality_overrides,
     apply_strategy_overrides,
@@ -251,7 +252,7 @@ def main():
                  "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-open-positions",
                  "ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order",
                  "ig-demo-live-signal-check", "ig-demo-signal-dry-run-order",
-                 "ig-demo-run-bot"):
+                 "ig-demo-run-bot", "ig-telegram-controller"):
         ig_parser = sub.add_parser(name)
         ig_parser.add_argument("--env-file", default=".env.demo")
         if name == "ig-demo-market-discovery":
@@ -288,6 +289,9 @@ def main():
             ig_parser.add_argument("--poll-seconds", type=float, default=5)
             ig_parser.add_argument("--cache-path", default="data/live_cache/ig")
             ig_parser.add_argument("--confirm")
+        if name == "ig-telegram-controller":
+            ig_parser.add_argument("--host", default="0.0.0.0")
+            ig_parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger.info("Pipeline command started | command=%s", args.command)
@@ -378,6 +382,8 @@ def main():
             args.duration_seconds, args.poll_seconds, args.cache_path,
             args.refresh_points, args.confirm,
         )
+    elif args.command == "ig-telegram-controller":
+        ig_telegram_controller(args.env_file, args.host, args.port)
     elif args.command == "forensics":
         run_forensics(
             load_strategy_config(args.strategy_config),

@@ -67,6 +67,26 @@ def test_optional_historical_credentials_are_separate_and_non_executable(tmp_pat
     assert historical.dry_run_only is True
 
 
+def test_optional_telegram_config(tmp_path, monkeypatch):
+    monkeypatch.delenv("IG_ENV", raising=False)
+    config = load_ig_demo_config(_env(
+        tmp_path,
+        TELEGRAM_ENABLED="true",
+        TELEGRAM_BOT_TOKEN="bot-token",
+        TELEGRAM_CHAT_ID="chat-id",
+        TELEGRAM_ADMIN_USER_ID="123",
+        TELEGRAM_WEBHOOK_SECRET="secret-path",
+        TELEGRAM_WEBHOOK_PATH="/telegram-webhook/prod-tg-secret-123",
+    ))
+
+    assert config.telegram_enabled is True
+    assert config.telegram_bot_token == "bot-token"
+    assert config.telegram_chat_id == "chat-id"
+    assert config.telegram_admin_user_id == "123"
+    assert config.telegram_webhook_secret == "secret-path"
+    assert config.telegram_webhook_path == "/telegram-webhook/prod-tg-secret-123"
+
+
 def test_rejects_partial_historical_credentials(tmp_path, monkeypatch):
     monkeypatch.delenv("IG_ENV", raising=False)
     with pytest.raises(ValueError, match="Set all or none"):

@@ -123,8 +123,13 @@ python -m src.main ig-demo-run-bot \
   --epic CS.D.USDJPY.TODAY.IP \
   --history-points 1000 \
   --refresh-points 10 \
-  --duration-seconds 3900
+  --duration-seconds 0
 ```
+
+`--duration-seconds 0` means always-on. Use a positive value only for short local test runs. The
+strategy session filters decide when entries are allowed; the bot process itself should stay up.
+It logs session progress once at startup and whenever a configured session starts or ends, including
+Tokyo, London morning, and London/New York overlap with UTC and local timestamps.
 
 For an overnight Tokyo/Japan-session DEMO bot run without order placement:
 
@@ -151,7 +156,7 @@ PYTHONPATH=. .venv/bin/python -m src.main ig-demo-run-bot \
   --epic "$EPIC" \
   --history-points 1000 \
   --refresh-points 5 \
-  --duration-seconds 28800 \
+  --duration-seconds 0 \
   --poll-seconds 5
 ```
 
@@ -172,7 +177,7 @@ PYTHONPATH=. .venv/bin/python -m src.main ig-demo-run-bot \
   --epic "$EPIC" \
   --history-points 1000 \
   --refresh-points 5 \
-  --duration-seconds 28800 \
+  --duration-seconds 0 \
   --poll-seconds 5 \
   --confirm PLACE_DEMO_ORDER
 ```
@@ -674,3 +679,88 @@ final research baseline. `ig_min_stop_only` remains the backup. The more conserv
 `recommended_research_guardrail` was not selected because its return sacrifice did not materially
 improve execution-stress failures or the worst stressed trade. This decision does not authorize
 demo or live execution.
+
+## IG Demo Bot Operations
+
+Telegram notifications and control are optional. They are disabled unless explicitly enabled in
+`.env.demo`.
+
+Required Telegram settings:
+
+```bash
+TELEGRAM_ENABLED=true
+TELEGRAM_BOT_TOKEN=<bot-token-from-botfather>
+TELEGRAM_CHAT_ID=<chat-id>
+TELEGRAM_ADMIN_USER_ID=<your-telegram-user-id>
+TELEGRAM_WEBHOOK_SECRET=<unguessable-path-fragment>
+# Optional: use this instead of TELEGRAM_WEBHOOK_SECRET when reusing the full path style
+# from another bot, for example /telegram-webhook/prod-tg-secret-123.
+TELEGRAM_WEBHOOK_PATH=
+TELEGRAM_CONTROL_PATH=.runtime/ig_bot_control.json
+TELEGRAM_STATUS_PATH=reports/ig_demo_audit/bot_run_usdjpy.json
+```
+
+The webhook endpoint path defaults to:
+
+```text
+/telegram/<TELEGRAM_WEBHOOK_SECRET>
+```
+
+If `TELEGRAM_WEBHOOK_PATH` is set, that exact path is used instead. This lets the bot reuse the
+same webhook path style as the `realtime_RSI` project without importing that project's unrelated
+market configuration.
+
+Supported commands:
+
+```text
+/status
+/pause
+/resume
+/stop
+/help
+```
+
+`/pause` pauses new signal evaluation and order placement. Existing lifecycle management still
+runs. `/stop` requests a graceful bot exit; it does not close broker positions.
+
+Start the webhook controller locally:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main ig-telegram-controller \
+  --env-file .env.demo \
+  --host 0.0.0.0 \
+  --port 8080
+```
+
+Register the webhook after your domain routes HTTPS traffic to port `8080`:
+
+```bash
+set -a
+source .env.demo
+set +a
+curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
+  -d "url=https://your-domain.example${TELEGRAM_WEBHOOK_PATH:-/telegram/${TELEGRAM_WEBHOOK_SECRET}}"
+```
+
+Check webhook registration:
+
+```bash
+curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo"
+```
+
+Docker demo run:
+
+```bash
+docker compose -f docker-compose.demo.yml build
+docker compose -f docker-compose.demo.yml up -d usdjpy-bot
+docker compose -f docker-compose.demo.yml up -d telegram-controller
+docker compose -f docker-compose.demo.yml logs -f usdjpy-bot
+```
+
+Stop containers:
+
+```bash
+docker compose -f docker-compose.demo.yml down
+```
+
+Do not paste `docker compose config` output into chat or logs; it expands `.env.demo` secrets.

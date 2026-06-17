@@ -1,9 +1,11 @@
 import json
+import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time as datetime_time, timedelta, timezone
 from pathlib import Path
 from threading import Lock
+from zoneinfo import ZoneInfo
 
 from .ig_candle_cache import CandleCachePaths, load_cached_candles, refresh_candle_cache
 from .ig_demo_execution import place_demo_test_order, write_demo_execution_report
@@ -22,6 +24,9 @@ from .ig_trade_lifecycle import (
     ManagedPosition,
 )
 from .models import DryRunOrder, InternalTick
+from .telegram_notifier import TelegramNotifier, control_state
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -48,12 +53,114 @@ def latest_closed_hour(now: datetime | None = None) -> datetime:
     return now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
 
 
+def _parse_hhmm(value: str) -> datetime_time:
+    hour, minute = value.split(":", 1)
+    return datetime_time(int(hour), int(minute))
+
+
+def active_session_windows(windows: list[dict], now_utc: datetime) -> list[dict]:
+    active = []
+    for window in windows:
+        tz_name = window.get("timezone", "UTC")
+        local_now = now_utc.astimezone(ZoneInfo(tz_name))
+        start = _parse_hhmm(window["start"])
+        end = _parse_hhmm(window["end"])
+        in_session = start <= local_now.time() < end
+        if in_session:
+            active.append({
+                "name": window["name"],
+                "timezone": tz_name,
+                "start": window["start"],
+                "end": window["end"],
+                "local_now": local_now,
+            })
+    return active
+
+
 def within_run_duration(started: datetime, duration_seconds: int, monotonic_deadline: float,
                         now: datetime | None = None, monotonic_now: float | None = None) -> bool:
+    if duration_seconds <= 0:
+        return True
     now = now or datetime.now(timezone.utc)
     monotonic_now = time.monotonic() if monotonic_now is None else monotonic_now
     wall_clock_deadline = started + timedelta(seconds=duration_seconds)
     return monotonic_now < monotonic_deadline and now < wall_clock_deadline
+
+
+class SessionProgressTracker:
+    def __init__(self, *, windows: list[dict], audit_output: str | Path, telegram: TelegramNotifier):
+        self.windows = windows
+        self.audit_output = audit_output
+        self.telegram = telegram
+        self.active_names: set[str] | None = None
+
+    def check(self, now_utc: datetime | None = None) -> None:
+        now_utc = now_utc or datetime.now(timezone.utc)
+        active = active_session_windows(self.windows, now_utc)
+        active_names = {item["name"] for item in active}
+        active_by_name = {item["name"]: item for item in active}
+        if self.active_names is None:
+            self.active_names = active_names
+            self._log_status(now_utc, active)
+            return
+
+        for name in sorted(active_names - self.active_names):
+            self._log_transition("SESSION_STARTED", now_utc, active_by_name[name])
+        for name in sorted(self.active_names - active_names):
+            window = next(item for item in self.windows if item["name"] == name)
+            local_now = now_utc.astimezone(ZoneInfo(window.get("timezone", "UTC")))
+            self._log_transition("SESSION_ENDED", now_utc, {
+                "name": window["name"],
+                "timezone": window.get("timezone", "UTC"),
+                "start": window["start"],
+                "end": window["end"],
+                "local_now": local_now,
+            })
+        self.active_names = active_names
+
+    def _log_status(self, now_utc: datetime, active: list[dict]) -> None:
+        names = ", ".join(item["name"] for item in active) if active else "none"
+        logger.info(
+            "IG bot session status | utc=%s | active_sessions=%s",
+            now_utc.isoformat(),
+            names,
+        )
+        write_bot_audit_event(self.audit_output, {
+            "event": "SESSION_STATUS",
+            "utc": now_utc.isoformat(),
+            "active_sessions": [item["name"] for item in active],
+        })
+
+    def _log_transition(self, event: str, now_utc: datetime, window: dict) -> None:
+        local_now = window["local_now"]
+        logger.info(
+            "IG bot %s | session=%s | utc=%s | local=%s | timezone=%s | window=%s-%s",
+            event,
+            window["name"],
+            now_utc.isoformat(),
+            local_now.isoformat(),
+            window["timezone"],
+            window["start"],
+            window["end"],
+        )
+        write_bot_audit_event(self.audit_output, {
+            "event": event,
+            "session": window["name"],
+            "utc": now_utc.isoformat(),
+            "local": local_now.isoformat(),
+            "timezone": window["timezone"],
+            "window": f"{window['start']}-{window['end']}",
+        })
+        self.telegram.send(
+            "\n".join([
+                f"USDJPY {event.replace('_', ' ').lower()}",
+                f"session: {window['name']}",
+                f"utc: {now_utc.isoformat()}",
+                f"local: {local_now.isoformat()}",
+                f"window: {window['start']}-{window['end']} {window['timezone']}",
+            ]),
+            category="system",
+        )
 
 
 def write_bot_audit_event(output: str | Path, event: dict) -> Path:
@@ -105,6 +212,8 @@ class IGDemoBotRunner:
         self.lifecycle_manager: IGTradeLifecycleManager | None = None
         self.lifecycle_executor: IGTradeLifecycleExecutor | None = None
         self.lifecycle_writer = LifecycleJSONWriter(self.config.audit_output_path)
+        self.telegram = TelegramNotifier(config)
+        self._last_control_state = "ACTIVE"
         self._lock = Lock()
 
     def _on_tick(self, tick: InternalTick) -> None:
@@ -136,6 +245,19 @@ class IGDemoBotRunner:
             "update_type": update_type,
             "payload": payload,
         })
+        if self.lifecycle_manager and self.lifecycle_manager.position:
+            if payload.get("dealId") == self.lifecycle_manager.position.deal_id:
+                status = payload.get("status") or payload.get("dealStatus") or update_type
+                self.telegram.send(
+                    "\n".join([
+                        "USDJPY trade update",
+                        f"deal_id: {payload.get('dealId')}",
+                        f"status: {status}",
+                        f"direction: {payload.get('direction')}",
+                        f"size: {payload.get('size')}",
+                    ]),
+                    category="trade",
+                )
 
     def _prepare(self) -> dict:
         self.runtime_config, self.contract = runtime_config_from_contract(
@@ -267,6 +389,18 @@ class IGDemoBotRunner:
             "deal_status": execution.get("deal_status"),
             "report": str(report),
         })
+        self.telegram.send(
+            "\n".join([
+                "USDJPY DEMO order submitted",
+                f"status: {execution.get('deal_status')}",
+                f"reason: {execution.get('reason')}",
+                f"deal_id: {execution.get('deal_id')}",
+                f"deal_reference: {execution.get('deal_reference')}",
+                f"direction: {order.direction}",
+                f"size: {order.size}",
+            ]),
+            category="trade",
+        )
         return execution
 
     def _process_lifecycle_action(self) -> dict | None:
@@ -290,6 +424,17 @@ class IGDemoBotRunner:
                 "report": str(report),
                 "result": result,
             })
+            self.telegram.send(
+                "\n".join([
+                    "USDJPY lifecycle action submitted",
+                    f"action: {action.action_type}",
+                    f"reason: {action.reason}",
+                    f"deal_id: {action.deal_id}",
+                    f"level: {action.level}",
+                    f"size: {action.size}",
+                ]),
+                category="trade",
+            )
             return result
         except Exception as exc:
             with self._lock:
@@ -306,11 +451,42 @@ class IGDemoBotRunner:
                 "error": str(exc),
                 "report": str(report) if report else None,
             })
+            self.telegram.send(
+                "\n".join([
+                    "USDJPY lifecycle action failed",
+                    f"action: {action.action_type}",
+                    f"reason: {action.reason}",
+                    f"deal_id: {action.deal_id}",
+                    f"error: {exc}",
+                ]),
+                category="trade",
+            )
             return {"error": str(exc), "action": action.action_type}
+
+    def _control_state(self) -> str:
+        state = control_state(self.config.telegram_control_path)
+        if state != self._last_control_state:
+            self._last_control_state = state
+            write_bot_audit_event(self.config.audit_output_path, {
+                "event": "CONTROL_STATE_CHANGED",
+                "state": state,
+                "control_path": str(self.config.telegram_control_path),
+            })
+            self.telegram.send(f"USDJPY bot control state changed: {state}", category="system")
+        return state
 
     def run(self, *, duration_seconds: int, execute_confirmation: str | None = None) -> BotRunResult:
         started = datetime.now(timezone.utc)
         result = BotRunResult(status="RUNNING", started_at=started.isoformat())
+        self.telegram.send(
+            "\n".join([
+                "USDJPY bot started",
+                f"epic: {self.epic}",
+                f"duration_seconds: {duration_seconds}",
+                f"orders_enabled: {bool(execute_confirmation)}",
+            ]),
+            category="system",
+        )
         cache_summary = self._prepare()
         write_bot_audit_event(self.config.audit_output_path, {
             "event": "CANDLE_CACHE_READY",
@@ -319,6 +495,11 @@ class IGDemoBotRunner:
         streaming = IGStreamingClient(self.config, self.session)
         last_evaluated: datetime | None = None
         first_evaluation = True
+        session_tracker = SessionProgressTracker(
+            windows=self.contract["entry_rules"]["allowed_sessions"],
+            audit_output=self.config.audit_output_path,
+            telegram=self.telegram,
+        )
         try:
             streaming.connect()
             streaming.subscribe_price(
@@ -331,15 +512,36 @@ class IGDemoBotRunner:
                 ),
             )
             streaming.subscribe_trade_updates(TradeUpdateListener(self._on_trade_update))
-            monotonic_deadline = time.monotonic() + duration_seconds
+            monotonic_deadline = (
+                float("inf") if duration_seconds <= 0 else time.monotonic() + duration_seconds
+            )
             while within_run_duration(started, duration_seconds, monotonic_deadline):
                 self._process_lifecycle_action()
+                session_tracker.check()
+                state = self._control_state()
+                if state == "STOP_REQUESTED":
+                    result.status = "STOPPED_BY_CONTROL"
+                    break
                 candle = latest_closed_hour()
+                if state == "PAUSED":
+                    time.sleep(self.poll_seconds)
+                    continue
                 if self.price_state.latest_tick and candle != last_evaluated:
                     signal_result = self._evaluate(
                         candle,
                         refresh_cache=not first_evaluation,
                     )
+                    if signal_result.get("status") == "SIGNAL_READY_FOR_DEMO_DRY_RUN":
+                        self.telegram.send(
+                            "\n".join([
+                                "USDJPY signal ready",
+                                f"candle: {candle.isoformat()}",
+                                f"direction: {(signal_result.get('current_signal') or {}).get('direction')}",
+                                f"session: {(signal_result.get('current_signal') or {}).get('session')}",
+                                f"order_status: {(signal_result.get('dry_run_order') or {}).get('validation_status')}",
+                            ]),
+                            category="trade",
+                        )
                     execution = self._maybe_execute(signal_result, execute_confirmation)
                     result.last_evaluated_candle = candle.isoformat()
                     result.last_signal_result = signal_result
@@ -347,7 +549,8 @@ class IGDemoBotRunner:
                     last_evaluated = candle
                     first_evaluation = False
                 time.sleep(self.poll_seconds)
-            result.status = "COMPLETED"
+            if result.status == "RUNNING":
+                result.status = "COMPLETED"
             return result
         finally:
             streaming.disconnect()
@@ -357,3 +560,15 @@ class IGDemoBotRunner:
             report.parent.mkdir(parents=True, exist_ok=True)
             result.reports["bot_run"] = str(report)
             report.write_text(json.dumps(result.__dict__, indent=2, default=str))
+            self.telegram.send(
+                "\n".join([
+                    "USDJPY bot stopped",
+                    f"status: {result.status}",
+                    f"tick_count: {result.tick_count}",
+                    f"last_evaluated_candle: {result.last_evaluated_candle}",
+                    f"last_signal_status: {(result.last_signal_result or {}).get('status')}",
+                    f"order_sent: {bool(result.order_execution)}",
+                ]),
+                category="system",
+            )
+            self.telegram.close()

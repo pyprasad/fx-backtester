@@ -6,6 +6,7 @@ import polars as pl
 
 from src.broker.ig.ig_bot import (
     IGDemoBotRunner,
+    active_session_windows,
     latest_closed_hour,
     within_run_duration,
     write_bot_audit_event,
@@ -17,6 +18,30 @@ def test_latest_closed_hour_returns_previous_complete_hour():
     assert latest_closed_hour(datetime(2026, 6, 16, 10, 4, 30, tzinfo=timezone.utc)) == (
         datetime(2026, 6, 16, 9, tzinfo=timezone.utc)
     )
+
+
+def test_active_session_windows_respects_per_session_timezones():
+    windows = [
+        {"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+        {
+            "name": "London New York overlap",
+            "start": "13:00",
+            "end": "16:30",
+            "timezone": "Europe/London",
+        },
+    ]
+
+    tokyo = active_session_windows(
+        windows,
+        datetime(2026, 6, 17, 0, 30, tzinfo=timezone.utc),
+    )
+    london_overlap = active_session_windows(
+        windows,
+        datetime(2026, 6, 17, 12, 30, tzinfo=timezone.utc),
+    )
+
+    assert [item["name"] for item in tokyo] == ["Tokyo"]
+    assert [item["name"] for item in london_overlap] == ["London New York overlap"]
 
 
 def test_write_bot_audit_event_appends_jsonl(tmp_path):
@@ -52,6 +77,18 @@ def test_within_run_duration_respects_wall_clock_and_monotonic_deadlines():
         monotonic_deadline=100,
         now=datetime(2026, 6, 17, 0, 0, 30, tzinfo=timezone.utc),
         monotonic_now=101,
+    )
+
+
+def test_within_run_duration_zero_means_indefinite():
+    started = datetime(2026, 6, 17, 0, tzinfo=timezone.utc)
+
+    assert within_run_duration(
+        started,
+        duration_seconds=0,
+        monotonic_deadline=0,
+        now=datetime(2030, 1, 1, tzinfo=timezone.utc),
+        monotonic_now=999999,
     )
 
 

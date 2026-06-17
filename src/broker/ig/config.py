@@ -60,6 +60,16 @@ class IGDemoConfig:
     historical_account_id: str = ""
     historical_token_cache_enabled: bool = False
     historical_token_cache_path: Path = Path(".runtime/ig_demo_historical_session.json")
+    telegram_enabled: bool = False
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    telegram_notify_trades: bool = True
+    telegram_notify_system: bool = True
+    telegram_webhook_secret: str = ""
+    telegram_webhook_path: str = ""
+    telegram_admin_user_id: str = ""
+    telegram_control_path: Path = Path(".runtime/ig_bot_control.json")
+    telegram_status_path: Path = Path("reports/ig_demo_audit/bot_run_usdjpy.json")
 
     def redacted(self) -> dict:
         return {
@@ -70,6 +80,9 @@ class IGDemoConfig:
             "dry_run_only": self.dry_run_only, "price_scale_divisor": self.price_scale_divisor,
             "historical_data_override_enabled": self.historical_data_override_enabled,
             "historical_username": redact(self.historical_username),
+            "telegram_enabled": self.telegram_enabled,
+            "telegram_chat_id": redact(self.telegram_chat_id),
+            "telegram_admin_user_id": redact(self.telegram_admin_user_id),
         }
 
     def __repr__(self) -> str:
@@ -131,6 +144,16 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         historical_token_cache_path=Path(
             get("IG_HISTORICAL_TOKEN_CACHE_PATH", ".runtime/ig_demo_historical_session.json")
         ),
+        telegram_enabled=_bool(get("TELEGRAM_ENABLED", "false"), False),
+        telegram_bot_token=get("TELEGRAM_BOT_TOKEN"),
+        telegram_chat_id=get("TELEGRAM_CHAT_ID"),
+        telegram_notify_trades=_bool(get("TELEGRAM_NOTIFY_TRADES", "true"), True),
+        telegram_notify_system=_bool(get("TELEGRAM_NOTIFY_SYSTEM", "true"), True),
+        telegram_webhook_secret=get("TELEGRAM_WEBHOOK_SECRET"),
+        telegram_webhook_path=get("TELEGRAM_WEBHOOK_PATH"),
+        telegram_admin_user_id=get("TELEGRAM_ADMIN_USER_ID"),
+        telegram_control_path=Path(get("TELEGRAM_CONTROL_PATH", ".runtime/ig_bot_control.json")),
+        telegram_status_path=Path(get("TELEGRAM_STATUS_PATH", "reports/ig_demo_audit/bot_run_usdjpy.json")),
     )
     if config.env != "DEMO" or config.acc_type != "DEMO":
         raise ValueError("FX-2I supports IG DEMO only")
@@ -153,6 +176,8 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         )
     if require_credentials and not all((config.api_key, config.username, config.password)):
         raise ValueError("IG DEMO API key, username, and password are required")
+    if config.telegram_enabled and not all((config.telegram_bot_token, config.telegram_chat_id)):
+        raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required when TELEGRAM_ENABLED=true")
     if not config.account_id:
         warnings.warn("IG_ACCOUNT_ID is missing; /accounts may be used to resolve it", stacklevel=2)
     return config

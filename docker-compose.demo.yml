@@ -1,0 +1,68 @@
+services:
+  usdjpy-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.demo
+    environment:
+      PYTHONPATH: /app
+      STRICT_CONFIG: config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml
+      EPIC: CS.D.USDJPY.TODAY.IP
+      # 0 means always-on. Session filters in the strategy decide when entries are allowed.
+      BOT_DURATION_SECONDS: "0"
+      BOT_POLL_SECONDS: "5"
+      BOT_HISTORY_POINTS: "1000"
+      BOT_REFRESH_POINTS: "5"
+      BOT_CONFIRM: PLACE_DEMO_ORDER
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./.runtime:/app/.runtime
+      - ./config:/app/config:ro
+      - ./.env.demo:/app/.env.demo:ro
+    command: >
+      sh -c 'python -m src.main ig-demo-run-bot
+      --env-file .env.demo
+      --strategy-config "$$STRICT_CONFIG"
+      --epic "$$EPIC"
+      --history-points "$$BOT_HISTORY_POINTS"
+      --refresh-points "$$BOT_REFRESH_POINTS"
+      --duration-seconds "$$BOT_DURATION_SECONDS"
+      --poll-seconds "$$BOT_POLL_SECONDS"
+      --confirm "$$BOT_CONFIRM"'
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  telegram-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.demo
+    environment:
+      PYTHONPATH: /app
+      TELEGRAM_CONTROLLER_PORT: "8080"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./reports:/app/reports
+      - ./.runtime:/app/.runtime
+      - ./.env.demo:/app/.env.demo:ro
+    command: >
+      sh -c 'python -m src.main ig-telegram-controller
+      --env-file .env.demo
+      --host 0.0.0.0
+      --port "$$TELEGRAM_CONTROLLER_PORT"'
+    restart: unless-stopped
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
