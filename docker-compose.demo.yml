@@ -47,9 +47,9 @@ services:
       - ./.env.demo
     environment:
       PYTHONPATH: /app
-      TELEGRAM_CONTROLLER_PORT: "8080"
+      TELEGRAM_CONTROLLER_PORT: "3000"
     ports:
-      - "8080:8080"
+      - "3000:3000"
     volumes:
       - ./reports:/app/reports
       - ./.runtime:/app/.runtime
