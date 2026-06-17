@@ -41,6 +41,14 @@ def latest_closed_hour(now: datetime | None = None) -> datetime:
     return now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=1)
 
 
+def within_run_duration(started: datetime, duration_seconds: int, monotonic_deadline: float,
+                        now: datetime | None = None, monotonic_now: float | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    monotonic_now = time.monotonic() if monotonic_now is None else monotonic_now
+    wall_clock_deadline = started + timedelta(seconds=duration_seconds)
+    return monotonic_now < monotonic_deadline and now < wall_clock_deadline
+
+
 def write_bot_audit_event(output: str | Path, event: dict) -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
@@ -210,8 +218,8 @@ class IGDemoBotRunner:
                     self.config.price_scale_divisor,
                 ),
             )
-            deadline = time.monotonic() + duration_seconds
-            while time.monotonic() < deadline:
+            monotonic_deadline = time.monotonic() + duration_seconds
+            while within_run_duration(started, duration_seconds, monotonic_deadline):
                 candle = latest_closed_hour()
                 if self.price_state.latest_tick and candle != last_evaluated:
                     signal_result = self._evaluate(

@@ -4,7 +4,12 @@ from types import SimpleNamespace
 
 import polars as pl
 
-from src.broker.ig.ig_bot import IGDemoBotRunner, latest_closed_hour, write_bot_audit_event
+from src.broker.ig.ig_bot import (
+    IGDemoBotRunner,
+    latest_closed_hour,
+    within_run_duration,
+    write_bot_audit_event,
+)
 from src.broker.ig.ig_candle_cache import CandleCachePaths
 
 
@@ -22,6 +27,32 @@ def test_write_bot_audit_event_appends_jsonl(tmp_path):
     assert len(rows) == 2
     assert "SIGNAL_EVALUATED" in rows[0]
     assert "FIRST_TICK" in rows[1]
+
+
+def test_within_run_duration_respects_wall_clock_and_monotonic_deadlines():
+    started = datetime(2026, 6, 17, 0, tzinfo=timezone.utc)
+
+    assert within_run_duration(
+        started,
+        duration_seconds=60,
+        monotonic_deadline=100,
+        now=datetime(2026, 6, 17, 0, 0, 59, tzinfo=timezone.utc),
+        monotonic_now=99,
+    )
+    assert not within_run_duration(
+        started,
+        duration_seconds=60,
+        monotonic_deadline=100,
+        now=datetime(2026, 6, 17, 0, 1, 1, tzinfo=timezone.utc),
+        monotonic_now=50,
+    )
+    assert not within_run_duration(
+        started,
+        duration_seconds=60,
+        monotonic_deadline=100,
+        now=datetime(2026, 6, 17, 0, 0, 30, tzinfo=timezone.utc),
+        monotonic_now=101,
+    )
 
 
 def test_evaluate_blocks_when_target_candle_is_newer_than_cache(tmp_path, monkeypatch):
