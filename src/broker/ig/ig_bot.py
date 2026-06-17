@@ -216,6 +216,14 @@ class IGDemoBotRunner:
         self._last_control_state = "ACTIVE"
         self._lock = Lock()
 
+    def _write_run_snapshot(self, result: BotRunResult) -> Path:
+        result.tick_count = self.price_state.tick_count
+        report = Path(self.config.audit_output_path) / "bot_run_usdjpy.json"
+        report.parent.mkdir(parents=True, exist_ok=True)
+        result.reports["bot_run"] = str(report)
+        report.write_text(json.dumps(result.__dict__, indent=2, default=str))
+        return report
+
     def _on_tick(self, tick: InternalTick) -> None:
         with self._lock:
             self.price_state.latest_tick = tick
@@ -478,6 +486,7 @@ class IGDemoBotRunner:
     def run(self, *, duration_seconds: int, execute_confirmation: str | None = None) -> BotRunResult:
         started = datetime.now(timezone.utc)
         result = BotRunResult(status="RUNNING", started_at=started.isoformat())
+        self._write_run_snapshot(result)
         self.telegram.send(
             "\n".join([
                 "USDJPY bot started",
@@ -515,6 +524,7 @@ class IGDemoBotRunner:
             monotonic_deadline = (
                 float("inf") if duration_seconds <= 0 else time.monotonic() + duration_seconds
             )
+            next_status_snapshot = time.monotonic() + 30
             while within_run_duration(started, duration_seconds, monotonic_deadline):
                 self._process_lifecycle_action()
                 session_tracker.check()
@@ -548,6 +558,10 @@ class IGDemoBotRunner:
                     result.order_execution = execution
                     last_evaluated = candle
                     first_evaluation = False
+                    self._write_run_snapshot(result)
+                if time.monotonic() >= next_status_snapshot:
+                    self._write_run_snapshot(result)
+                    next_status_snapshot = time.monotonic() + 30
                 time.sleep(self.poll_seconds)
             if result.status == "RUNNING":
                 result.status = "COMPLETED"
@@ -555,11 +569,7 @@ class IGDemoBotRunner:
         finally:
             streaming.disconnect()
             result.completed_at = datetime.now(timezone.utc).isoformat()
-            result.tick_count = self.price_state.tick_count
-            report = Path(self.config.audit_output_path) / "bot_run_usdjpy.json"
-            report.parent.mkdir(parents=True, exist_ok=True)
-            result.reports["bot_run"] = str(report)
-            report.write_text(json.dumps(result.__dict__, indent=2, default=str))
+            self._write_run_snapshot(result)
             self.telegram.send(
                 "\n".join([
                     "USDJPY bot stopped",

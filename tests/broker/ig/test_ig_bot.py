@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import polars as pl
 
 from src.broker.ig.ig_bot import (
+    BotRunResult,
     IGDemoBotRunner,
     active_session_windows,
     latest_closed_hour,
@@ -125,3 +126,28 @@ def test_evaluate_blocks_when_target_candle_is_newer_than_cache(tmp_path, monkey
     assert result["target_closed_1h_candle"] == "2026-06-16T11:00:00+00:00"
     assert result["latest_closed_1h_candle"] == "2026-06-16T10:00:00+00:00"
     assert Path(config.audit_output_path / "signal_dry_run_order_usdjpy.json").exists()
+
+
+def test_write_run_snapshot_updates_status_file(tmp_path):
+    config = SimpleNamespace(
+        audit_output_path=tmp_path / "audit",
+        price_scale_divisor=100,
+        telegram_enabled=False,
+    )
+    runner = IGDemoBotRunner(
+        config=config,
+        session=SimpleNamespace(),
+        client=SimpleNamespace(),
+        env_file=".env.demo",
+        strategy_path="contract.yaml",
+        epic="CS.D.USDJPY.TODAY.IP",
+        runtime_strategy_config="runtime.yaml",
+    )
+    runner.price_state.tick_count = 42
+    result = BotRunResult(status="RUNNING", started_at="2026-06-18T00:00:00+00:00")
+
+    path = runner._write_run_snapshot(result)
+
+    assert path.exists()
+    assert '"status": "RUNNING"' in path.read_text()
+    assert '"tick_count": 42' in path.read_text()
