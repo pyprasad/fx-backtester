@@ -1,17 +1,17 @@
 {
   "status": "COMPLETED",
-  "started_at": "2026-06-16T22:16:05.471192+00:00",
-  "completed_at": "2026-06-17T09:11:48.048189+00:00",
-  "tick_count": 30896,
-  "last_evaluated_candle": "2026-06-17T08:00:00+00:00",
+  "started_at": "2026-06-17T11:25:18.686897+00:00",
+  "completed_at": "2026-06-17T19:25:21.807083+00:00",
+  "tick_count": 58159,
+  "last_evaluated_candle": "2026-06-17T18:00:00+00:00",
   "last_signal_result": {
     "status": "NO_SIGNAL",
     "epic": "CS.D.USDJPY.TODAY.IP",
-    "latest_closed_1h_candle": "2026-06-17T08:00:00+00:00",
+    "latest_closed_1h_candle": "2026-06-17T18:00:00+00:00",
     "signal_count": 12,
-    "rejection_count": 340,
+    "rejection_count": 341,
     "last_signal": {
-      "signal_id": "e37298c9-7fce-4736-83e1-2609ad23ebfa",
+      "signal_id": "8cfe1058-852b-4456-8053-f7764219b51e",
       "timestamp_utc": "2026-06-15T03:00:00+00:00",
       "timestamp_london": "2026-06-15T12:00:00+09:00",
       "symbol": "USDJPY",
@@ -29,7 +29,7 @@
       "indicator_snapshot": {
         "ema_fast": 160.13588990930688,
         "ema_mid": 160.21320214780732,
-        "ema_slow": 160.10530404202783,
+        "ema_slow": 160.10532395914956,
         "rsi": 44.85444371052668,
         "atr": 0.13477598103159666,
         "atr_pips": 13.477598103159666

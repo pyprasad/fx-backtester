@@ -12,6 +12,10 @@ def write_csv_reports(output: Path, trades: list, metrics: dict, rejections: lis
     _write(output / "strategy_summary.csv", [metrics])
     _write(output / "trade_log.csv", [asdict(t) for t in trades])
     _write(output / "signal_rejection_log.csv", rejections)
+    _write(
+        output / "news_guard_skipped_signals.csv",
+        [row for row in rejections if row.get("reason") == "NEWS_BLACKOUT"],
+    )
     balance = metrics["starting_balance"]
     curve = []
     for trade in trades:

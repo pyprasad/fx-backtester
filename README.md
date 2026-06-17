@@ -535,6 +535,93 @@ distance before execution. The default funding cost is zero; supply `--daily-fun
 meaningful cost scenario. FX-2G remains historical research and a passing result does not establish
 demo or production readiness.
 
+## Forex News Guardrail
+
+The optional news guard blocks new entries around configured USD/JPY macro events. It does not
+skip candle processing and does not close existing trades. Existing stops, targets, trailing stops,
+max-duration exits, and weekend rules continue normally.
+
+The guard is disabled by default in `config/strategy.usdjpy.fx_swing_trend_reclaim.yaml`. Enable it
+from config or CLI:
+
+```yaml
+news_guard:
+  enabled: true
+  calendar_file: data/macro_calendar/usd_jpy_events_sample.csv
+  affected_currencies: [USD, JPY]
+  impact_levels: [HIGH]
+  before_minutes: 60
+  after_minutes: 60
+  block_new_entries: true
+  close_existing_positions: false
+  log_skipped_signals: true
+```
+
+Calendar CSVs must use UTC timestamps:
+
+```csv
+event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source
+2024-07-05-us-nfp,2024-07-05T12:30:00Z,United States,USD,Non Farm Payrolls,HIGH,206K,190K,218K,manual
+```
+
+For research-only historical coverage, generate a cached USD/JPY macro calendar:
+
+```bash
+PYTHONPATH=. .venv/bin/python scripts/fetch_nasdaq_usdjpy_macro_calendar.py \
+  --start-date 2022-01-01 \
+  --end-date 2025-12-31 \
+  --output data/macro_calendar/usd_jpy_events_2022_2025_nasdaq.csv \
+  --cache-dir data/macro_calendar/cache/nasdaq \
+  --sleep-seconds 0.5 \
+  --timeout-seconds 60 \
+  --retries 5 \
+  --retry-sleep-seconds 10
+```
+
+The fetcher reuses one JSON cache file per calendar day. Delete a specific cached day or pass
+`--refresh-cache` only when you intentionally want to re-request source data. Treat this as a
+research feed: verify any suspicious timestamps against official release schedules before using the
+calendar for production decisions.
+
+The 2022-2025 broad NASDAQ calendar experiment is documented in
+`docs/strategies/usdjpy_news_guard_research_2022_2025.md`. The broad filter improved drawdown and
+worst-trade quality but reduced net profit, so it remains opt-in rather than a selected-strategy
+default.
+
+Environment overrides are available for research/demo runs without editing the strategy YAML:
+
+```bash
+export NEWS_GUARD_ENABLED=true
+export NEWS_GUARD_CALENDAR_FILE=data/macro_calendar/usd_jpy_events_2022_2025_nasdaq.csv
+export NEWS_GUARD_BEFORE_MINUTES=60
+export NEWS_GUARD_AFTER_MINUTES=60
+```
+
+CLI flags still take precedence for a single command.
+
+News-blocked entries are written to both `signal_rejection_log.csv` and
+`news_guard_skipped_signals.csv`. Summary metrics include the calendar file, events loaded,
+blackout window, skipped signal counts, and first/last event timestamps.
+
+Compare the selected broker guardrail with the news filter enabled:
+
+```bash
+PYTHONPATH=. .venv/bin/python -m src.main --log-level INFO broker-guardrails \
+  --strategy-config config/strategy.usdjpy.fx_swing_trend_reclaim.yaml \
+  --guardrail-variants-config config/broker_guardrail_variants.usdjpy.yaml \
+  --normalised-tick-path data/normalised_ticks/USDJPY_2022_2025.parquet \
+  --candle-path data/candles/USDJPY_2022_2025 \
+  --report-output-path reports/broker_guardrails_news_guard_research \
+  --variant min_risk_3pips_spread_ratio_20pct_lifecycle_throttled \
+  --session-window "London morning,07:00,11:30,Europe/London" \
+  --session-window "London New York overlap,13:00,16:30,Europe/London" \
+  --session-window "Tokyo,09:00,18:00,Asia/Tokyo" \
+  --news-guard-enabled true \
+  --news-calendar-file data/macro_calendar/usd_jpy_events_sample.csv \
+  --news-before-minutes 60 \
+  --news-after-minutes 60
+```
+
 ## FX-2H: Final Guardrail Candidate Bake-Off
 
 FX-2H compares the three surviving FX-2G candidates side by side without changing strategy

@@ -11,3 +11,4 @@ reports/runs/*/
 .runtime/
 *.token-cache.json
 data/live_demo_ticks/
+data/macro_calendar

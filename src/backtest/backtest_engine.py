@@ -7,6 +7,7 @@ from src.config.schemas import StrategyConfig
 from src.data.candle_builder import build_and_save_all
 from src.execution.tick_execution_engine import evaluate_executable_entry_guardrail, execute_signal
 from src.indicators.indicator_engine import add_indicators
+from src.news_guard.calendar_loader import load_economic_events
 from src.reporting.csv_report import write_csv_reports, write_funding_reports, write_weekend_policy_reports
 from src.reporting.html_report import write_html_report
 from src.reporting.metrics import calculate_metrics
@@ -45,6 +46,31 @@ def build_candles_for_config(config: StrategyConfig) -> dict[str, pl.DataFrame]:
     logger.info("Building candles | tick_path=%s, output=%s", tick_path, resolve(config, config.data["candle_path"]))
     ticks = pl.scan_parquet(tick_path)
     return build_and_save_all(ticks, resolve(config, config.data["candle_path"]), config.candles["build_timeframes"])
+
+
+def _news_guard_metrics(config: StrategyConfig, rejections: list[dict]) -> dict:
+    settings = config.news_guard or {}
+    enabled = bool(settings.get("enabled", False))
+    skipped = [row for row in rejections if row.get("reason") == "NEWS_BLACKOUT"]
+    events = []
+    if enabled:
+        events = load_economic_events(
+            config.base_dir / settings["calendar_file"],
+            settings.get("affected_currencies", []),
+            settings.get("impact_levels", []),
+        )
+    return {
+        "news_guard_enabled": enabled,
+        "news_guard_calendar_file": settings.get("calendar_file", ""),
+        "news_guard_before_minutes": int(settings.get("before_minutes", 0)) if enabled else 0,
+        "news_guard_after_minutes": int(settings.get("after_minutes", 0)) if enabled else 0,
+        "news_guard_events_loaded": len(events),
+        "news_guard_skipped_signals": len(skipped),
+        "news_guard_skipped_buy_signals": sum(row.get("signal_direction") in {"BUY", "LONG"} for row in skipped),
+        "news_guard_skipped_sell_signals": sum(row.get("signal_direction") in {"SELL", "SHORT"} for row in skipped),
+        "first_news_event_time": events[0].event_time_utc.isoformat() if events else "",
+        "last_news_event_time": events[-1].event_time_utc.isoformat() if events else "",
+    }
 
 
 def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, dict, object]:
@@ -98,6 +124,7 @@ def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, di
             risk.record(trade.net_pnl, balance, trade.exit_timestamp_utc)
             active_until = trade.exit_timestamp_utc
     metrics = calculate_metrics(trades, config.risk["starting_balance"])
+    metrics.update(_news_guard_metrics(config, rejections))
     run_name = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1")
     output = output_override or (resolve(config, config.reporting["output_path"]) / run_name)
     with timed_stage(logger, "write backtest reports", output=output):

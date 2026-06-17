@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import yaml
@@ -18,7 +19,50 @@ def load_data_quality_config(path: str | Path) -> DataQualityConfig:
 
 def load_strategy_config(path: str | Path) -> StrategyConfig:
     data, base_dir = _load(path)
-    return StrategyConfig(**data, base_dir=base_dir)
+    config = StrategyConfig(**data, base_dir=base_dir)
+    return apply_news_guard_env_overrides(config)
+
+
+def _env_bool(name: str) -> bool | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    lowered = value.strip().lower()
+    if lowered in {"true", "1", "yes", "y", "on"}:
+        return True
+    if lowered in {"false", "0", "no", "n", "off"}:
+        return False
+    raise ValueError(f"{name} must be true or false")
+
+
+def _env_int(name: str) -> int | None:
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return None
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an integer") from exc
+
+
+def apply_news_guard_env_overrides(config: StrategyConfig) -> StrategyConfig:
+    enabled = _env_bool("NEWS_GUARD_ENABLED")
+    if enabled is not None:
+        config.news_guard["enabled"] = enabled
+
+    calendar_file = os.environ.get("NEWS_GUARD_CALENDAR_FILE")
+    if calendar_file:
+        config.news_guard["calendar_file"] = calendar_file
+
+    before_minutes = _env_int("NEWS_GUARD_BEFORE_MINUTES")
+    if before_minutes is not None:
+        config.news_guard["before_minutes"] = before_minutes
+
+    after_minutes = _env_int("NEWS_GUARD_AFTER_MINUTES")
+    if after_minutes is not None:
+        config.news_guard["after_minutes"] = after_minutes
+
+    return config
 
 
 def resolve(config: DataQualityConfig | StrategyConfig, path: str) -> Path:
@@ -53,6 +97,10 @@ def apply_strategy_overrides(
     normalised_tick_path: str | None = None,
     candle_path: str | None = None,
     report_output_path: str | None = None,
+    news_guard_enabled: bool | None = None,
+    news_calendar_file: str | None = None,
+    news_before_minutes: int | None = None,
+    news_after_minutes: int | None = None,
 ) -> StrategyConfig:
     if normalised_tick_path:
         config.data["normalised_tick_path"] = normalised_tick_path
@@ -60,6 +108,14 @@ def apply_strategy_overrides(
         config.data["candle_path"] = candle_path
     if report_output_path:
         config.reporting["output_path"] = report_output_path
+    if news_guard_enabled is not None:
+        config.news_guard["enabled"] = news_guard_enabled
+    if news_calendar_file:
+        config.news_guard["calendar_file"] = news_calendar_file
+    if news_before_minutes is not None:
+        config.news_guard["before_minutes"] = news_before_minutes
+    if news_after_minutes is not None:
+        config.news_guard["after_minutes"] = news_after_minutes
     return config
 
 

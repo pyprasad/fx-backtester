@@ -6,6 +6,8 @@ import polars as pl
 
 from src.config.schemas import StrategyConfig
 from src.broker_guardrails.distance_validator import evaluate_proposed_signal
+from src.news_guard.blackout import is_news_blackout
+from src.news_guard.calendar_loader import load_economic_events
 from src.risk.weekend_policy import WeekendPolicy
 
 from .signal import Signal
@@ -43,6 +45,44 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
     signals, rejected = [], []
     weekend = WeekendPolicy(config.weekend_policy)
     guardrails = config.broker_execution_guardrails
+    news_guard = config.news_guard or {}
+    news_events = []
+    if news_guard.get("enabled"):
+        calendar_file = config.base_dir / news_guard["calendar_file"]
+        news_events = load_economic_events(
+            calendar_file,
+            news_guard.get("affected_currencies", []),
+            news_guard.get("impact_levels", []),
+        )
+
+    def news_rejection(row: dict, direction: str) -> bool:
+        if not news_guard.get("enabled") or not news_guard.get("block_new_entries", True):
+            return False
+        blocked, event = is_news_blackout(
+            row["timestamp"],
+            news_events,
+            int(news_guard.get("before_minutes", 0)),
+            int(news_guard.get("after_minutes", 0)),
+        )
+        if not blocked or event is None:
+            return False
+        if news_guard.get("log_skipped_signals", True):
+            rejected.append({
+                "timestamp": row["timestamp"],
+                "timestamp_utc": row["timestamp"],
+                "strategy": config.strategy["name"],
+                "market": config.strategy["market"],
+                "signal_direction": direction,
+                "reason": "NEWS_BLACKOUT",
+                "rejection_reason": "NEWS_BLACKOUT",
+                "rejection_group": "NEWS_GUARD",
+                "event_id": event.event_id,
+                "event_name": event.event_name,
+                "event_currency": event.currency,
+                "event_time_utc": event.event_time_utc,
+                "impact": event.impact,
+            })
+        return True
 
     def guardrail_rejection(row, stop, target, spread_pips, session):
         if not guardrails.get("enabled"):
@@ -128,6 +168,8 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             target = row["mid_close"] - config.exit["runner"]["final_target_r"] * risk
             if guardrail_rejection(row, stop, target, spread_pips, session):
                 continue
+            if news_rejection(row, "SHORT"):
+                continue
             signals.append(Signal(
                 str(uuid4()), row["timestamp"], session_local, row["symbol"], "SHORT",
                 "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
@@ -145,6 +187,8 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
                 risk = row["mid_close"] - stop
                 target = row["mid_close"] + config.exit["runner"]["final_target_r"] * risk
                 if guardrail_rejection(row, stop, target, spread_pips, session):
+                    continue
+                if news_rejection(row, "LONG"):
                     continue
                 signals.append(Signal(
                     str(uuid4()), row["timestamp"], session_local, row["symbol"], "LONG",

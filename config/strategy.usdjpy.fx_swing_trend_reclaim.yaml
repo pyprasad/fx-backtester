@@ -49,6 +49,16 @@ session_filter:
     - {name: London New York overlap, start: "13:00", end: "16:30"}
 market_open_filter: {enabled: true, avoid_sunday_open: true, avoid_first_minutes_after_week_open: 60}
 spread_filter: {enabled: true, max_spread_pips: 2.0}
+news_guard:
+  enabled: false
+  calendar_file: data/macro_calendar/usd_jpy_events_sample.csv
+  affected_currencies: [USD, JPY]
+  impact_levels: [HIGH]
+  before_minutes: 60
+  after_minutes: 60
+  block_new_entries: true
+  close_existing_positions: false
+  log_skipped_signals: true
 execution:
   use_tick_execution: true
   slippage_enabled: true

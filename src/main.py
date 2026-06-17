@@ -99,6 +99,13 @@ def add_strategy_overrides(parser):
     parser.add_argument("--report-output-path", help="Override backtest report parent directory")
 
 
+def add_news_guard_overrides(parser):
+    parser.add_argument("--news-guard-enabled", type=boolean)
+    parser.add_argument("--news-calendar-file")
+    parser.add_argument("--news-before-minutes", type=int)
+    parser.add_argument("--news-after-minutes", type=int)
+
+
 def run_forensics(config, run_path, normalised_tick_path, candle_path):
     run_path = Path(run_path).resolve()
     engine = TradeForensicsEngine(
@@ -131,6 +138,10 @@ def strategy_config(args, path):
         normalised_tick_path=getattr(args, "normalised_tick_path", None),
         candle_path=getattr(args, "candle_path", None),
         report_output_path=getattr(args, "report_output_path", None),
+        news_guard_enabled=getattr(args, "news_guard_enabled", None),
+        news_calendar_file=getattr(args, "news_calendar_file", None),
+        news_before_minutes=getattr(args, "news_before_minutes", None),
+        news_after_minutes=getattr(args, "news_after_minutes", None),
     )
     if getattr(args, "weekend_policy_name", None):
         config = apply_weekend_policy_variant(
@@ -151,6 +162,7 @@ def main():
             add_data_overrides(command)
         if name in ("build-candles", "backtest"):
             add_strategy_overrides(command)
+            add_news_guard_overrides(command)
         if name == "backtest":
             command.add_argument("--weekend-policy-name")
             command.add_argument("--weekend-variants-config", default="config/weekend_policy_variants.usdjpy.yaml")
@@ -219,6 +231,7 @@ def main():
     guardrail_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
     guardrail_parser.add_argument("--session-timezone")
     guardrail_parser.add_argument("--session-window", action="append", type=session_window)
+    add_news_guard_overrides(guardrail_parser)
     bakeoff_parser = sub.add_parser("final-guardrail-bakeoff")
     bakeoff_parser.add_argument("--strategy-config", required=True)
     bakeoff_parser.add_argument("--bakeoff-config", required=True)
@@ -316,6 +329,8 @@ def main():
             args.candle_path, args.report_output_path, args.daily_funding_pips,
             args.skip_funding, args.variant, args.continue_on_error,
             args.session_timezone, args.session_window,
+            args.news_guard_enabled, args.news_calendar_file,
+            args.news_before_minutes, args.news_after_minutes,
         ).run()
         print(f"Broker guardrail report: {output / 'broker_guardrail_report.html'}")
     elif args.command == "final-guardrail-bakeoff":

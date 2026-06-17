@@ -32,7 +32,9 @@ class BrokerGuardrailRunner:
     def __init__(self, strategy_config, variants_config, normalised_tick_path, candle_path,
                  report_output_path, daily_funding_pips=None, skip_funding=False,
                  variant=None, continue_on_error=True, session_timezone=None,
-                 session_windows=None):
+                 session_windows=None, news_guard_enabled=None,
+                 news_calendar_file=None, news_before_minutes=None,
+                 news_after_minutes=None):
         self.strategy_path = Path(strategy_config)
         self.variants_path = Path(variants_config)
         self.tick_path = str(Path(normalised_tick_path).resolve())
@@ -44,6 +46,10 @@ class BrokerGuardrailRunner:
         self.continue_on_error = continue_on_error
         self.session_timezone = session_timezone
         self.session_windows = session_windows
+        self.news_guard_enabled = news_guard_enabled
+        self.news_calendar_file = news_calendar_file
+        self.news_before_minutes = news_before_minutes
+        self.news_after_minutes = news_after_minutes
         self.output = self.report_parent / datetime.now(timezone.utc).strftime(
             "%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1"
         )
@@ -55,6 +61,14 @@ class BrokerGuardrailRunner:
             config.session_filter["timezone"] = self.session_timezone
         if self.session_windows:
             config.session_filter["entry_windows"] = self.session_windows
+        if self.news_guard_enabled is not None:
+            config.news_guard["enabled"] = self.news_guard_enabled
+        if self.news_calendar_file:
+            config.news_guard["calendar_file"] = self.news_calendar_file
+        if self.news_before_minutes is not None:
+            config.news_guard["before_minutes"] = self.news_before_minutes
+        if self.news_after_minutes is not None:
+            config.news_guard["after_minutes"] = self.news_after_minutes
         config.broker_execution_guardrails = deep_merge(
             config.broker_execution_guardrails, variant["broker_execution_guardrails"]
         )

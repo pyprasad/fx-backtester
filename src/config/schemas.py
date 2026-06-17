@@ -44,6 +44,7 @@ class StrategyConfig(FlexibleConfig):
     reporting: dict[str, Any]
     forensics: dict[str, Any] = {}
     weekend_policy: dict[str, Any] = {}
+    news_guard: dict[str, Any] = {}
     stability_validation: dict[str, Any] = {}
     walk_forward_validation: dict[str, Any] = {}
     parameter_robustness: dict[str, Any] = {}
