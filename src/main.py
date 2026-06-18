@@ -35,6 +35,7 @@ from src.data.tick_loader import scan_ticks
 from src.data.tick_normalizer import normalize_ticks
 from src.forensics.trade_forensics import TradeForensicsEngine
 from src.reporting.html_report import add_forensic_link
+from src.research.strategy_group import StrategyGroupResearchRunner, parse_strategy_run
 from src.robustness.robustness_runner import ParameterRobustnessRunner
 from src.stability.stability_runner import StabilityValidationRunner
 from src.stress.monte_carlo_runner import MonteCarloStressRunner
@@ -98,6 +99,22 @@ def add_strategy_overrides(parser):
     parser.add_argument("--normalised-tick-path", help="Override strategy normalized Parquet input")
     parser.add_argument("--candle-path", help="Override candle output/input directory")
     parser.add_argument("--report-output-path", help="Override backtest report parent directory")
+    add_research_parameter_overrides(parser)
+    parser.add_argument("--session-timezone")
+    parser.add_argument("--session-window", action="append", type=session_window)
+
+
+def add_research_parameter_overrides(parser):
+    parser.add_argument("--risk-per-trade-percent", type=float)
+    parser.add_argument("--atr-stop-multiplier", type=float)
+    parser.add_argument("--rsi-short-trigger", type=float)
+    parser.add_argument("--ema-mid", type=int)
+    parser.add_argument("--ema-slow", type=int)
+    parser.add_argument("--final-target-r", type=float)
+    parser.add_argument("--partial-take-profit-r", type=float)
+    parser.add_argument("--breakeven-after-r", type=float)
+    parser.add_argument("--trailing-atr-multiplier", type=float)
+    parser.add_argument("--enable-long", type=boolean)
 
 
 def add_news_guard_overrides(parser):
@@ -143,6 +160,18 @@ def strategy_config(args, path):
         news_calendar_file=getattr(args, "news_calendar_file", None),
         news_before_minutes=getattr(args, "news_before_minutes", None),
         news_after_minutes=getattr(args, "news_after_minutes", None),
+        risk_per_trade_percent=getattr(args, "risk_per_trade_percent", None),
+        atr_stop_multiplier=getattr(args, "atr_stop_multiplier", None),
+        rsi_short_trigger=getattr(args, "rsi_short_trigger", None),
+        ema_mid=getattr(args, "ema_mid", None),
+        ema_slow=getattr(args, "ema_slow", None),
+        final_target_r=getattr(args, "final_target_r", None),
+        partial_take_profit_r=getattr(args, "partial_take_profit_r", None),
+        breakeven_after_r=getattr(args, "breakeven_after_r", None),
+        trailing_atr_multiplier=getattr(args, "trailing_atr_multiplier", None),
+        enable_long=getattr(args, "enable_long", None),
+        session_timezone=getattr(args, "session_timezone", None),
+        session_windows=getattr(args, "session_window", None),
     )
     if getattr(args, "weekend_policy_name", None):
         config = apply_weekend_policy_variant(
@@ -210,6 +239,7 @@ def main():
     robustness_parser.add_argument("--baseline-run-path")
     robustness_parser.add_argument("--session-timezone")
     robustness_parser.add_argument("--session-window", action="append", type=session_window)
+    add_research_parameter_overrides(robustness_parser)
     stress_parser = sub.add_parser("monte-carlo-stress")
     stress_parser.add_argument("--strategy-config", required=True)
     stress_parser.add_argument("--run-path", required=True)
@@ -232,6 +262,7 @@ def main():
     guardrail_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
     guardrail_parser.add_argument("--session-timezone")
     guardrail_parser.add_argument("--session-window", action="append", type=session_window)
+    add_research_parameter_overrides(guardrail_parser)
     add_news_guard_overrides(guardrail_parser)
     bakeoff_parser = sub.add_parser("final-guardrail-bakeoff")
     bakeoff_parser.add_argument("--strategy-config", required=True)
@@ -248,6 +279,15 @@ def main():
     bakeoff_parser.add_argument("--continue-on-error", type=boolean, default=True)
     bakeoff_parser.add_argument("--existing-guardrail-run-path")
     bakeoff_parser.add_argument("--existing-bakeoff-run-path")
+    group_parser = sub.add_parser("strategy-group-research")
+    group_parser.add_argument(
+        "--strategy-run",
+        action="append",
+        required=True,
+        help="Strategy run as LABEL=RUN_PATH. Repeat for each strategy/variant.",
+    )
+    group_parser.add_argument("--report-output-path", required=True)
+    group_parser.add_argument("--starting-balance", type=float, default=10000)
     for name in ("ig-demo-auth-check", "ig-demo-market-discovery", "ig-demo-market-rules",
                  "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-open-positions",
                  "ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order",
@@ -277,6 +317,8 @@ def main():
                 default="config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
             )
             ig_parser.add_argument("--history-points", type=int, default=1000)
+            ig_parser.add_argument("--refresh-points", type=int, default=10)
+            ig_parser.add_argument("--cache-path", default="data/live_cache/ig")
         if name == "ig-demo-run-bot":
             ig_parser.add_argument("--strategy-config", required=True)
             ig_parser.add_argument(
@@ -318,6 +360,11 @@ def main():
             args.report_output_path, args.max_variants, args.include_full_grid,
             args.skip_heatmaps, args.continue_on_error, args.baseline_run_path,
             args.session_timezone, args.session_window,
+            args.risk_per_trade_percent, args.atr_stop_multiplier,
+            args.rsi_short_trigger, args.ema_mid, args.ema_slow,
+            args.final_target_r, args.partial_take_profit_r,
+            args.breakeven_after_r, args.trailing_atr_multiplier,
+            args.enable_long,
         ).run()
         print(f"Parameter robustness report: {output / 'robustness_report.html'}")
     elif args.command == "monte-carlo-stress":
@@ -335,6 +382,11 @@ def main():
             args.session_timezone, args.session_window,
             args.news_guard_enabled, args.news_calendar_file,
             args.news_before_minutes, args.news_after_minutes,
+            args.risk_per_trade_percent, args.atr_stop_multiplier,
+            args.rsi_short_trigger, args.ema_mid, args.ema_slow,
+            args.final_target_r, args.partial_take_profit_r,
+            args.breakeven_after_r, args.trailing_atr_multiplier,
+            args.enable_long,
         ).run()
         print(f"Broker guardrail report: {output / 'broker_guardrail_report.html'}")
     elif args.command == "final-guardrail-bakeoff":
@@ -347,6 +399,13 @@ def main():
             args.existing_bakeoff_run_path,
         ).run()
         print(f"Final guardrail bake-off report: {output / 'final_guardrail_bakeoff_report.html'}")
+    elif args.command == "strategy-group-research":
+        output = StrategyGroupResearchRunner(
+            [parse_strategy_run(value) for value in args.strategy_run],
+            args.report_output_path,
+            args.starting_balance,
+        ).run()
+        print(f"Strategy group research report: {output / 'strategy_group_report.html'}")
     elif args.command == "ig-demo-auth-check":
         ig_auth_check(args.env_file)
     elif args.command == "ig-demo-market-discovery":
@@ -369,11 +428,13 @@ def main():
         ig_live_signal_check(
             args.env_file, args.strategy_config, args.epic,
             args.runtime_strategy_config, args.history_points,
+            args.cache_path, args.refresh_points,
         )
     elif args.command == "ig-demo-signal-dry-run-order":
         ig_signal_dry_run_order(
             args.env_file, args.strategy_config, args.epic,
             args.runtime_strategy_config, args.history_points,
+            args.cache_path, args.refresh_points,
         )
     elif args.command == "ig-demo-run-bot":
         ig_run_bot(

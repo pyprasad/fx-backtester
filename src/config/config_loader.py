@@ -101,6 +101,18 @@ def apply_strategy_overrides(
     news_calendar_file: str | None = None,
     news_before_minutes: int | None = None,
     news_after_minutes: int | None = None,
+    risk_per_trade_percent: float | None = None,
+    atr_stop_multiplier: float | None = None,
+    rsi_short_trigger: float | None = None,
+    ema_mid: int | None = None,
+    ema_slow: int | None = None,
+    final_target_r: float | None = None,
+    partial_take_profit_r: float | None = None,
+    breakeven_after_r: float | None = None,
+    trailing_atr_multiplier: float | None = None,
+    enable_long: bool | None = None,
+    session_timezone: str | None = None,
+    session_windows: list[dict] | None = None,
 ) -> StrategyConfig:
     if normalised_tick_path:
         config.data["normalised_tick_path"] = normalised_tick_path
@@ -116,6 +128,30 @@ def apply_strategy_overrides(
         config.news_guard["before_minutes"] = news_before_minutes
     if news_after_minutes is not None:
         config.news_guard["after_minutes"] = news_after_minutes
+    if risk_per_trade_percent is not None:
+        config.risk["risk_per_trade_percent"] = risk_per_trade_percent
+    if atr_stop_multiplier is not None:
+        config.stop_loss["atr_multiplier"] = atr_stop_multiplier
+    if rsi_short_trigger is not None:
+        config.entry["short"]["rsi_cross_down_level"] = rsi_short_trigger
+    if ema_mid is not None:
+        config.indicators["ema_mid"] = ema_mid
+    if ema_slow is not None:
+        config.indicators["ema_slow"] = ema_slow
+    if final_target_r is not None:
+        config.exit["runner"]["final_target_r"] = final_target_r
+    if partial_take_profit_r is not None:
+        config.exit["partial_take_profit"]["at_r"] = partial_take_profit_r
+    if breakeven_after_r is not None:
+        config.exit["move_stop_to_breakeven"]["after_r"] = breakeven_after_r
+    if trailing_atr_multiplier is not None:
+        config.exit["runner"]["trailing_stop"]["atr_multiplier"] = trailing_atr_multiplier
+    if enable_long is not None:
+        config.entry["long"]["enabled"] = enable_long
+    if session_timezone is not None:
+        config.session_filter["timezone"] = session_timezone
+    if session_windows:
+        config.session_filter["entry_windows"] = session_windows
     return config
 
 

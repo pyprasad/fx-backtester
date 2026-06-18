@@ -17,3 +17,9 @@ validation contract is
 The existing executable research configuration remains
 `config/strategy.usdjpy.fx_swing_trend_reclaim.yaml`. The final package does not enable live
 execution or automatically modify that runtime configuration.
+
+The current next-level DEMO research candidate is documented in
+[USDJPY ATR15 Next-Level Research Candidate](usdjpy_atr15_next_level_candidate.md). It extends the
+baseline with ATR `1.5`, Tokyo plus London sessions, and the
+`min_risk_3pips_spread_ratio_20pct_lifecycle_throttled` guardrail. Its 2021-2026 historical
+validation remained strong, but it is still DEMO validation only and not live-trading approved.

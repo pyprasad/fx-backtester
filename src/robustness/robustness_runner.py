@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.config.config_loader import load_strategy_config
+from src.config.config_loader import apply_strategy_overrides, load_strategy_config
 from src.utils.logging import get_logger
 
 from .heatmap_generator import generate_heatmaps
@@ -31,9 +31,43 @@ class ParameterRobustnessRunner:
     def __init__(self, strategy_config, normalised_tick_path, candle_path, report_output_path,
                  max_variants=100, include_full_grid=False, skip_heatmaps=False,
                  continue_on_error=True, baseline_run_path=None,
-                 session_timezone=None, session_windows=None):
+                 session_timezone=None, session_windows=None,
+                 risk_per_trade_percent=None, atr_stop_multiplier=None,
+                 rsi_short_trigger=None, ema_mid=None, ema_slow=None,
+                 final_target_r=None, partial_take_profit_r=None,
+                 breakeven_after_r=None, trailing_atr_multiplier=None,
+                 enable_long=None):
         self.config = load_strategy_config(strategy_config)
+        self.config = apply_strategy_overrides(
+            self.config,
+            risk_per_trade_percent=risk_per_trade_percent,
+            atr_stop_multiplier=atr_stop_multiplier,
+            rsi_short_trigger=rsi_short_trigger,
+            ema_mid=ema_mid,
+            ema_slow=ema_slow,
+            final_target_r=final_target_r,
+            partial_take_profit_r=partial_take_profit_r,
+            breakeven_after_r=breakeven_after_r,
+            trailing_atr_multiplier=trailing_atr_multiplier,
+            enable_long=enable_long,
+        )
         self.settings = self.config.parameter_robustness
+        if atr_stop_multiplier is not None:
+            self.settings["baseline_parameters"]["atr_stop_multiplier"] = atr_stop_multiplier
+        if rsi_short_trigger is not None:
+            self.settings["baseline_parameters"]["rsi_short_trigger"] = rsi_short_trigger
+        if ema_mid is not None:
+            self.settings["baseline_parameters"]["ema_mid"] = ema_mid
+        if ema_slow is not None:
+            self.settings["baseline_parameters"]["ema_slow"] = ema_slow
+        if final_target_r is not None:
+            self.settings["baseline_parameters"]["final_target_r"] = final_target_r
+        if partial_take_profit_r is not None:
+            self.settings["baseline_parameters"]["partial_take_profit_r"] = partial_take_profit_r
+        if breakeven_after_r is not None:
+            self.settings["baseline_parameters"]["breakeven_after_r"] = breakeven_after_r
+        if trailing_atr_multiplier is not None:
+            self.settings["baseline_parameters"]["trailing_atr_multiplier"] = trailing_atr_multiplier
         self.config.data["normalised_tick_path"] = str(Path(normalised_tick_path).resolve())
         self.config.data["candle_path"] = str(Path(candle_path).resolve())
         if session_timezone:

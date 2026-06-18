@@ -35,6 +35,28 @@ The documentation package starts at
 Gate; no live trading is included. DEMO order placement is disabled by default and restricted to
 an explicitly confirmed DEMO execution-plumbing test.
 
+## Next-Level ATR15 DEMO Candidate
+
+The current next-level research candidate is documented in
+[`docs/strategies/usdjpy_atr15_next_level_candidate.md`](docs/strategies/usdjpy_atr15_next_level_candidate.md).
+It keeps the same short-only USDJPY strategy family but uses ATR `1.5`, Tokyo plus London session
+coverage, and the `min_risk_3pips_spread_ratio_20pct_lifecycle_throttled` guardrail.
+
+Extended 2021-2026 validation, using data through `2026-06-12 20:59 UTC`, produced:
+
+- Total historical return: `174.6211%`
+- Approx annualized return: `20.42%`
+- Profit factor: `2.5389`
+- Maximum drawdown: `1.1028%`
+- Worst trade: `-1.6101R`
+- Stability: `STRONG_STABILITY`
+- Walk-forward: `STRONG_WALK_FORWARD`
+- Monte Carlo / execution stress: `STRONG_STRESS_RESILIENCE`
+
+This is a DEMO validation candidate, not live approval. It should be treated as a replacement
+candidate rather than stacked with near-duplicate ATR variants, because grouped-strategy research
+showed high duplicate-entry overlap.
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule

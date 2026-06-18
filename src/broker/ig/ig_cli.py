@@ -9,6 +9,7 @@ import yaml
 from .config import load_ig_demo_config
 from .ig_auth import create_session, logout
 from .ig_bot import IGDemoBotRunner
+from .ig_candle_cache import CandleCachePaths, load_cached_candles, refresh_candle_cache
 from .ig_demo_readiness import evaluate_demo_readiness, write_readiness_report
 from .ig_demo_execution import place_demo_test_order, write_demo_execution_report
 from .ig_market_discovery import (
@@ -19,6 +20,7 @@ from .ig_market_discovery import (
 from .ig_market_rules import extract_market_rules
 from .ig_live_signal import (
     evaluate_live_signal,
+    evaluate_live_signal_from_candles,
     runtime_config_from_contract,
     write_live_signal_report,
     write_signal_dry_run_report,
@@ -337,19 +339,61 @@ def readiness(env_file, strategy_path):
     return result
 
 
-def live_signal_check(env_file, strategy_path, epic, runtime_strategy_config, history_points):
+def _evaluate_live_signal_with_cache(
+    *,
+    config,
+    client,
+    historical_client,
+    strategy_path,
+    epic,
+    runtime_strategy_config,
+    history_points,
+    cache_path,
+    refresh_points,
+):
+    runtime_config, contract = runtime_config_from_contract(strategy_path, runtime_strategy_config)
+    rules = extract_market_rules(client.get_market(epic))
+    paths = CandleCachePaths(Path(cache_path))
+    points = history_points if not paths.exists() else refresh_points
+    cache_summary = refresh_candle_cache(
+        client=historical_client or client,
+        epic=epic,
+        paths=paths,
+        scale_divisor=config.price_scale_divisor,
+        history_points=points,
+        keep_last=history_points,
+    )
+    hour, four_hour = load_cached_candles(paths)
+    result = evaluate_live_signal_from_candles(
+        client=client,
+        config=runtime_config,
+        contract=contract,
+        epic=epic,
+        market_rules=rules,
+        hour=hour,
+        four_hour=four_hour,
+        execution_tick=latest_tick(config.tick_output_path),
+    )
+    result["cache"] = cache_summary
+    return result
+
+
+def live_signal_check(env_file, strategy_path, epic, runtime_strategy_config, history_points,
+                      cache_path="data/live_cache/ig", refresh_points=10):
     config, session, client = _connect(env_file)
+    historical_config = historical_session = historical_client = None
     try:
-        runtime_config, contract = runtime_config_from_contract(strategy_path, runtime_strategy_config)
-        rules = extract_market_rules(client.get_market(epic))
-        result = evaluate_live_signal(
+        historical_config, historical_session, historical_client = _connect_historical_data_client(config)
+        result = _evaluate_live_signal_with_cache(
+            config=config,
             client=client,
-            config=runtime_config,
-            contract=contract,
-            ig_config=config,
+            historical_client=historical_client,
+            strategy_path=strategy_path,
             epic=epic,
-            market_rules=rules,
+            runtime_strategy_config=runtime_strategy_config,
             history_points=history_points,
+            cache_path=cache_path,
+            refresh_points=refresh_points,
         )
         report = write_live_signal_report(config.audit_output_path, result)
         print(f"IG DEMO live signal report: {report}")
@@ -361,22 +405,27 @@ def live_signal_check(env_file, strategy_path, epic, runtime_strategy_config, hi
         }, indent=2))
         return result
     finally:
+        if historical_session and historical_config:
+            _release_session(historical_config, historical_session)
         _release_session(config, client.session)
 
 
-def signal_dry_run_order(env_file, strategy_path, epic, runtime_strategy_config, history_points):
+def signal_dry_run_order(env_file, strategy_path, epic, runtime_strategy_config, history_points,
+                         cache_path="data/live_cache/ig", refresh_points=10):
     config, session, client = _connect(env_file)
+    historical_config = historical_session = historical_client = None
     try:
-        runtime_config, contract = runtime_config_from_contract(strategy_path, runtime_strategy_config)
-        rules = extract_market_rules(client.get_market(epic))
-        result = evaluate_live_signal(
+        historical_config, historical_session, historical_client = _connect_historical_data_client(config)
+        result = _evaluate_live_signal_with_cache(
+            config=config,
             client=client,
-            config=runtime_config,
-            contract=contract,
-            ig_config=config,
+            historical_client=historical_client,
+            strategy_path=strategy_path,
             epic=epic,
-            market_rules=rules,
+            runtime_strategy_config=runtime_strategy_config,
             history_points=history_points,
+            cache_path=cache_path,
+            refresh_points=refresh_points,
         )
         report = write_signal_dry_run_report(config.audit_output_path, result)
         print(f"IG DEMO signal dry-run order report: {report}")
@@ -392,6 +441,8 @@ def signal_dry_run_order(env_file, strategy_path, epic, runtime_strategy_config,
         }, indent=2))
         return result
     finally:
+        if historical_session and historical_config:
+            _release_session(historical_config, historical_session)
         _release_session(config, client.session)
 
 

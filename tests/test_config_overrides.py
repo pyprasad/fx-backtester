@@ -66,3 +66,38 @@ def test_cli_news_guard_override_wins_after_env(monkeypatch):
     )
 
     assert config.news_guard["enabled"] is False
+
+
+def test_strategy_research_parameter_overrides():
+    config = apply_strategy_overrides(
+        load_strategy_config("config/strategy.usdjpy.fx_swing_trend_reclaim.yaml"),
+        risk_per_trade_percent=0.5,
+        atr_stop_multiplier=1.5,
+        rsi_short_trigger=55,
+        ema_mid=60,
+        ema_slow=220,
+        final_target_r=5.0,
+        partial_take_profit_r=2.5,
+        breakeven_after_r=1.5,
+        trailing_atr_multiplier=1.8,
+        enable_long=True,
+        session_timezone="UTC",
+        session_windows=[
+            {"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+        ],
+    )
+
+    assert config.risk["risk_per_trade_percent"] == 0.5
+    assert config.stop_loss["atr_multiplier"] == 1.5
+    assert config.entry["short"]["rsi_cross_down_level"] == 55
+    assert config.indicators["ema_mid"] == 60
+    assert config.indicators["ema_slow"] == 220
+    assert config.exit["runner"]["final_target_r"] == 5.0
+    assert config.exit["partial_take_profit"]["at_r"] == 2.5
+    assert config.exit["move_stop_to_breakeven"]["after_r"] == 1.5
+    assert config.exit["runner"]["trailing_stop"]["atr_multiplier"] == 1.8
+    assert config.entry["long"]["enabled"] is True
+    assert config.session_filter["timezone"] == "UTC"
+    assert config.session_filter["entry_windows"] == [
+        {"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+    ]

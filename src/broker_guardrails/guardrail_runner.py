@@ -7,7 +7,7 @@ import yaml
 
 from src.backtest.backtest_engine import run_backtest
 from src.backtest.weekend_policy_runner import deep_merge
-from src.config.config_loader import apply_weekend_policy_variant, load_strategy_config
+from src.config.config_loader import apply_strategy_overrides, apply_weekend_policy_variant, load_strategy_config
 from src.utils.logging import get_logger
 
 from .guardrail_metrics import score_guardrail, trade_guardrail_stats
@@ -34,7 +34,11 @@ class BrokerGuardrailRunner:
                  variant=None, continue_on_error=True, session_timezone=None,
                  session_windows=None, news_guard_enabled=None,
                  news_calendar_file=None, news_before_minutes=None,
-                 news_after_minutes=None):
+                 news_after_minutes=None, risk_per_trade_percent=None,
+                 atr_stop_multiplier=None, rsi_short_trigger=None,
+                 ema_mid=None, ema_slow=None, final_target_r=None,
+                 partial_take_profit_r=None, breakeven_after_r=None,
+                 trailing_atr_multiplier=None, enable_long=None):
         self.strategy_path = Path(strategy_config)
         self.variants_path = Path(variants_config)
         self.tick_path = str(Path(normalised_tick_path).resolve())
@@ -50,6 +54,18 @@ class BrokerGuardrailRunner:
         self.news_calendar_file = news_calendar_file
         self.news_before_minutes = news_before_minutes
         self.news_after_minutes = news_after_minutes
+        self.research_overrides = {
+            "risk_per_trade_percent": risk_per_trade_percent,
+            "atr_stop_multiplier": atr_stop_multiplier,
+            "rsi_short_trigger": rsi_short_trigger,
+            "ema_mid": ema_mid,
+            "ema_slow": ema_slow,
+            "final_target_r": final_target_r,
+            "partial_take_profit_r": partial_take_profit_r,
+            "breakeven_after_r": breakeven_after_r,
+            "trailing_atr_multiplier": trailing_atr_multiplier,
+            "enable_long": enable_long,
+        }
         self.output = self.report_parent / datetime.now(timezone.utc).strftime(
             "%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1"
         )
@@ -69,6 +85,10 @@ class BrokerGuardrailRunner:
             config.news_guard["before_minutes"] = self.news_before_minutes
         if self.news_after_minutes is not None:
             config.news_guard["after_minutes"] = self.news_after_minutes
+        config = apply_strategy_overrides(
+            config,
+            **{key: value for key, value in self.research_overrides.items() if value is not None},
+        )
         config.broker_execution_guardrails = deep_merge(
             config.broker_execution_guardrails, variant["broker_execution_guardrails"]
         )

@@ -1,0 +1,124 @@
+strategy:
+  name: fx_swing_trend_reclaim_v1
+  version: atr15_combined_sessions_candidate
+  status: research_candidate_validation_only
+  market: USDJPY
+  direction_mode: short_only
+  broker_target: IG
+  pip_size: 0.01
+  source_timezone: UTC
+  production_ready: false
+  live_trading_approved: false
+
+timeframes:
+  trend_timeframe: 4H
+  signal_timeframe: 1H
+  execution_timeframe: tick
+
+indicators:
+  ema_fast: 20
+  ema_mid: 50
+  ema_slow: 200
+  rsi_period: 14
+  atr_period: 14
+
+entry_rules:
+  trend_filter:
+    enabled: true
+    rule: 4H close below EMA200
+  signal_filter:
+    enabled: true
+    rules:
+      - 1H close below EMA50
+      - pullback near EMA20 or EMA50 within 1.2 ATR
+      - RSI14 below 50
+      - RSI14 falling
+      - bearish candle close
+      - enter on next available tick after signal candle close
+  allowed_sessions:
+    - {name: London morning, start: "07:00", end: "11:30", timezone: Europe/London}
+    - {name: London New York overlap, start: "13:00", end: "16:30", timezone: Europe/London}
+    - {name: Tokyo, start: "09:00", end: "18:00", timezone: Asia/Tokyo}
+
+execution:
+  use_bid_ask: true
+  short_entry_price: bid
+  short_exit_price: ask
+  long_entry_price: ask
+  long_exit_price: bid
+  allow_mid_for_indicators_only: true
+  enter_after_signal_close: true
+  max_open_positions: 1
+  allow_pyramiding: false
+  allow_averaging_down: false
+  allow_martingale: false
+  default_slippage_price_points: 0.002
+
+stop_loss:
+  method: max_of_signal_high_and_atr
+  atr_multiplier: 1.5
+  swing_lookback_candles: 8
+  swing_buffer_atr_multiplier: 0.20
+
+risk_management:
+  risk_per_trade_percent: 0.25
+  maximum_trade_duration_days: 7
+  move_to_breakeven_after_r: 1.2
+  partial_take_profit_r: 2.0
+  partial_take_profit_percent: 50
+  final_target_r: 4.0
+  trailing_atr_enabled: true
+  trailing_atr_multiplier: 1.5
+
+broker_guardrails:
+  broker: IG
+  selected_guardrail_candidate: min_risk_3pips_spread_ratio_20pct
+  min_stop_distance_pips: 2.0
+  min_take_profit_distance_pips: 2.0
+  min_initial_risk_pips: 3.0
+  reject_initial_risk_below_minimum: true
+  validate_against_executable_entry_tick: true
+
+spread_guardrails:
+  track_entry_spread: true
+  track_exit_spread: true
+  track_spread_to_risk_ratio: true
+  signal_spread_reject_above_pips: 2.0
+  warn_spread_to_risk_ratio_above: 0.20
+  reject_spread_to_risk_ratio_above: 0.20
+
+time_guards:
+  broker_timezone: Europe/London
+  block_new_entries_after: "21:30"
+  overnight_funding_cutoff: "22:00"
+  intraday_force_close_enabled: false
+  intraday_force_close_before: "21:55"
+
+weekend_policy:
+  name: force_close_friday_20_30
+  enabled: true
+  force_close_friday: true
+  close_time_utc: "20:30"
+  block_weekend_holding: true
+
+funding_awareness:
+  enabled: true
+  track_overnight_funding: true
+  cutoff_time_uk: "22:00"
+  apply_wednesday_triple_rollover: true
+  funding_rate_source: configurable_research_assumption
+  fetch_live_rates: false
+
+validation_status:
+  research_candidate: atr15_combined_sessions
+  baseline_reference: strict_combined_sessions_demo_validation
+  validation_required_before_demo_promotion: true
+  motivation:
+    - Wider initial ATR stop improved historical expectancy and reduced stop-out churn.
+    - This follows a classic trend-following principle: give profitable trend pullbacks enough room to breathe while keeping fixed fractional risk.
+    - Candidate must pass the same guardrail, stability, walk-forward, robustness, and Monte Carlo gates before replacing the current demo contract.
+
+candidate_decision:
+  selected_for_demo_validation: false
+  current_role: next_level_research_candidate
+  rationale: ATR 1.5 improved return, profit factor, average R, drawdown, and worst trade in combined-session research, but requires full validation before live demo promotion.
