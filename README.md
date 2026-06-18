@@ -57,6 +57,10 @@ This is a DEMO validation candidate, not live approval. It should be treated as 
 candidate rather than stacked with near-duplicate ATR variants, because grouped-strategy research
 showed high duplicate-entry overlap.
 
+Future production-style DEMO operation commands for this candidate are documented in
+[`docs/broker/ig_demo_integration.md`](docs/broker/ig_demo_integration.md#future-production-style-demo-commands).
+They keep the DEMO safety boundary: no live-account trading is approved or enabled.
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule

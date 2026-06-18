@@ -7,14 +7,14 @@ services:
       - ./.env.demo
     environment:
       PYTHONPATH: /app
-      STRICT_CONFIG: config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml
-      EPIC: CS.D.USDJPY.TODAY.IP
+      STRICT_CONFIG: ${STRICT_CONFIG:-config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml}
+      EPIC: ${EPIC:-CS.D.USDJPY.TODAY.IP}
       # 0 means always-on. Session filters in the strategy decide when entries are allowed.
-      BOT_DURATION_SECONDS: "0"
-      BOT_POLL_SECONDS: "5"
-      BOT_HISTORY_POINTS: "1000"
-      BOT_REFRESH_POINTS: "5"
-      BOT_CONFIRM: PLACE_DEMO_ORDER
+      BOT_DURATION_SECONDS: ${BOT_DURATION_SECONDS:-0}
+      BOT_POLL_SECONDS: ${BOT_POLL_SECONDS:-5}
+      BOT_HISTORY_POINTS: ${BOT_HISTORY_POINTS:-1000}
+      BOT_REFRESH_POINTS: ${BOT_REFRESH_POINTS:-5}
+      BOT_CONFIRM: ${BOT_CONFIRM:-PLACE_DEMO_ORDER}
     volumes:
       - ./data:/app/data
       - ./reports:/app/reports
@@ -47,7 +47,7 @@ services:
       - ./.env.demo
     environment:
       PYTHONPATH: /app
-      TELEGRAM_CONTROLLER_PORT: "3000"
+      TELEGRAM_CONTROLLER_PORT: ${TELEGRAM_CONTROLLER_PORT:-3000}
     ports:
       - "3000:3000"
     volumes:

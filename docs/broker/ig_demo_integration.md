@@ -145,6 +145,120 @@ PYTHONPATH=. .venv/bin/python -m src.main ig-demo-open-positions \
   --epic "$EPIC"
 ```
 
+## Future Production-Style DEMO Commands
+
+These commands are for later operational reference after DEMO approval. They still use the DEMO
+safety layer; this codebase does not approve or enable live-account trading.
+
+Use the ATR15 candidate contract:
+
+```bash
+cd /Users/my/mayu_solutions/usdjpy_research/fx-backtester
+export PYTHONPATH=.
+
+ATR15_CONFIG=config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml
+EPIC=CS.D.USDJPY.TODAY.IP
+```
+
+Pre-flight checks:
+
+```bash
+.venv/bin/python -m src.main ig-demo-auth-check \
+  --env-file .env.demo
+
+.venv/bin/python -m src.main ig-demo-open-positions \
+  --env-file .env.demo \
+  --epic "$EPIC"
+
+.venv/bin/python -m src.main ig-demo-readiness \
+  --env-file .env.demo \
+  --strategy-config "$ATR15_CONFIG"
+
+.venv/bin/python -m src.main ig-demo-live-signal-check \
+  --env-file .env.demo \
+  --strategy-config "$ATR15_CONFIG" \
+  --epic "$EPIC" \
+  --refresh-points 3 \
+  --cache-path data/live_cache/ig
+```
+
+Signal-driven dry run without sending an order:
+
+```bash
+.venv/bin/python -m src.main ig-demo-signal-dry-run-order \
+  --env-file .env.demo \
+  --strategy-config "$ATR15_CONFIG" \
+  --epic "$EPIC" \
+  --refresh-points 3 \
+  --cache-path data/live_cache/ig
+```
+
+Always-on DEMO bot with order placement disabled in `.env.demo`:
+
+```dotenv
+IG_ORDER_EXECUTION_ENABLED=false
+IG_DRY_RUN_ONLY=true
+```
+
+```bash
+.venv/bin/python -m src.main ig-demo-run-bot \
+  --env-file .env.demo \
+  --strategy-config "$ATR15_CONFIG" \
+  --epic "$EPIC" \
+  --history-points 1000 \
+  --refresh-points 5 \
+  --duration-seconds 0 \
+  --poll-seconds 5
+```
+
+After DEMO-only approval, allow signal-generated DEMO orders by changing only local `.env.demo`:
+
+```dotenv
+IG_ORDER_EXECUTION_ENABLED=true
+IG_DRY_RUN_ONLY=false
+```
+
+Then run with explicit confirmation:
+
+```bash
+.venv/bin/python -m src.main ig-demo-run-bot \
+  --env-file .env.demo \
+  --strategy-config "$ATR15_CONFIG" \
+  --epic "$EPIC" \
+  --history-points 1000 \
+  --refresh-points 5 \
+  --duration-seconds 0 \
+  --poll-seconds 5 \
+  --confirm PLACE_DEMO_ORDER
+```
+
+Docker Compose reference:
+
+```bash
+STRICT_CONFIG=config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml \
+EPIC=CS.D.USDJPY.TODAY.IP \
+docker compose -f docker-compose.demo.yml up -d --build usdjpy-bot telegram-controller
+```
+
+Inspect operational state:
+
+```bash
+docker compose -f docker-compose.demo.yml ps
+docker compose -f docker-compose.demo.yml logs -f --tail=100 usdjpy-bot
+docker compose -f docker-compose.demo.yml logs -f --tail=100 telegram-controller
+
+cat data/live_cache/ig/usdjpy_metadata.json
+cat reports/ig_demo_audit/bot_run_usdjpy.json
+cat reports/ig_demo_audit/live_signal_check_usdjpy.json
+tail -50 reports/ig_demo_audit/bot_audit_events_usdjpy.jsonl
+```
+
+Stop the processes:
+
+```bash
+docker compose -f docker-compose.demo.yml down
+```
+
 ## Safety Boundary
 
 The REST client exposes accounts, sessions, markets, positions, confirms, historical prices, and a
