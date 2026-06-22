@@ -235,10 +235,22 @@ Then run with explicit confirmation:
 Docker Compose reference:
 
 ```bash
-STRICT_CONFIG=config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml \
-EPIC=CS.D.USDJPY.TODAY.IP \
-docker compose -f docker-compose.demo.yml up -d --build usdjpy-bot telegram-controller
+docker compose -f docker-compose.demo.yml build
+docker compose -f docker-compose.demo.yml --profile tools run --rm readiness
+docker compose -f docker-compose.demo.yml --profile tools run --rm live-signal-check
+docker compose -f docker-compose.demo.yml --profile tools run --rm open-positions
+docker compose -f docker-compose.demo.yml up -d usdjpy-bot telegram-controller
 ```
+
+The default Compose config is the ATR15 combined-session DEMO validation candidate:
+
+```text
+config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml
+```
+
+Override `STRICT_CONFIG`, `EPIC`, `BOT_HISTORY_POINTS`, `BOT_REFRESH_POINTS`, `BOT_CACHE_PATH`,
+`BOT_DURATION_SECONDS`, `BOT_POLL_SECONDS`, or `BOT_CONFIRM` from the shell when needed. Use an
+empty `BOT_CONFIRM=` override for monitor-only bot startup.
 
 Inspect operational state:
 

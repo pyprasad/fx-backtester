@@ -1,0 +1,21 @@
+{
+  "strategy_name": "fx_swing_trend_reclaim_v1",
+  "market": "USDJPY",
+  "weekend_policy_name": "force_close_friday_20_30",
+  "baseline_run_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/next_level_validation_2021_2026/backtest/20260618_181314_usdjpy_fx_swing_trend_reclaim_v1",
+  "total_anchored_windows": 3,
+  "anchored_positive_test_windows": 3,
+  "anchored_positive_test_percent": 100.0,
+  "total_rolling_windows": 38,
+  "rolling_positive_test_windows": 38,
+  "rolling_positive_test_percent": 100.0,
+  "average_test_profit_factor": 2.6837,
+  "median_test_profit_factor": 2.5922,
+  "average_test_average_r": 0.5811,
+  "median_test_average_r": 0.6,
+  "worst_test_trade_r": -1.6101,
+  "max_test_drawdown_percent": 2.6297,
+  "lowest_test_profit_factor": 1.7041,
+  "walk_forward_score": 100,
+  "final_verdict": "STRONG_WALK_FORWARD"
+}

@@ -1,0 +1,25 @@
+{
+  "stability_score": 100,
+  "verdict": "STRONG_STABILITY",
+  "positive_years_percent": 100.0,
+  "positive_months_percent": 82.9787,
+  "largest_year_profit_contribution_percent": 48.6115,
+  "deductions": {
+    "negative_year": 0,
+    "positive_months_below_50_percent": 0,
+    "top_3_month_concentration": 0,
+    "top_10_trade_concentration": 0,
+    "worst_trade_below_minus_2_5r": 0,
+    "negative_rolling_6_month": 0,
+    "drawdown_above_10_percent": 0,
+    "negative_major_regime": 0,
+    "year_below_30_trades": 0,
+    "single_year_profit_concentration": 0
+  },
+  "additions": {
+    "all_years_positive": 5,
+    "profit_factor_at_least_1_8": 5,
+    "drawdown_below_5_percent": 5,
+    "worst_trade_at_least_minus_2_5r": 5
+  }
+}

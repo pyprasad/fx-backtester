@@ -18,7 +18,7 @@
     "effective_order_risk_covers_broker_minimum": true,
     "first_valid_bid_ask_received": true,
     "price_scaling_confirmed": true,
-    "price_tick_fresh": true,
+    "price_tick_fresh": false,
     "price_not_delayed": true,
     "selected_guardrail_candidate_approved": true,
     "strict_spread_to_risk_rejection_active": true,
@@ -34,6 +34,7 @@
     "live_account_support_disabled": true
   },
   "failed_checks": [
+    "price_tick_fresh",
     "dry_run_order_valid"
   ],
   "highest_allowed_status": "READY_FOR_DEMO_ORDER",

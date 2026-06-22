@@ -1,0 +1,19 @@
+{
+  "variant_id": "baseline_plus_small",
+  "variant_name": "baseline_plus_small",
+  "test_type": "local_neighbourhood",
+  "parameter_overrides": {
+    "ema_mid": 60,
+    "ema_slow": 220,
+    "rsi_short_trigger": 55,
+    "atr_stop_multiplier": 1.5,
+    "trailing_atr_multiplier": 1.8,
+    "partial_take_profit_r": 2.5,
+    "final_target_r": 5.0,
+    "breakeven_after_r": 1.5
+  },
+  "is_baseline": false,
+  "run_status": "SUCCESS",
+  "error_message": "",
+  "report_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/next_level_validation/atr15_robustness/20260618_150027_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/variants/baseline_plus_small/html_report.html"
+}

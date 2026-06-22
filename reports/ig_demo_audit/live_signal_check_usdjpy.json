@@ -1,17 +1,17 @@
 {
   "status": "NO_SIGNAL",
   "epic": "CS.D.USDJPY.TODAY.IP",
-  "latest_closed_1h_candle": "2026-06-16T08:00:00+00:00",
-  "signal_count": 2,
-  "rejection_count": 38,
+  "latest_closed_1h_candle": "2026-06-18T16:00:00+00:00",
+  "signal_count": 12,
+  "rejection_count": 340,
   "last_signal": {
-    "signal_id": "2c9a981a-ee62-40a6-9c1f-bf231ea51f03",
-    "timestamp_utc": "2026-06-12T08:00:00+00:00",
-    "timestamp_london": "2026-06-12T09:00:00+01:00",
+    "signal_id": "d24e3e8f-cccb-4e62-a7c2-e939934dbfab",
+    "timestamp_utc": "2026-06-15T03:00:00+00:00",
+    "timestamp_london": "2026-06-15T12:00:00+09:00",
     "symbol": "USDJPY",
     "direction": "SHORT",
     "entry_type": "market_on_next_tick_after_signal_close",
-    "signal_price_mid": 160.094,
+    "signal_price_mid": 160.056,
     "trend_timeframe": "4H",
     "entry_timeframe": "1H",
     "reason_codes": [
@@ -21,19 +21,56 @@
       "bearish_close"
     ],
     "indicator_snapshot": {
-      "ema_fast": 160.25456015226231,
-      "ema_mid": 160.3126707147043,
-      "ema_slow": 160.12021255552241,
-      "rsi": 39.93716494614134,
-      "atr": 0.1395224208759261,
-      "atr_pips": 13.952242087592609
+      "ema_fast": 160.13588990930688,
+      "ema_mid": 160.21320214780732,
+      "ema_slow": 160.1053417804169,
+      "rsi": 44.85444371052668,
+      "atr": 0.13477598103159666,
+      "atr_pips": 13.477598103159666
     },
-    "proposed_stop": 160.288,
-    "proposed_target": 159.31799999999993,
+    "proposed_stop": 160.25816397154742,
+    "proposed_target": 159.24734411381039,
     "spread_pips_at_signal": 0.9999999999990905,
-    "session": "London morning"
+    "session": "Tokyo"
   },
   "current_signal": null,
   "dry_run_order": null,
-  "order_sent": false
+  "order_sent": false,
+  "cache": {
+    "epic": "CS.D.USDJPY.TODAY.IP",
+    "refreshed_at": "2026-06-18T17:48:14.919487+00:00",
+    "history_points": 3,
+    "keep_last": 1000,
+    "timeframes": {
+      "HOUR": {
+        "path": "data/live_cache/ig/usdjpy_hour.parquet",
+        "rows": 1000,
+        "latest_timestamp": "2026-06-18T16:00:00+00:00",
+        "rate_limited_using_existing_cache": false,
+        "request_points": 3,
+        "request_plan": {
+          "reason": "incremental_from_existing_cache",
+          "latest_cached_timestamp": "2026-06-17T21:00:00+00:00",
+          "target_closed_hour": "2026-06-18T16:00:00+00:00",
+          "missing_hours_estimate": 19,
+          "overlap_hours": 2
+        },
+        "incoming_rows": 2
+      },
+      "HOUR_4": {
+        "path": "data/live_cache/ig/usdjpy_hour_4.parquet",
+        "rows": 259,
+        "latest_timestamp": "2026-06-18T16:00:00+00:00",
+        "source": "derived_from_cached_hour_utc_anchor",
+        "anchor_utc_hours": [
+          0,
+          4,
+          8,
+          12,
+          16,
+          20
+        ]
+      }
+    }
+  }
 }

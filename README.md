@@ -778,9 +778,38 @@ Docker demo run:
 
 ```bash
 docker compose -f docker-compose.demo.yml build
+docker compose -f docker-compose.demo.yml --profile tools run --rm readiness
+docker compose -f docker-compose.demo.yml --profile tools run --rm live-signal-check
+docker compose -f docker-compose.demo.yml --profile tools run --rm open-positions
 docker compose -f docker-compose.demo.yml up -d usdjpy-bot
 docker compose -f docker-compose.demo.yml up -d telegram-controller
 docker compose -f docker-compose.demo.yml logs -f usdjpy-bot
+```
+
+The default Docker strategy config is the ATR15 next-level DEMO validation candidate:
+
+```text
+config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml
+```
+
+Override it without editing the compose file:
+
+```bash
+STRICT_CONFIG=config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml \
+docker compose -f docker-compose.demo.yml up -d --build usdjpy-bot telegram-controller
+```
+
+Run the legacy strict bot service explicitly:
+
+```bash
+docker compose -f docker-compose.demo.yml --profile legacy up -d usdjpy-bot-strict-legacy
+```
+
+For monitor-only mode, make sure `.env.demo` has `IG_DRY_RUN_ONLY=true` and start the bot with an
+empty confirmation override:
+
+```bash
+BOT_CONFIRM= docker compose -f docker-compose.demo.yml up -d --build usdjpy-bot telegram-controller
 ```
 
 Stop containers:

@@ -1,0 +1,12 @@
+{
+  "variant_id": "ofat_ema_mid_40",
+  "variant_name": "ofat_ema_mid_40",
+  "test_type": "one_factor_at_a_time",
+  "parameter_overrides": {
+    "ema_mid": 40
+  },
+  "is_baseline": false,
+  "run_status": "SUCCESS",
+  "error_message": "",
+  "report_path": "/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/next_level_validation/atr15_robustness/20260618_150027_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/variants/ofat_ema_mid_40/html_report.html"
+}

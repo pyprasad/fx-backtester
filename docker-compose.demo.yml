@@ -1,5 +1,131 @@
+x-demo-common: &demo-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - ./.env.demo
+  environment:
+    PYTHONPATH: /app
+    STRICT_CONFIG: ${STRICT_CONFIG:-config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml}
+    RUNTIME_STRATEGY_CONFIG: ${RUNTIME_STRATEGY_CONFIG:-config/strategy.usdjpy.fx_swing_trend_reclaim.yaml}
+    EPIC: ${EPIC:-CS.D.USDJPY.TODAY.IP}
+    BOT_HISTORY_POINTS: ${BOT_HISTORY_POINTS:-1000}
+    BOT_REFRESH_POINTS: ${BOT_REFRESH_POINTS:-5}
+    BOT_CACHE_PATH: ${BOT_CACHE_PATH:-data/live_cache/ig}
+  volumes:
+    - ./data:/app/data
+    - ./reports:/app/reports
+    - ./.runtime:/app/.runtime
+    - ./config:/app/config:ro
+    - ./.env.demo:/app/.env.demo:ro
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+
 services:
   usdjpy-bot:
+    <<: *demo-common
+    environment:
+      PYTHONPATH: /app
+      STRICT_CONFIG: ${STRICT_CONFIG:-config/strategies/usdjpy_fx_swing_trend_reclaim_v1_atr15_combined_candidate.yaml}
+      RUNTIME_STRATEGY_CONFIG: ${RUNTIME_STRATEGY_CONFIG:-config/strategy.usdjpy.fx_swing_trend_reclaim.yaml}
+      EPIC: ${EPIC:-CS.D.USDJPY.TODAY.IP}
+      BOT_HISTORY_POINTS: ${BOT_HISTORY_POINTS:-1000}
+      BOT_REFRESH_POINTS: ${BOT_REFRESH_POINTS:-5}
+      BOT_CACHE_PATH: ${BOT_CACHE_PATH:-data/live_cache/ig}
+      # 0 means always-on. Session filters in the strategy decide when entries are allowed.
+      BOT_DURATION_SECONDS: ${BOT_DURATION_SECONDS:-0}
+      BOT_POLL_SECONDS: ${BOT_POLL_SECONDS:-5}
+      # Keep existing order-enabled behavior by default. Set BOT_CONFIRM= to monitor only.
+      BOT_CONFIRM: ${BOT_CONFIRM-PLACE_DEMO_ORDER}
+    command: >
+      sh -c 'set -- python -m src.main ig-demo-run-bot
+      --env-file .env.demo
+      --strategy-config "$$STRICT_CONFIG"
+      --runtime-strategy-config "$$RUNTIME_STRATEGY_CONFIG"
+      --epic "$$EPIC"
+      --history-points "$$BOT_HISTORY_POINTS"
+      --refresh-points "$$BOT_REFRESH_POINTS"
+      --cache-path "$$BOT_CACHE_PATH"
+      --duration-seconds "$$BOT_DURATION_SECONDS"
+      --poll-seconds "$$BOT_POLL_SECONDS";
+      if [ -n "$$BOT_CONFIRM" ]; then set -- "$$@" --confirm "$$BOT_CONFIRM"; fi;
+      exec "$$@"'
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+  telegram-controller:
+    <<: *demo-common
+    environment:
+      PYTHONPATH: /app
+      TELEGRAM_CONTROLLER_PORT: ${TELEGRAM_CONTROLLER_PORT:-3000}
+    ports:
+      - "${TELEGRAM_CONTROLLER_PORT:-3000}:${TELEGRAM_CONTROLLER_PORT:-3000}"
+    command: >
+      sh -c 'python -m src.main ig-telegram-controller
+      --env-file .env.demo
+      --host 0.0.0.0
+      --port "$$TELEGRAM_CONTROLLER_PORT"'
+    restart: unless-stopped
+    stop_grace_period: 15s
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python -c "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:%s/health' % os.environ.get('TELEGRAM_CONTROLLER_PORT', '3000'), timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  readiness:
+    <<: *demo-common
+    profiles: ["tools"]
+    command: >
+      sh -c 'python -m src.main ig-demo-readiness
+      --env-file .env.demo
+      --strategy-config "$$STRICT_CONFIG"'
+    restart: "no"
+
+  live-signal-check:
+    <<: *demo-common
+    profiles: ["tools"]
+    command: >
+      sh -c 'python -m src.main ig-demo-live-signal-check
+      --env-file .env.demo
+      --strategy-config "$$STRICT_CONFIG"
+      --runtime-strategy-config "$$RUNTIME_STRATEGY_CONFIG"
+      --epic "$$EPIC"
+      --history-points "$$BOT_HISTORY_POINTS"
+      --refresh-points "$$BOT_REFRESH_POINTS"
+      --cache-path "$$BOT_CACHE_PATH"'
+    restart: "no"
+
+  signal-dry-run-order:
+    <<: *demo-common
+    profiles: ["tools"]
+    command: >
+      sh -c 'python -m src.main ig-demo-signal-dry-run-order
+      --env-file .env.demo
+      --strategy-config "$$STRICT_CONFIG"
+      --runtime-strategy-config "$$RUNTIME_STRATEGY_CONFIG"
+      --epic "$$EPIC"
+      --history-points "$$BOT_HISTORY_POINTS"
+      --refresh-points "$$BOT_REFRESH_POINTS"
+      --cache-path "$$BOT_CACHE_PATH"'
+    restart: "no"
+
+  open-positions:
+    <<: *demo-common
+    profiles: ["tools"]
+    command: >
+      sh -c 'python -m src.main ig-demo-open-positions
+      --env-file .env.demo
+      --epic "$$EPIC"'
+    restart: "no"
+
+  usdjpy-bot-strict-legacy:
     build:
       context: .
       dockerfile: Dockerfile
@@ -14,7 +140,7 @@ services:
       BOT_POLL_SECONDS: ${BOT_POLL_SECONDS:-5}
       BOT_HISTORY_POINTS: ${BOT_HISTORY_POINTS:-1000}
       BOT_REFRESH_POINTS: ${BOT_REFRESH_POINTS:-5}
-      BOT_CONFIRM: ${BOT_CONFIRM:-PLACE_DEMO_ORDER}
+      BOT_CONFIRM: ${BOT_CONFIRM-PLACE_DEMO_ORDER}
     volumes:
       - ./data:/app/data
       - ./reports:/app/reports
@@ -38,31 +164,4 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-
-  telegram-controller:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    env_file:
-      - ./.env.demo
-    environment:
-      PYTHONPATH: /app
-      TELEGRAM_CONTROLLER_PORT: ${TELEGRAM_CONTROLLER_PORT:-3000}
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./reports:/app/reports
-      - ./.runtime:/app/.runtime
-      - ./.env.demo:/app/.env.demo:ro
-    command: >
-      sh -c 'python -m src.main ig-telegram-controller
-      --env-file .env.demo
-      --host 0.0.0.0
-      --port "$$TELEGRAM_CONTROLLER_PORT"'
-    restart: unless-stopped
-    stop_grace_period: 15s
-    logging:
-      driver: json-file
-      options:
-        max-size: "20m"
-        max-file: "5"
+    profiles: ["legacy"]
