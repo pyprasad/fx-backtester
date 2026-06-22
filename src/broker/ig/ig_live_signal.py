@@ -1,5 +1,5 @@
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -15,6 +15,57 @@ from src.strategies.fx_swing_trend_reclaim import generate_signals
 from .ig_order_dry_run import build_dry_run_order
 from .ig_position_sizing import account_balance, active_account, dynamic_deal_size
 from .ig_tick_store import latest_tick
+
+
+CANDLE_SCHEMA = {
+    "timestamp": pl.Datetime(time_zone="UTC"),
+    "timestamp_london": pl.Datetime(time_zone="UTC"),
+    "symbol": pl.String,
+    "bid_open": pl.Float64,
+    "ask_open": pl.Float64,
+    "mid_open": pl.Float64,
+    "bid_high": pl.Float64,
+    "ask_high": pl.Float64,
+    "mid_high": pl.Float64,
+    "bid_low": pl.Float64,
+    "ask_low": pl.Float64,
+    "mid_low": pl.Float64,
+    "bid_close": pl.Float64,
+    "ask_close": pl.Float64,
+    "mid_close": pl.Float64,
+    "spread_open": pl.Float64,
+    "spread_high": pl.Float64,
+    "spread_low": pl.Float64,
+    "spread_close": pl.Float64,
+    "spread_avg": pl.Float64,
+    "spread_median": pl.Float64,
+    "spread_max": pl.Float64,
+    "tick_count": pl.Int64,
+    "bid_vol_sum": pl.Float64,
+    "ask_vol_sum": pl.Float64,
+}
+
+PRICE_FIELDS = (
+    ("open", "openPrice"),
+    ("high", "highPrice"),
+    ("low", "lowPrice"),
+    ("close", "closePrice"),
+)
+
+
+@dataclass(frozen=True)
+class CandleConversion:
+    candles: pl.DataFrame
+    total_prices: int
+    valid_prices: int
+    skipped_missing_bid_ask: int
+
+    def quality_summary(self) -> dict:
+        return {
+            "total_prices": self.total_prices,
+            "valid_prices": self.valid_prices,
+            "skipped_missing_bid_ask": self.skipped_missing_bid_ask,
+        }
 
 
 def _scale(value, divisor: float | None):
@@ -40,21 +91,34 @@ def _parse_snapshot_time(item: dict, timezone_name: str) -> datetime:
     raise ValueError(f"Unsupported IG snapshot time format: {raw}")
 
 
-def prices_to_candles(response: dict, *, scale_divisor: float | None,
-                      symbol: str = "USDJPY", snapshot_timezone: str = "Europe/London") -> pl.DataFrame:
+def _empty_candle_frame() -> pl.DataFrame:
+    return pl.DataFrame(schema=CANDLE_SCHEMA)
+
+
+def convert_prices_to_candles(response: dict, *, scale_divisor: float | None,
+                              symbol: str = "USDJPY",
+                              snapshot_timezone: str = "Europe/London") -> CandleConversion:
     rows = []
+    total = 0
+    skipped_missing_bid_ask = 0
     for item in response.get("prices", []):
-        timestamp = _parse_snapshot_time(item, snapshot_timezone)
+        total += 1
         prices = {}
-        for label, source in (
-            ("open", "openPrice"), ("high", "highPrice"),
-            ("low", "lowPrice"), ("close", "closePrice"),
-        ):
-            bid = _scale(item[source]["bid"], scale_divisor)
-            ask = _scale(item[source]["ask"], scale_divisor)
+        complete = True
+        for label, source in PRICE_FIELDS:
+            source_prices = item.get(source) or {}
+            bid = _scale(source_prices.get("bid"), scale_divisor)
+            ask = _scale(source_prices.get("ask"), scale_divisor)
+            if bid is None or ask is None:
+                complete = False
+                break
             prices[f"bid_{label}"] = bid
             prices[f"ask_{label}"] = ask
             prices[f"mid_{label}"] = _mid(bid, ask)
+        if not complete:
+            skipped_missing_bid_ask += 1
+            continue
+        timestamp = _parse_snapshot_time(item, snapshot_timezone)
         close_spread = prices["ask_close"] - prices["bid_close"]
         rows.append({
             "timestamp": timestamp,
@@ -77,15 +141,35 @@ def prices_to_candles(response: dict, *, scale_divisor: float | None,
             "bid_vol_sum": 0,
             "ask_vol_sum": 0,
         })
-    return pl.DataFrame(rows).sort("timestamp") if rows else pl.DataFrame()
+    frame = pl.DataFrame(rows, schema=CANDLE_SCHEMA).sort("timestamp") if rows else _empty_candle_frame()
+    return CandleConversion(
+        candles=frame,
+        total_prices=total,
+        valid_prices=len(rows),
+        skipped_missing_bid_ask=skipped_missing_bid_ask,
+    )
+
+
+def prices_to_candles(response: dict, *, scale_divisor: float | None,
+                      symbol: str = "USDJPY", snapshot_timezone: str = "Europe/London") -> pl.DataFrame:
+    return convert_prices_to_candles(
+        response,
+        scale_divisor=scale_divisor,
+        symbol=symbol,
+        snapshot_timezone=snapshot_timezone,
+    ).candles
 
 
 def closed_candles(candles: pl.DataFrame, hours: int, now: datetime | None = None) -> pl.DataFrame:
+    if "timestamp" not in candles.columns:
+        return candles
     now = now or datetime.now(timezone.utc)
     return candles.filter(pl.col("timestamp") + timedelta(hours=hours) <= now)
 
 
 def derive_four_hour_from_hour(hour: pl.DataFrame, keep_last: int = 1000) -> pl.DataFrame:
+    if not hour.height:
+        return _empty_candle_frame()
     aggregations = [pl.first("symbol").alias("symbol")]
     for price in ("mid", "bid", "ask"):
         aggregations += [
