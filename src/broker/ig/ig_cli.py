@@ -19,7 +19,6 @@ from .ig_market_discovery import (
 )
 from .ig_market_rules import extract_market_rules
 from .ig_live_signal import (
-    evaluate_live_signal,
     evaluate_live_signal_from_candles,
     runtime_config_from_contract,
     write_live_signal_report,

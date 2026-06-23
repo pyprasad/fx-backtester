@@ -96,6 +96,42 @@ def test_refresh_candle_cache_merges_deduplicates_and_keeps_last(tmp_path):
     assert four_hour["timestamp"].to_list() == [datetime(2026, 6, 15, 8, tzinfo=timezone.utc)]
 
 
+def test_refresh_candle_cache_skips_partial_bid_ask_prices(tmp_path):
+    paths = CandleCachePaths(tmp_path)
+    client = SimpleNamespace()
+    client.get_historical_prices = lambda epic, resolution, points: {
+        "prices": [
+            {
+                "snapshotTimeUTC": "2026-06-15T08:00:00",
+                "openPrice": {"bid": 16000, "ask": 16001},
+                "closePrice": {"bid": 16010, "ask": None},
+                "highPrice": {"bid": 16012, "ask": 16013},
+                "lowPrice": {"bid": 15990, "ask": 15991},
+            },
+            _price("2026-06-15T09:00:00"),
+        ]
+    }
+
+    summary = refresh_candle_cache(
+        client=client,
+        epic="CS.D.USDJPY.TODAY.IP",
+        paths=paths,
+        scale_divisor=100,
+        history_points=2,
+        keep_last=1000,
+    )
+    hour, four_hour = load_cached_candles(paths)
+
+    assert hour["timestamp"].to_list() == [datetime(2026, 6, 15, 9, tzinfo=timezone.utc)]
+    assert four_hour.height == 1
+    assert summary["timeframes"]["HOUR"]["incoming_rows"] == 1
+    assert summary["timeframes"]["HOUR"]["conversion_quality"] == {
+        "total_prices": 2,
+        "valid_prices": 1,
+        "skipped_missing_bid_ask": 1,
+    }
+
+
 def test_refresh_candle_cache_uses_existing_cache_when_historical_allowance_exceeded(tmp_path):
     paths = CandleCachePaths(tmp_path)
     existing = _hour_frame([datetime(2026, 6, 15, 8, tzinfo=timezone.utc)])

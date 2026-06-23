@@ -43,6 +43,31 @@ def test_prices_to_candles_converts_snapshot_time_from_london_when_utc_missing()
     assert frame.row(0, named=True)["timestamp"] == datetime(2026, 6, 16, 9, tzinfo=timezone.utc)
 
 
+def test_prices_to_candles_skips_partial_bid_ask_candles():
+    frame = prices_to_candles({
+        "prices": [
+            {
+                "snapshotTimeUTC": "2026-06-16T08:00:00",
+                "openPrice": {"bid": 16022.8, "ask": 16023.8},
+                "closePrice": {"bid": 16031.2, "ask": None},
+                "highPrice": {"bid": 16032.3, "ask": 16033.3},
+                "lowPrice": {"bid": 16022.2, "ask": 16023.2},
+            },
+            {
+                "snapshotTimeUTC": "2026-06-16T09:00:00",
+                "openPrice": {"bid": 16042.8, "ask": 16043.8},
+                "closePrice": {"bid": 16051.2, "ask": 16052.2},
+                "highPrice": {"bid": 16052.3, "ask": 16053.3},
+                "lowPrice": {"bid": 16042.2, "ask": 16043.2},
+            },
+        ],
+    }, scale_divisor=100)
+
+    assert frame.height == 1
+    assert frame.row(0, named=True)["timestamp"] == datetime(2026, 6, 16, 9, tzinfo=timezone.utc)
+    assert frame.row(0, named=True)["mid_close"] == 160.517
+
+
 def test_runtime_config_from_strict_contract_applies_combined_sessions_and_spread_guardrail():
     config, contract = runtime_config_from_contract(
         "config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml",

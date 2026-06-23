@@ -5,7 +5,7 @@ from pathlib import Path
 
 import polars as pl
 
-from .ig_live_signal import closed_candles, derive_four_hour_from_hour, prices_to_candles
+from .ig_live_signal import closed_candles, convert_prices_to_candles, derive_four_hour_from_hour
 from .ig_rest_client import IGRateLimitError
 
 
@@ -76,14 +76,13 @@ def refresh_candle_cache(*, client, epic: str, paths: CandleCachePaths,
     path = paths.path("HOUR")
     existing = pl.read_parquet(path) if path.exists() else None
     request_points, request_plan = required_hour_points(existing, history_points, overlap_hours=overlap_hours)
+    conversion = None
     try:
-        incoming = closed_candles(
-            prices_to_candles(
-                client.get_historical_prices(epic, "HOUR", request_points),
-                scale_divisor=scale_divisor,
-            ),
-            1,
+        conversion = convert_prices_to_candles(
+            client.get_historical_prices(epic, "HOUR", request_points),
+            scale_divisor=scale_divisor,
         )
+        incoming = closed_candles(conversion.candles, 1)
         rate_limited = False
     except IGRateLimitError:
         if existing is None or not existing.height:
@@ -100,6 +99,7 @@ def refresh_candle_cache(*, client, epic: str, paths: CandleCachePaths,
         "request_points": request_points,
         "request_plan": request_plan,
         "incoming_rows": incoming.height,
+        "conversion_quality": conversion.quality_summary() if conversion else None,
     }
 
     four_hour = derive_four_hour_from_hour(hour, keep_last)
