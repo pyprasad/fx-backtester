@@ -10,7 +10,7 @@ from src.broker.ig.ig_candle_cache import (
     refresh_candle_cache,
     required_hour_points,
 )
-from src.broker.ig.ig_rest_client import IGRateLimitError
+from src.broker.ig.ig_rest_client import IGAPIError, IGRateLimitError
 
 
 def _price(timestamp):
@@ -157,7 +157,39 @@ def test_refresh_candle_cache_uses_existing_cache_when_historical_allowance_exce
     assert hour.height == 1
     assert four_hour.height == 1
     assert summary["timeframes"]["HOUR"]["rate_limited_using_existing_cache"] is True
+    assert summary["timeframes"]["HOUR"]["used_existing_cache"] is True
     assert summary["timeframes"]["HOUR_4"]["source"] == "derived_from_cached_hour_utc_anchor"
+
+
+def test_refresh_candle_cache_uses_existing_cache_when_ig_history_has_transient_error(tmp_path):
+    paths = CandleCachePaths(tmp_path)
+    existing = _hour_frame([datetime(2026, 6, 15, 8, tzinfo=timezone.utc)])
+    existing.write_parquet(paths.path("HOUR"))
+
+    client = SimpleNamespace()
+
+    def blocked(*_args):
+        raise IGAPIError('IG REST error (500): {"errorCode":"error.price-history.io-error"}')
+
+    client.get_historical_prices = blocked
+
+    summary = refresh_candle_cache(
+        client=client,
+        epic="CS.D.USDJPY.TODAY.IP",
+        paths=paths,
+        scale_divisor=100,
+        history_points=10,
+        keep_last=1000,
+    )
+    hour, four_hour = load_cached_candles(paths)
+
+    assert hour.height == 1
+    assert four_hour.height == 1
+    assert summary["timeframes"]["HOUR"]["used_existing_cache"] is True
+    assert summary["timeframes"]["HOUR"]["rate_limited_using_existing_cache"] is False
+    assert summary["timeframes"]["HOUR"]["fallback_reason"].startswith(
+        "IG_HISTORY_REFRESH_FAILED"
+    )
 
 
 def test_derive_four_hour_from_hour_uses_backtest_utc_anchor():

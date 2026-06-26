@@ -6,7 +6,7 @@ from pathlib import Path
 import polars as pl
 
 from .ig_live_signal import closed_candles, convert_prices_to_candles, derive_four_hour_from_hour
-from .ig_rest_client import IGRateLimitError
+from .ig_rest_client import IGAPIError, IGRateLimitError
 
 
 @dataclass(frozen=True)
@@ -77,6 +77,7 @@ def refresh_candle_cache(*, client, epic: str, paths: CandleCachePaths,
     existing = pl.read_parquet(path) if path.exists() else None
     request_points, request_plan = required_hour_points(existing, history_points, overlap_hours=overlap_hours)
     conversion = None
+    fallback_reason = None
     try:
         conversion = convert_prices_to_candles(
             client.get_historical_prices(epic, "HOUR", request_points),
@@ -89,6 +90,13 @@ def refresh_candle_cache(*, client, epic: str, paths: CandleCachePaths,
             raise
         incoming = pl.DataFrame()
         rate_limited = True
+        fallback_reason = "IG_RATE_LIMIT"
+    except IGAPIError as exc:
+        if existing is None or not existing.height:
+            raise
+        incoming = pl.DataFrame()
+        rate_limited = False
+        fallback_reason = f"IG_HISTORY_REFRESH_FAILED: {exc}"
     hour = _merge(existing, incoming, keep_last)
     hour.write_parquet(path)
     summary["timeframes"]["HOUR"] = {
@@ -96,6 +104,8 @@ def refresh_candle_cache(*, client, epic: str, paths: CandleCachePaths,
         "rows": hour.height,
         "latest_timestamp": hour["timestamp"].max().isoformat() if hour.height else None,
         "rate_limited_using_existing_cache": rate_limited,
+        "used_existing_cache": incoming.height == 0 and existing is not None and existing.height > 0,
+        "fallback_reason": fallback_reason,
         "request_points": request_points,
         "request_plan": request_plan,
         "incoming_rows": incoming.height,

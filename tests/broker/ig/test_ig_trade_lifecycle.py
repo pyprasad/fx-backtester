@@ -63,7 +63,7 @@ def _position():
 
 
 def _tick(bid, ask):
-    return _tick_at(datetime.now(timezone.utc), bid, ask)
+    return _tick_at(datetime(2026, 6, 18, 12, tzinfo=timezone.utc), bid, ask)
 
 
 def _tick_at(timestamp, bid, ask):
