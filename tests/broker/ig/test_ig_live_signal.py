@@ -3,10 +3,12 @@ from datetime import datetime, timezone
 import json
 
 from src.broker.ig.ig_live_signal import (
+    _executable_target_from_tick,
     prices_to_candles,
     runtime_config_from_contract,
     write_signal_dry_run_report,
 )
+from src.broker.ig.models import InternalTick
 
 
 def test_prices_to_candles_scales_ig_historical_prices():
@@ -78,6 +80,47 @@ def test_runtime_config_from_strict_contract_applies_combined_sessions_and_sprea
     assert config.session_filter["entry_windows"][-1]["name"] == "Tokyo"
     assert config.broker_execution_guardrails["spread_to_risk_filter"]["enabled"] is True
     assert config.broker_execution_guardrails["spread_to_risk_filter"]["default_max_spread_to_initial_risk_ratio"] == 0.20
+
+
+def test_runtime_config_from_final_contract_accepts_london_session_contract_shape():
+    config, contract = runtime_config_from_contract(
+        "config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml",
+        "config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
+    )
+
+    assert contract["broker_guardrails"]["selected_guardrail_candidate"] == "min_risk_3pips"
+    assert [item["name"] for item in config.session_filter["entry_windows"]] == [
+        "London morning",
+        "London New York overlap",
+    ]
+    assert all(item["timezone"] == "Europe/London" for item in config.session_filter["entry_windows"])
+    assert config.weekend_policy["enabled"] is True
+    assert config.weekend_policy["policy_name"] == "force_close_friday_20_30"
+    assert config.weekend_policy["force_close_on_friday"]["enabled"] is True
+    assert config.weekend_policy["force_close_on_friday"]["close_time_utc"] == "20:30"
+    assert config.risk["max_open_trades_total"] == 1
+    assert config.execution["default_slippage_points"] == 0.002
+
+
+def test_executable_target_uses_current_tick_entry_risk_like_backtest():
+    signal = type("SignalStub", (), {
+        "direction": "SHORT",
+        "proposed_stop": 160.30,
+        "proposed_target": 159.00,
+    })()
+    tick = InternalTick(
+        datetime(2026, 6, 15, 8, tzinfo=timezone.utc),
+        bid=160.10,
+        ask=160.11,
+        mid=160.105,
+        spread_pips=1,
+        source="test",
+        epic="USDJPY",
+        delayed=False,
+    )
+    contract = {"risk_management": {"final_target_r": 4.0}}
+
+    assert round(_executable_target_from_tick(signal, tick, contract), 6) == 159.30
 
 
 def test_write_signal_dry_run_report_never_marks_order_sent(tmp_path):

@@ -203,10 +203,22 @@ def derive_four_hour_from_hour(hour: pl.DataFrame, keep_last: int = 1000) -> pl.
 def runtime_config_from_contract(contract_path: str | Path, runtime_config_path: str | Path):
     config = load_strategy_config(runtime_config_path)
     contract = yaml.safe_load(Path(contract_path).read_text())
+    entry_rules = contract["entry_rules"]
+    sessions = entry_rules.get("allowed_sessions")
+    if sessions is None:
+        sessions = [
+            {**item, "timezone": contract["time_guards"]["broker_timezone"]}
+            for item in entry_rules.get("allowed_london_sessions", [])
+        ]
+    if not sessions:
+        raise ValueError("Strategy contract must define allowed_sessions or allowed_london_sessions")
+
     config.indicators.update(contract["indicators"])
-    config.entry["short"]["enabled"] = contract["entry_rules"]["signal_filter"]["enabled"]
+    config.entry["short"]["enabled"] = entry_rules["signal_filter"]["enabled"]
     config.entry["long"]["enabled"] = False
     config.risk["risk_per_trade_percent"] = contract["risk_management"]["risk_per_trade_percent"]
+    config.risk["max_open_trades_total"] = contract["execution"]["max_open_positions"]
+    config.risk["max_open_trades_per_market"] = contract["execution"]["max_open_positions"]
     config.stop_loss["atr_multiplier"] = contract["stop_loss"]["atr_multiplier"]
     config.exit["partial_take_profit"]["at_r"] = contract["risk_management"]["partial_take_profit_r"]
     config.exit["partial_take_profit"]["close_percent"] = contract["risk_management"]["partial_take_profit_percent"]
@@ -214,11 +226,33 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
     config.exit["runner"]["final_target_r"] = contract["risk_management"]["final_target_r"]
     config.exit["runner"]["trailing_stop"]["atr_multiplier"] = contract["risk_management"]["trailing_atr_multiplier"]
     config.max_trade_duration_days = contract["risk_management"]["maximum_trade_duration_days"]
+    config.execution["default_slippage_points"] = contract["execution"].get(
+        "default_slippage_price_points",
+        config.execution.get("default_slippage_points", 0),
+    )
     config.session_filter = {
         "timezone": "UTC",
-        "entry_windows": contract["entry_rules"]["allowed_sessions"],
+        "entry_windows": sessions,
     }
     config.spread_filter["max_spread_pips"] = contract["spread_guardrails"]["signal_spread_reject_above_pips"]
+    weekend = contract.get("weekend_policy", {})
+    if weekend:
+        config.weekend_policy["enabled"] = bool(weekend.get("enabled", False))
+        config.weekend_policy["policy_name"] = weekend.get("name", config.weekend_policy.get("policy_name"))
+        if "force_close_friday" in weekend:
+            config.weekend_policy["force_close_on_friday"] = {
+                **config.weekend_policy.get("force_close_on_friday", {}),
+                "enabled": bool(weekend["force_close_friday"]),
+                "close_time_utc": weekend.get("close_time_utc", "20:30"),
+                "close_reason": config.weekend_policy.get("force_close_on_friday", {}).get(
+                    "close_reason", "weekend_force_close"
+                ),
+            }
+        config.weekend_policy["block_late_friday_entries"] = {
+            **config.weekend_policy.get("block_late_friday_entries", {}),
+            "enabled": bool(weekend.get("block_weekend_holding", True)),
+            "cutoff_utc": config.weekend_policy.get("block_late_friday_entries", {}).get("cutoff_utc", "17:00"),
+        }
     spread_ratio = contract["spread_guardrails"].get("reject_spread_to_risk_ratio_above")
     config.broker_execution_guardrails = deep_merge(config.broker_execution_guardrails, {
         "enabled": True,
@@ -241,6 +275,15 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
         },
     })
     return config, contract
+
+
+def _executable_target_from_tick(signal, tick, contract: dict) -> float:
+    direction = "SELL" if signal.direction == "SHORT" else "BUY"
+    is_short = direction == "SELL"
+    entry = tick.bid if is_short else tick.ask
+    risk = abs(signal.proposed_stop - entry)
+    target_r = float(contract["risk_management"]["final_target_r"])
+    return entry - risk * target_r if is_short else entry + risk * target_r
 
 
 def _signal_payload(signal):
@@ -308,7 +351,7 @@ def evaluate_live_signal_from_candles(*, client, config, contract: dict, epic: s
         signal={
             "direction": "SELL" if signal.direction == "SHORT" else "BUY",
             "stop_price": signal.proposed_stop,
-            "target_price": signal.proposed_target,
+            "target_price": _executable_target_from_tick(signal, tick, contract),
         },
         market_rules=market_rules,
         strategy=contract,

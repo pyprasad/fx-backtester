@@ -1,0 +1,12 @@
+{
+  "status": "RUNNING",
+  "started_at": "2026-06-27T20:17:56.551382+00:00",
+  "completed_at": null,
+  "tick_count": 0,
+  "last_evaluated_candle": null,
+  "last_signal_result": null,
+  "order_execution": null,
+  "reports": {
+    "bot_run": "reports/ig_demo_audit/bot_run_usdjpy.json"
+  }
+}
