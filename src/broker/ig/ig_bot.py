@@ -267,6 +267,9 @@ class IGDemoBotRunner:
                     category="trade",
                 )
 
+    def _audit_streaming_event(self, event: dict) -> None:
+        write_bot_audit_event(self.config.audit_output_path, event)
+
     def _prepare(self) -> dict:
         self.runtime_config, self.contract = runtime_config_from_contract(
             self.strategy_path,
@@ -501,7 +504,11 @@ class IGDemoBotRunner:
             "event": "CANDLE_CACHE_READY",
             "cache": cache_summary,
         })
-        streaming = IGStreamingClient(self.config, self.session)
+        streaming = IGStreamingClient(
+            self.config,
+            self.session,
+            event_callback=self._audit_streaming_event,
+        )
         last_evaluated: datetime | None = None
         first_evaluation = True
         session_tracker = SessionProgressTracker(
@@ -518,13 +525,18 @@ class IGDemoBotRunner:
                     self._on_tick,
                     self.market_rules.pip_size,
                     self.config.price_scale_divisor,
+                    event_callback=self._audit_streaming_event,
                 ),
             )
-            streaming.subscribe_trade_updates(TradeUpdateListener(self._on_trade_update))
+            streaming.subscribe_trade_updates(TradeUpdateListener(
+                self._on_trade_update,
+                event_callback=self._audit_streaming_event,
+            ))
             monotonic_deadline = (
                 float("inf") if duration_seconds <= 0 else time.monotonic() + duration_seconds
             )
             next_status_snapshot = time.monotonic() + 30
+            next_no_tick_warning = time.monotonic() + 300
             while within_run_duration(started, duration_seconds, monotonic_deadline):
                 self._process_lifecycle_action()
                 session_tracker.check()
@@ -562,6 +574,13 @@ class IGDemoBotRunner:
                 if time.monotonic() >= next_status_snapshot:
                     self._write_run_snapshot(result)
                     next_status_snapshot = time.monotonic() + 30
+                if not self.price_state.latest_tick and time.monotonic() >= next_no_tick_warning:
+                    write_bot_audit_event(self.config.audit_output_path, {
+                        "event": "NO_PRICE_TICK_YET",
+                        "streaming_status": streaming.status.value,
+                        "tick_count": self.price_state.tick_count,
+                    })
+                    next_no_tick_warning = time.monotonic() + 300
                 time.sleep(self.poll_seconds)
             if result.status == "RUNNING":
                 result.status = "COMPLETED"

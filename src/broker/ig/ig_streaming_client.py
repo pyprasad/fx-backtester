@@ -20,19 +20,30 @@ class _ConnectionListener:
             else StreamingHealth.CONNECTING if status.startswith("CONNECTING")
             else StreamingHealth.DISCONNECTED
         )
+        self.owner._emit_event({"event": "LIGHTSTREAMER_STATUS", "status": status})
 
-    def onServerError(self, _code, _message):
+    def onServerError(self, code, message):
         self.owner.status = StreamingHealth.ERROR
+        self.owner._emit_event({
+            "event": "LIGHTSTREAMER_SERVER_ERROR",
+            "code": code,
+            "message": message,
+        })
 
 
 class IGStreamingClient:
-    def __init__(self, config, session):
+    def __init__(self, config, session, event_callback=None):
         if config.streaming_mode == "MARKET":
             raise ValueError("MARKET subscription is deprecated; use PRICE or CHART_TICK")
         if not session.lightstreamer_endpoint:
             raise ValueError("IG session did not provide a Lightstreamer endpoint")
         self.config, self.session = config, session
         self.status, self.client, self.subscriptions = StreamingHealth.DISCONNECTED, None, []
+        self.event_callback = event_callback
+
+    def _emit_event(self, event: dict) -> None:
+        if self.event_callback:
+            self.event_callback(event)
 
     @staticmethod
     def _library():
@@ -63,6 +74,13 @@ class IGStreamingClient:
         subscription.addListener(listener)
         self.client.subscribe(subscription)
         self.subscriptions.append(subscription)
+        self._emit_event({
+            "event": "PRICE_SUBSCRIPTION_REQUESTED",
+            "item": f"PRICE:{self.session.account_id}:{epic}",
+            "fields": list(self.config.stream_price_fields),
+            "mode": "MERGE",
+            "adapter": "Pricing",
+        })
         return subscription
 
     def subscribe_chart_ticks(self, epic: str, listener):
@@ -73,6 +91,12 @@ class IGStreamingClient:
         subscription.addListener(listener)
         self.client.subscribe(subscription)
         self.subscriptions.append(subscription)
+        self._emit_event({
+            "event": "CHART_TICK_SUBSCRIPTION_REQUESTED",
+            "item": f"CHART:{epic}:TICK",
+            "fields": list(self.config.stream_chart_tick_fields),
+            "mode": "DISTINCT",
+        })
         return subscription
 
     def subscribe_trade_updates(self, listener):
@@ -83,6 +107,12 @@ class IGStreamingClient:
         subscription.addListener(listener)
         self.client.subscribe(subscription)
         self.subscriptions.append(subscription)
+        self._emit_event({
+            "event": "TRADE_SUBSCRIPTION_REQUESTED",
+            "item": f"TRADE:{self.session.account_id}",
+            "fields": ["CONFIRMS", "OPU", "WOU"],
+            "mode": "DISTINCT",
+        })
         return subscription
 
     def disconnect(self):

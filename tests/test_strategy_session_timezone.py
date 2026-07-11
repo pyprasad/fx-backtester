@@ -26,6 +26,7 @@ def test_signal_session_uses_configured_timezone(strategy_config):
         "spread_avg": [.001, .001],
         "ema_20": [150.0, 150.0],
         "ema_50": [150.1, 150.1],
+        "ema_200": [151.0, 151.0],
         "rsi_14": [45.0, 40.0],
         "atr_14": [.1, .1],
         "atr_14_pips": [10.0, 10.0],
@@ -61,7 +62,8 @@ def test_signal_session_supports_per_window_timezones(strategy_config):
         "mid_open": [150.1, 150.1], "mid_high": [150.2, 150.2],
         "mid_low": [149.9, 149.9], "mid_close": [150.0, 150.0],
         "spread_avg": [.001, .001], "ema_20": [150.0, 150.0], "ema_50": [150.1, 150.1],
-        "rsi_14": [45.0, 40.0], "atr_14": [.1, .1], "atr_14_pips": [10.0, 10.0],
+        "ema_200": [151.0, 151.0], "rsi_14": [45.0, 40.0],
+        "atr_14": [.1, .1], "atr_14_pips": [10.0, 10.0],
     })
     trend = pl.DataFrame({"timestamp": times, "mid_close": [149.0, 149.0], "ema_200": [150.0, 150.0]})
 
@@ -102,7 +104,8 @@ def test_news_guard_blocks_valid_signal_and_logs_event(strategy_config, tmp_path
         "mid_open": [150.1, 150.1], "mid_high": [150.2, 150.2],
         "mid_low": [149.9, 149.9], "mid_close": [150.0, 150.0],
         "spread_avg": [.001, .001], "ema_20": [150.0, 150.0], "ema_50": [150.1, 150.1],
-        "rsi_14": [45.0, 40.0], "atr_14": [.1, .1], "atr_14_pips": [10.0, 10.0],
+        "ema_200": [151.0, 151.0], "rsi_14": [45.0, 40.0],
+        "atr_14": [.1, .1], "atr_14_pips": [10.0, 10.0],
     })
     trend = pl.DataFrame({"timestamp": times, "mid_close": [149.0, 149.0], "ema_200": [150.0, 150.0]})
 
@@ -113,3 +116,43 @@ def test_news_guard_blocks_valid_signal_and_logs_event(strategy_config, tmp_path
     assert len(news) == 1
     assert news[0]["event_id"] == "us-cpi"
     assert news[0]["event_currency"] == "USD"
+
+
+def test_trend_filter_uses_4h_ema_not_entry_ema(strategy_config):
+    strategy_config.session_filter = {
+        "timezone": "Asia/Tokyo",
+        "entry_windows": [{"name": "Tokyo", "start": "09:00", "end": "18:00"}],
+    }
+    strategy_config.broker_execution_guardrails["enabled"] = False
+    times = [
+        datetime(2025, 1, 6, 0, tzinfo=timezone.utc),
+        datetime(2025, 1, 6, 1, tzinfo=timezone.utc),
+    ]
+    entry = pl.DataFrame({
+        "timestamp": times, "timestamp_london": times, "symbol": ["USDJPY"] * 2,
+        "mid_open": [150.1, 150.1], "mid_high": [150.2, 150.2],
+        "mid_low": [149.9, 149.9], "mid_close": [150.0, 150.0],
+        "spread_avg": [.001, .001],
+        "ema_20": [150.0, 150.0],
+        "ema_50": [150.1, 150.1],
+        "ema_200": [151.0, 151.0],
+        "rsi_14": [45.0, 40.0],
+        "atr_14": [.1, .1],
+        "atr_14_pips": [10.0, 10.0],
+    })
+    trend_above_4h_ema = pl.DataFrame({
+        "timestamp": times,
+        "mid_close": [150.5, 150.5],
+        "ema_200": [149.0, 149.0],
+    })
+    trend_below_4h_ema = pl.DataFrame({
+        "timestamp": times,
+        "mid_close": [148.5, 148.5],
+        "ema_200": [149.0, 149.0],
+    })
+
+    blocked, _ = generate_signals(entry, trend_above_4h_ema, strategy_config)
+    allowed, _ = generate_signals(entry, trend_below_4h_ema, strategy_config)
+
+    assert blocked == []
+    assert len(allowed) == 1

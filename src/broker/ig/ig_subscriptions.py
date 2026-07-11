@@ -82,9 +82,14 @@ def normalise_chart_tick(update, epic: str, pip_size: float = 0.01,
 
 class PriceUpdateListener:
     def __init__(self, epic: str, callback, pip_size: float = 0.01,
-                 price_scale_divisor: float | None = None):
+                 price_scale_divisor: float | None = None, event_callback=None):
         self.epic, self.callback, self.pip_size = epic, callback, pip_size
         self.price_scale_divisor = price_scale_divisor
+        self.event_callback = event_callback
+
+    def _emit_event(self, event: dict) -> None:
+        if self.event_callback:
+            self.event_callback(event)
 
     def onItemUpdate(self, update):
         try:
@@ -96,19 +101,31 @@ class PriceUpdateListener:
 
     def onSubscription(self):
         logger.info("IG PRICE subscription active | epic=%s", self.epic)
+        self._emit_event({"event": "PRICE_SUBSCRIPTION_ACTIVE", "epic": self.epic})
 
     def onSubscriptionError(self, code, message):
         logger.error(
             "IG PRICE subscription failed | epic=%s | code=%s | message=%s",
             self.epic, code, message,
         )
+        self._emit_event({
+            "event": "PRICE_SUBSCRIPTION_FAILED",
+            "epic": self.epic,
+            "code": code,
+            "message": message,
+        })
 
 
 class ChartTickListener:
     def __init__(self, epic: str, callback, pip_size: float = 0.01,
-                 price_scale_divisor: float | None = None):
+                 price_scale_divisor: float | None = None, event_callback=None):
         self.epic, self.callback, self.pip_size = epic, callback, pip_size
         self.price_scale_divisor = price_scale_divisor
+        self.event_callback = event_callback
+
+    def _emit_event(self, event: dict) -> None:
+        if self.event_callback:
+            self.event_callback(event)
 
     def onItemUpdate(self, update):
         try:
@@ -120,20 +137,42 @@ class ChartTickListener:
 
     def onSubscription(self):
         logger.info("IG CHART:TICK subscription active | epic=%s", self.epic)
+        self._emit_event({"event": "CHART_TICK_SUBSCRIPTION_ACTIVE", "epic": self.epic})
 
     def onSubscriptionError(self, code, message):
         logger.error(
             "IG CHART:TICK subscription failed | epic=%s | code=%s | message=%s",
             self.epic, code, message,
         )
+        self._emit_event({
+            "event": "CHART_TICK_SUBSCRIPTION_FAILED",
+            "epic": self.epic,
+            "code": code,
+            "message": message,
+        })
 
 
 class AccountUpdateListener:
-    def __init__(self, callback):
+    def __init__(self, callback, event_callback=None):
         self.callback = callback
+        self.event_callback = event_callback
+
+    def _emit_event(self, event: dict) -> None:
+        if self.event_callback:
+            self.event_callback(event)
 
     def onItemUpdate(self, update):
         self.callback(update)
+
+    def onSubscription(self):
+        self._emit_event({"event": "ACCOUNT_SUBSCRIPTION_ACTIVE"})
+
+    def onSubscriptionError(self, code, message):
+        self._emit_event({
+            "event": "ACCOUNT_SUBSCRIPTION_FAILED",
+            "code": code,
+            "message": message,
+        })
 
 
 class TradeUpdateListener(AccountUpdateListener):

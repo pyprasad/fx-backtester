@@ -128,6 +128,8 @@ def test_write_signal_dry_run_report_never_marks_order_sent(tmp_path):
         "status": "SIGNAL_READY_FOR_DEMO_DRY_RUN",
         "epic": "CS.D.USDJPY.TODAY.IP",
         "latest_closed_1h_candle": "2026-06-16T08:00:00+00:00",
+        "signal_count": 3,
+        "rejection_count": 5,
         "current_signal": {"direction": "SHORT"},
         "dry_run_order": {"validation_status": "READY_FOR_DEMO_DRY_RUN"},
         "order_sent": False,
@@ -136,5 +138,7 @@ def test_write_signal_dry_run_report_never_marks_order_sent(tmp_path):
     payload = json.loads(report.read_text())
     assert report.name == "signal_dry_run_order_usdjpy.json"
     assert payload["status"] == "SIGNAL_READY_FOR_DEMO_DRY_RUN"
+    assert payload["signal_count"] == 3
+    assert payload["rejection_count"] == 5
     assert payload["dry_run_order"]["validation_status"] == "READY_FOR_DEMO_DRY_RUN"
     assert payload["order_sent"] is False

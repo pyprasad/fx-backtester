@@ -410,6 +410,8 @@ def write_signal_dry_run_report(output: str | Path, result: dict) -> Path:
         "status": result["status"],
         "epic": result.get("epic"),
         "latest_closed_1h_candle": result.get("latest_closed_1h_candle"),
+        "signal_count": result.get("signal_count"),
+        "rejection_count": result.get("rejection_count"),
         "current_signal": result.get("current_signal"),
         "dry_run_order": result.get("dry_run_order"),
         "order_sent": False,

@@ -33,7 +33,8 @@ def test_tiny_risk_strategy_setup_is_rejected_before_execution(strategy_config):
         "timestamp": times, "timestamp_london": times, "symbol": ["USDJPY"] * 2,
         "mid_open": [150.1, 150.1], "mid_high": [150.001, 150.001],
         "mid_low": [149.9, 149.9], "mid_close": [150.0, 150.0], "spread_avg": [.001, .001],
-        "ema_20": [150.0, 150.0], "ema_50": [150.1, 150.1], "rsi_14": [45.0, 40.0],
+        "ema_20": [150.0, 150.0], "ema_50": [150.1, 150.1], "ema_200": [151.0, 151.0],
+        "rsi_14": [45.0, 40.0],
         "atr_14": [.001, .001], "atr_14_pips": [.1, .1],
     })
     trend = pl.DataFrame({"timestamp": times, "mid_close": [149.0, 149.0], "ema_200": [150.0, 150.0]})

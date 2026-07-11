@@ -40,7 +40,11 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         *(pl.col(source).alias(target) for target, source in aliases.items()
           if target not in trend.columns and source in trend.columns)
     )
-    trend_view = trend.select("timestamp", pl.col("mid_close").alias("trend_close"), "ema_slow")
+    trend_view = trend.select(
+        "timestamp",
+        pl.col("mid_close").alias("trend_close"),
+        pl.col("ema_slow").alias("trend_ema_slow"),
+    )
     joined = entry.sort("timestamp").join_asof(trend_view.sort("timestamp"), on="timestamp", strategy="backward")
     signals, rejected = [], []
     weekend = WeekendPolicy(config.weekend_policy)
@@ -132,7 +136,9 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
 
     rows = joined.with_columns(pl.col("rsi").shift(1).alias("previous_rsi")).to_dicts()
     for row in rows:
-        if any(row.get(k) is None for k in ("atr", "ema_fast", "ema_mid", "rsi", "ema_slow")):
+        if any(row.get(k) is None for k in (
+            "atr", "ema_fast", "ema_mid", "rsi", "ema_slow", "trend_close", "trend_ema_slow",
+        )):
             continue
         session, session_local = _session(
             row["timestamp"], config.session_filter["entry_windows"],
@@ -160,7 +166,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         )
         rsi_trigger = config.entry["short"]["rsi_cross_down_level"]
         rsi_down = row["rsi"] < rsi_trigger and row["previous_rsi"] is not None and row["rsi"] < row["previous_rsi"]
-        if config.entry["short"]["enabled"] and row["trend_close"] < row["ema_slow"] and row["mid_close"] < row["ema_mid"] and near_ema and rsi_down and bearish:
+        if config.entry["short"]["enabled"] and row["trend_close"] < row["trend_ema_slow"] and row["mid_close"] < row["ema_mid"] and near_ema and rsi_down and bearish:
             if weekend_rejection(row, session):
                 continue
             stop = max(row["mid_high"], row["mid_close"] + config.stop_loss["atr_multiplier"] * row["atr"])
@@ -180,7 +186,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         if config.entry["long"]["enabled"]:
             bullish = row["mid_close"] > row["mid_open"]
             rsi_up = row["rsi"] > config.entry["long"]["rsi_cross_up_level"] and row["previous_rsi"] is not None and row["rsi"] > row["previous_rsi"]
-            if row["trend_close"] > row["ema_slow"] and row["mid_close"] > row["ema_mid"] and near_ema and rsi_up and bullish:
+            if row["trend_close"] > row["trend_ema_slow"] and row["mid_close"] > row["ema_mid"] and near_ema and rsi_up and bullish:
                 if weekend_rejection(row, session):
                     continue
                 stop = min(row["mid_low"], row["mid_close"] - config.stop_loss["atr_multiplier"] * row["atr"])
