@@ -30,7 +30,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./reports:/app/reports
-      - ./.runtime_intraday:/app/.runtime
+      - ig_intraday_runtime:/app/.runtime
       - ./config:/app/config:ro
       - ./.env.demo:/app/.env.demo:ro
     command: >
@@ -52,3 +52,6 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
+
+volumes:
+  ig_intraday_runtime:
