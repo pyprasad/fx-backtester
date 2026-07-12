@@ -11,10 +11,15 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from scripts.fetch_nasdaq_usdjpy_macro_calendar import (
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.fetch_nasdaq_usdjpy_macro_calendar import (  # noqa: E402
     CalendarEvent,
     fetch_day,
     iter_dates,
