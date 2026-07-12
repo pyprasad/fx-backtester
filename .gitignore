@@ -11,4 +11,7 @@ reports/runs/*/
 .runtime/
 *.token-cache.json
 data/live_demo_ticks/
-data/macro_calendar
+data/macro_calendar/*
+!data/macro_calendar/
+!data/macro_calendar/usd_jpy_events_2022_2025_nasdaq.csv
+!data/macro_calendar/usd_jpy_events_sample.csv

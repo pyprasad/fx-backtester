@@ -110,7 +110,7 @@ funding_awareness:
 
 news_guard:
   enabled: true
-  calendar_file: data/macro_calendar/usd_jpy_events_2022_2025_nasdaq.csv
+  calendar_file: data/macro_calendar/usd_jpy_events_live_nasdaq.csv
   affected_currencies: [USD, JPY]
   impact_levels: [HIGH]
   before_minutes: 60

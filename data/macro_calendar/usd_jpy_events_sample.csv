@@ -1,0 +1,4 @@
+event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source
+2024-06-12-us-cpi,2024-06-12T12:30:00Z,United States,USD,CPI YoY,HIGH,3.3,3.4,3.4,manual
+2024-06-14-boj-rate,2024-06-14T03:00:00Z,Japan,JPY,BoJ Interest Rate Decision,HIGH,,,0.10,manual
+2024-07-05-us-nfp,2024-07-05T12:30:00Z,United States,USD,Non Farm Payrolls,HIGH,206K,190K,218K,manual

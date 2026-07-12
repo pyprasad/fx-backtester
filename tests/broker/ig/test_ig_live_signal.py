@@ -105,7 +105,7 @@ def test_runtime_config_from_long_short_intraday_contract_enables_long_and_intra
     assert config.broker_execution_guardrails["broker_distance_rules"]["min_take_profit_distance_pips"] == 6.0
     assert config.broker_execution_guardrails["trade_lifecycle"]["stop_amend_skip_log_interval_seconds"] == 60
     assert config.news_guard["enabled"] is True
-    assert config.news_guard["calendar_file"] == "data/macro_calendar/usd_jpy_events_2022_2025_nasdaq.csv"
+    assert config.news_guard["calendar_file"] == "data/macro_calendar/usd_jpy_events_live_nasdaq.csv"
 
 
 def test_runtime_config_from_final_contract_accepts_london_session_contract_shape():

@@ -16,6 +16,9 @@ services:
       BOT_HISTORY_POINTS: "1000"
       BOT_REFRESH_POINTS: "5"
       BOT_CACHE_PATH: data/live_cache/ig_intraday
+      NEWS_GUARD_CALENDAR_FILE: data/macro_calendar/usd_jpy_events_live_nasdaq.csv
+      NEWS_GUARD_FORWARD_DAYS: "21"
+      NEWS_GUARD_MIN_FORWARD_DAYS: "7"
       # Explicit DEMO-only order placement. Keep .env.demo pointed at IG DEMO credentials.
       BOT_CONFIRM: "PLACE_DEMO_ORDER"
       IG_ORDER_EXECUTION_ENABLED: "true"
@@ -34,7 +37,11 @@ services:
       - ./config:/app/config:ro
       - ./.env.demo:/app/.env.demo:ro
     command: >
-      sh -c 'python -m src.main ig-demo-run-bot
+      sh -c 'python scripts/ensure_live_usdjpy_macro_calendar.py
+      --output "$$NEWS_GUARD_CALENDAR_FILE"
+      --forward-days "$$NEWS_GUARD_FORWARD_DAYS"
+      --min-forward-days "$$NEWS_GUARD_MIN_FORWARD_DAYS"
+      && python -m src.main ig-demo-run-bot
       --env-file .env.demo
       --strategy-config "$$STRICT_CONFIG"
       --runtime-strategy-config "$$RUNTIME_CONFIG"
