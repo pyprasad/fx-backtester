@@ -7,7 +7,7 @@ def active_account(accounts: dict, account_id: str) -> dict | None:
 
 def account_balance(account: dict) -> float:
     balance = account.get("balance", {})
-    for key in ("balance", "available", "deposit"):
+    for key in ("available", "balance", "deposit"):
         value = balance.get(key)
         if value is not None:
             return float(value)

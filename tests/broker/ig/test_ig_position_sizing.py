@@ -30,5 +30,5 @@ def test_dynamic_deal_size_respects_minimum():
     assert context["raw_deal_size"] == pytest.approx(0.0125)
 
 
-def test_account_balance_prefers_cash_balance():
-    assert account_balance({"balance": {"balance": 100, "available": 90}}) == 100
+def test_account_balance_prefers_available_balance_for_execution_sizing():
+    assert account_balance({"balance": {"balance": 100, "available": 90}}) == 90
