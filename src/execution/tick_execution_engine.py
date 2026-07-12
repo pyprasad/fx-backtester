@@ -66,6 +66,7 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
     min_amend_move = float(lifecycle.get("stop_amend_min_move_pips", 0)) * pip_size
     max_amends = int(lifecycle.get("max_stop_amends_per_trade", 1_000_000))
     max_amends_per_minute = int(lifecycle.get("max_stop_amends_per_minute", 1_000_000))
+    skip_log_interval = float(lifecycle.get("stop_amend_skip_log_interval_seconds", 0))
     broker_min_stop = (
         config.broker_execution_guardrails
         .get("broker_distance_rules", {})
@@ -76,6 +77,7 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
     stop_amend_skipped_count = 0
     stop_amend_skip_reasons = []
     stop_amend_timestamps = []
+    stop_amend_skip_timestamps = {}
     partial_close_request_count = 0
 
     def try_amend_stop(candidate: float, row: dict, amend_reason: str) -> bool:
@@ -112,8 +114,13 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
                 skip_reason = "STOP_AMEND_TOO_CLOSE_TO_MARKET"
 
         if skip_reason:
-            stop_amend_skipped_count += 1
-            stop_amend_skip_reasons.append(skip_reason)
+            last_logged = stop_amend_skip_timestamps.get(skip_reason)
+            if not skip_log_interval or last_logged is None or (
+                timestamp - last_logged
+            ).total_seconds() >= skip_log_interval:
+                stop_amend_skipped_count += 1
+                stop_amend_skip_reasons.append(skip_reason)
+                stop_amend_skip_timestamps[skip_reason] = timestamp
             return False
 
         old_stop = final_stop

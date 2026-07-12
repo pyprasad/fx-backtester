@@ -67,8 +67,10 @@ class IGTradeLifecycleManager:
         self.min_amend_move = float(lifecycle.get("stop_amend_min_move_pips", 1.0)) * pip_size
         self.max_amends_per_minute = int(lifecycle.get("max_stop_amends_per_minute", 4))
         self.max_amends_per_trade = int(lifecycle.get("max_stop_amends_per_trade", 50))
+        self.skip_log_interval = float(lifecycle.get("stop_amend_skip_log_interval_seconds", 0))
         self.position: ManagedPosition | None = None
         self.pending_action: LifecycleAction | None = None
+        self._last_skip_logged_at: dict[str, float] = {}
 
     def attach(self, position: ManagedPosition) -> None:
         if position.direction.upper() == "BUY":
@@ -257,15 +259,18 @@ class IGTradeLifecycleManager:
         elif len(recent) >= self.max_amends_per_minute:
             reason = "STOP_AMEND_PER_MINUTE_THROTTLED"
         if reason:
-            position.stop_amend_skipped_count += 1
-            position.stop_amend_skip_reasons.append(reason)
-            position.lifecycle_events.append({
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "event": "STOP_AMEND_SKIPPED",
-                "reason": reason,
-                "candidate": candidate,
-                "current_stop": position.current_stop,
-            })
+            last_logged = self._last_skip_logged_at.get(reason)
+            if not self.skip_log_interval or last_logged is None or now - last_logged >= self.skip_log_interval:
+                position.stop_amend_skipped_count += 1
+                position.stop_amend_skip_reasons.append(reason)
+                position.lifecycle_events.append({
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "event": "STOP_AMEND_SKIPPED",
+                    "reason": reason,
+                    "candidate": candidate,
+                    "current_stop": position.current_stop,
+                })
+                self._last_skip_logged_at[reason] = now
             return False
         return True
 

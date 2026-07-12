@@ -214,8 +214,10 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
         raise ValueError("Strategy contract must define allowed_sessions or allowed_london_sessions")
 
     config.indicators.update(contract["indicators"])
-    config.entry["short"]["enabled"] = entry_rules["signal_filter"]["enabled"]
-    config.entry["long"]["enabled"] = False
+    direction_mode = str(contract["strategy"].get("direction_mode", "short_only")).lower()
+    signal_filter_enabled = entry_rules["signal_filter"]["enabled"]
+    config.entry["short"]["enabled"] = signal_filter_enabled and direction_mode in {"short_only", "long_short"}
+    config.entry["long"]["enabled"] = signal_filter_enabled and direction_mode in {"long_only", "long_short"}
     config.risk["risk_per_trade_percent"] = contract["risk_management"]["risk_per_trade_percent"]
     config.risk["max_open_trades_total"] = contract["execution"]["max_open_positions"]
     config.risk["max_open_trades_per_market"] = contract["execution"]["max_open_positions"]
@@ -260,6 +262,13 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
             "enabled": contract["broker_guardrails"]["reject_initial_risk_below_minimum"],
             "default_min_initial_risk_pips": contract["broker_guardrails"]["min_initial_risk_pips"],
         },
+        "broker_distance_rules": {
+            "enabled": True,
+            "min_stop_distance_pips": contract["broker_guardrails"]["min_stop_distance_pips"],
+            "min_take_profit_distance_pips": contract["broker_guardrails"]["min_take_profit_distance_pips"],
+            "reject_if_stop_distance_below_broker_minimum": True,
+            "reject_if_take_profit_distance_below_broker_minimum": True,
+        },
         "spread_to_risk_filter": {
             "enabled": spread_ratio is not None,
             "default_max_spread_to_initial_risk_ratio": spread_ratio or 0.20,
@@ -274,6 +283,28 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
             "block_new_entries_after": contract["time_guards"]["block_new_entries_after"],
         },
     })
+    intraday_enabled = bool(contract["time_guards"].get("intraday_force_close_enabled", False))
+    config.broker_execution_guardrails = deep_merge(config.broker_execution_guardrails, {
+        "intraday_mode": {
+            "enabled": intraday_enabled,
+            "force_close_before_funding_cutoff": intraday_enabled,
+            "force_close_time": contract["time_guards"].get("intraday_force_close_before", "21:55"),
+            "force_close_reason": "INTRADAY_FUNDING_AVOIDANCE_CLOSE",
+        },
+        "swing_mode": {
+            "enabled": True,
+            "allow_overnight_holding": not intraday_enabled,
+            "track_overnight_funding": bool(contract.get("funding_awareness", {}).get("track_overnight_funding", True)),
+        },
+    })
+    lifecycle = contract.get("trade_lifecycle")
+    if lifecycle:
+        config.broker_execution_guardrails = deep_merge(config.broker_execution_guardrails, {
+            "trade_lifecycle": lifecycle,
+        })
+    news_guard = contract.get("news_guard")
+    if news_guard:
+        config.news_guard = deep_merge(config.news_guard, news_guard)
     return config, contract
 
 
@@ -339,7 +370,8 @@ def evaluate_live_signal_from_candles(*, client, config, contract: dict, epic: s
         result["status"] = "BLOCKED_NO_ACCOUNT"
         return result
     positions = client.get_open_positions().get("positions", [])
-    risk_pips = abs(signal.proposed_stop - tick.bid) / contract["strategy"]["pip_size"]
+    entry_price = tick.bid if signal.direction == "SHORT" else tick.ask
+    risk_pips = abs(signal.proposed_stop - entry_price) / contract["strategy"]["pip_size"]
     size, sizing = dynamic_deal_size(
         balance=account_balance(account),
         risk_percent=float(contract["risk_management"]["risk_per_trade_percent"]),

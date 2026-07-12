@@ -1,5 +1,5 @@
 # IG DEMO Signal Dry-Run Order
 
-Status: **NO_SIGNAL**
+Status: **BLOCKED_STALE_CANDLE_CACHE**
 
 Order sent: **False**

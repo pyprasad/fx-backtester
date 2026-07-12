@@ -80,6 +80,32 @@ def test_runtime_config_from_strict_contract_applies_combined_sessions_and_sprea
     assert config.session_filter["entry_windows"][-1]["name"] == "Tokyo"
     assert config.broker_execution_guardrails["spread_to_risk_filter"]["enabled"] is True
     assert config.broker_execution_guardrails["spread_to_risk_filter"]["default_max_spread_to_initial_risk_ratio"] == 0.20
+    assert config.entry["short"]["enabled"] is True
+    assert config.entry["long"]["enabled"] is False
+
+
+def test_runtime_config_from_long_short_intraday_contract_enables_long_and_intraday():
+    config, contract = runtime_config_from_contract(
+        "config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_long_short_demo.yaml",
+        "config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
+    )
+
+    assert contract["strategy"]["direction_mode"] == "long_short"
+    assert config.entry["short"]["enabled"] is True
+    assert config.entry["long"]["enabled"] is True
+    assert config.risk["risk_per_trade_percent"] == 0.25
+    assert config.stop_loss["atr_multiplier"] == 1.5
+    assert config.max_trade_duration_days == 1
+    assert config.execution["default_slippage_points"] == 0.005
+    assert config.broker_execution_guardrails["intraday_mode"]["enabled"] is True
+    assert config.broker_execution_guardrails["swing_mode"]["allow_overnight_holding"] is False
+    assert contract["broker_guardrails"]["selected_guardrail_candidate"] == "intraday_long_short_ig_realistic_risk025_ig6"
+    assert config.broker_execution_guardrails["minimum_initial_risk"]["default_min_initial_risk_pips"] == 6.0
+    assert config.broker_execution_guardrails["broker_distance_rules"]["min_stop_distance_pips"] == 6.0
+    assert config.broker_execution_guardrails["broker_distance_rules"]["min_take_profit_distance_pips"] == 6.0
+    assert config.broker_execution_guardrails["trade_lifecycle"]["stop_amend_skip_log_interval_seconds"] == 60
+    assert config.news_guard["enabled"] is True
+    assert config.news_guard["calendar_file"] == "data/macro_calendar/usd_jpy_events_2022_2025_nasdaq.csv"
 
 
 def test_runtime_config_from_final_contract_accepts_london_session_contract_shape():
@@ -121,6 +147,27 @@ def test_executable_target_uses_current_tick_entry_risk_like_backtest():
     contract = {"risk_management": {"final_target_r": 4.0}}
 
     assert round(_executable_target_from_tick(signal, tick, contract), 6) == 159.30
+
+
+def test_executable_target_uses_ask_entry_risk_for_long():
+    signal = type("SignalStub", (), {
+        "direction": "LONG",
+        "proposed_stop": 159.90,
+        "proposed_target": 161.00,
+    })()
+    tick = InternalTick(
+        datetime(2026, 6, 15, 8, tzinfo=timezone.utc),
+        bid=160.10,
+        ask=160.11,
+        mid=160.105,
+        spread_pips=1,
+        source="test",
+        epic="USDJPY",
+        delayed=False,
+    )
+    contract = {"risk_management": {"final_target_r": 4.0}}
+
+    assert round(_executable_target_from_tick(signal, tick, contract), 6) == 160.95
 
 
 def test_write_signal_dry_run_report_never_marks_order_sent(tmp_path):

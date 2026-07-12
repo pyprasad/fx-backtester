@@ -1,10 +1,18 @@
 {
-  "status": "RUNNING",
-  "started_at": "2026-07-11T08:24:19.782371+00:00",
-  "completed_at": "2026-07-11T08:26:18.855651+00:00",
-  "tick_count": 0,
-  "last_evaluated_candle": null,
-  "last_signal_result": null,
+  "status": "COMPLETED",
+  "started_at": "2026-07-12T20:55:15.299609+00:00",
+  "completed_at": "2026-07-12T20:55:36.288653+00:00",
+  "tick_count": 1,
+  "last_evaluated_candle": "2026-07-12T19:00:00+00:00",
+  "last_signal_result": {
+    "status": "BLOCKED_STALE_CANDLE_CACHE",
+    "epic": "CS.D.USDJPY.TODAY.IP",
+    "target_closed_1h_candle": "2026-07-12T19:00:00+00:00",
+    "latest_closed_1h_candle": "2026-07-10T20:00:00+00:00",
+    "current_signal": null,
+    "dry_run_order": null,
+    "order_sent": false
+  },
   "order_execution": null,
   "reports": {
     "bot_run": "reports/ig_demo_audit/bot_run_usdjpy.json"

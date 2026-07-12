@@ -2,12 +2,11 @@ import csv
 import html
 import json
 from copy import deepcopy
-from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
 
-from src.backtest.backtest_engine import run_backtest
+from src.backtest.backtest_engine import run_backtest, strategy_run_name
 from src.config.config_loader import load_strategy_config
 from src.utils.logging import get_logger, timed_stage
 
@@ -52,7 +51,8 @@ class WeekendPolicyVariantRunner:
 
     def run_all_variants(self) -> Path:
         variants = yaml.safe_load(self.variants_path.read_text())["variants"]
-        root = self.report_parent / datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1")
+        root_config = load_strategy_config(self.strategy_path)
+        root = self.report_parent / strategy_run_name(root_config)
         root.mkdir(parents=True, exist_ok=True)
         rows = []
         for index, variant in enumerate(variants, 1):

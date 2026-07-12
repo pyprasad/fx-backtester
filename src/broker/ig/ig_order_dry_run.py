@@ -31,16 +31,26 @@ def build_dry_run_order(*, signal: dict, market_rules, strategy: dict, latest_ti
     stop = float(signal.get("stop_price", 0))
     target = float(signal.get("target_price", 0))
     pip_size = float(strategy["strategy"]["pip_size"])
+    direction_mode = str(strategy["strategy"].get("direction_mode", "short_only")).lower()
     risk_pips = abs(stop - entry) / pip_size
     limit_pips = abs(entry - target) / pip_size
     spread_ratio = latest_tick.spread_pips / risk_pips if risk_pips else float("inf")
     errors, warnings = [], []
-    if direction != "SELL" or strategy["strategy"]["direction_mode"] != "short_only":
+    allowed_directions = {
+        "short_only": {"SELL"},
+        "long_only": {"BUY"},
+        "long_short": {"BUY", "SELL"},
+    }.get(direction_mode, {"SELL"})
+    if direction not in allowed_directions:
         errors.append("ONLY_SELL_ALLOWED")
     if direction == "SELL" and stop <= entry:
         errors.append("SHORT_STOP_MUST_BE_ABOVE_ENTRY")
     if direction == "SELL" and target >= entry:
         errors.append("SHORT_TARGET_MUST_BE_BELOW_ENTRY")
+    if direction == "BUY" and stop >= entry:
+        errors.append("LONG_STOP_MUST_BE_BELOW_ENTRY")
+    if direction == "BUY" and target <= entry:
+        errors.append("LONG_TARGET_MUST_BE_ABOVE_ENTRY")
     minimum = float(strategy["broker_guardrails"]["min_initial_risk_pips"])
     if risk_pips < minimum:
         errors.append("INITIAL_RISK_BELOW_SELECTED_MINIMUM")

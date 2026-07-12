@@ -116,6 +116,34 @@ def test_lifecycle_throttles_rapid_trailing_stop_updates():
     assert "STOP_AMEND_INTERVAL_THROTTLED" in manager.position.stop_amend_skip_reasons
 
 
+def test_lifecycle_rate_limits_repeated_stop_amend_skip_events(monkeypatch):
+    config = _config()
+    config["broker_execution_guardrails"]["trade_lifecycle"]["stop_amend_skip_log_interval_seconds"] = 60
+    config["broker_execution_guardrails"]["trade_lifecycle"]["max_stop_amends_per_trade"] = 1
+    manager = IGTradeLifecycleManager(config=config)
+    position = _position()
+    position.partial_close_applied = True
+    position.remaining_size = 6.0
+    manager.attach(position)
+
+    times = iter([100.0, 105.0, 106.0, 107.0, 170.0])
+    monkeypatch.setattr("src.broker.ig.ig_trade_lifecycle.time.monotonic", lambda: next(times))
+
+    action = manager.on_tick(_tick(159.80, 159.81))
+    assert action.action_type == "AMEND_STOP"
+    manager.mark_action_applied(action)
+
+    assert manager.on_tick(_tick(159.78, 159.79)) is None
+    assert manager.on_tick(_tick(159.76, 159.77)) is None
+    assert manager.on_tick(_tick(159.74, 159.75)) is None
+
+    assert manager.position.stop_amend_skipped_count == 2
+    assert [
+        event["event"] for event in manager.position.lifecycle_events
+        if event["event"] == "STOP_AMEND_SKIPPED"
+    ] == ["STOP_AMEND_SKIPPED", "STOP_AMEND_SKIPPED"]
+
+
 def test_lifecycle_executor_scales_stop_level_and_closes_opposite_direction():
     calls = []
     client = SimpleNamespace()

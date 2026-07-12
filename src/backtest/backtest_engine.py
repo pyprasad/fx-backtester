@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta, timezone
 
 import polars as pl
@@ -16,6 +17,14 @@ from src.strategies.fx_swing_trend_reclaim import generate_signals
 from src.utils.logging import get_logger, timed_stage
 
 logger = get_logger(__name__)
+
+
+def strategy_run_name(config: StrategyConfig) -> str:
+    strategy = getattr(config, "strategy", {}) or {}
+    strategy_name = str(strategy.get("name") or "strategy")
+    slug = re.sub(r"[^a-zA-Z0-9_.-]+", "_", strategy_name).strip("_").lower()
+    slug = slug or "strategy"
+    return datetime.now(timezone.utc).strftime(f"%Y%m%d_%H%M%S_usdjpy_{slug}")
 
 
 def _execution_guardrail_rejections(signal, decision) -> list[dict]:
@@ -125,7 +134,7 @@ def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, di
             active_until = trade.exit_timestamp_utc
     metrics = calculate_metrics(trades, config.risk["starting_balance"])
     metrics.update(_news_guard_metrics(config, rejections))
-    run_name = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1")
+    run_name = strategy_run_name(config)
     output = output_override or (resolve(config, config.reporting["output_path"]) / run_name)
     with timed_stage(logger, "write backtest reports", output=output):
         write_csv_reports(output, trades, metrics, rejections)

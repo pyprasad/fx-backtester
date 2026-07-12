@@ -1,0 +1,1 @@
+/Users/my/mayu_solutions/usdjpy_research/fx-backtester/reports/ig_realistic_candidate_validation/validation/intraday_risk025/monte_carlo/20260711_134845_usdjpy_fx_swing_trend_reclaim_v1_force_close_friday_20_30/stress_report.html

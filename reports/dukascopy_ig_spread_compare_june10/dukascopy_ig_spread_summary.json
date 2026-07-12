@@ -1,0 +1,29 @@
+{
+  "symbol": "USDJPY",
+  "start": "2026-06-10T00:00:00+00:00",
+  "end": "2026-06-10T23:00:00+00:00",
+  "dukascopy_cache_dir": ".runtime/dukascopy_cache",
+  "ig_hourly_path": "data/live_cache/ig/usdjpy_hour.parquet",
+  "fetch": {
+    "requested_hours": 24,
+    "downloaded_hours": 3,
+    "cached_hours": 1,
+    "missing_hours": 0,
+    "failed_hours": 20,
+    "ticks": 10985,
+    "failure_reasons": {
+      "URL_ERROR_TimeoutError": 16,
+      "TIMEOUT": 4
+    }
+  },
+  "comparison": {
+    "matched_hours": 4,
+    "ig_avg_spread_pips": 1.0,
+    "dukascopy_avg_spread_pips": 0.460962,
+    "avg_ig_minus_dukascopy_pips": 0.539038,
+    "avg_ig_to_dukascopy_spread_ratio": 2.181585,
+    "ig_spread_p95_pips": 1.0,
+    "dukascopy_spread_p95_pips": 0.512766,
+    "avg_mid_close_diff": 0.0015
+  }
+}

@@ -1,0 +1,54 @@
+services:
+  usdjpy-intraday-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.demo
+    environment:
+      PYTHONPATH: /app
+      STRICT_CONFIG: config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_long_short_demo.yaml
+      RUNTIME_CONFIG: config/strategy.usdjpy.fx_swing_trend_reclaim.yaml
+      EPIC: CS.D.USDJPY.TODAY.IP
+      # 0 means always-on. Session filters and intraday guards decide when entries are allowed.
+      BOT_DURATION_SECONDS: "0"
+      BOT_POLL_SECONDS: "5"
+      BOT_HISTORY_POINTS: "1000"
+      BOT_REFRESH_POINTS: "5"
+      BOT_CACHE_PATH: data/live_cache/ig_intraday
+      # Explicit DEMO-only order placement. Keep .env.demo pointed at IG DEMO credentials.
+      BOT_CONFIRM: "PLACE_DEMO_ORDER"
+      IG_ORDER_EXECUTION_ENABLED: "true"
+      IG_DRY_RUN_ONLY: "false"
+      IG_AUDIT_OUTPUT_PATH: reports/ig_demo_audit_intraday
+      IG_TICK_OUTPUT_PATH: data/live_demo_ticks/usdjpy_intraday
+      IG_TOKEN_CACHE_PATH: .runtime/ig_demo_intraday_session.json
+      IG_HISTORICAL_TOKEN_CACHE_PATH: .runtime/ig_demo_intraday_historical_session.json
+      TELEGRAM_ENABLED: "false"
+      TELEGRAM_CONTROL_PATH: .runtime/ig_intraday_bot_control.json
+      TELEGRAM_STATUS_PATH: reports/ig_demo_audit_intraday/bot_run_usdjpy.json
+    volumes:
+      - ./data:/app/data
+      - ./reports:/app/reports
+      - ./.runtime_intraday:/app/.runtime
+      - ./config:/app/config:ro
+      - ./.env.demo:/app/.env.demo:ro
+    command: >
+      sh -c 'python -m src.main ig-demo-run-bot
+      --env-file .env.demo
+      --strategy-config "$$STRICT_CONFIG"
+      --runtime-strategy-config "$$RUNTIME_CONFIG"
+      --epic "$$EPIC"
+      --history-points "$$BOT_HISTORY_POINTS"
+      --refresh-points "$$BOT_REFRESH_POINTS"
+      --cache-path "$$BOT_CACHE_PATH"
+      --duration-seconds "$$BOT_DURATION_SECONDS"
+      --poll-seconds "$$BOT_POLL_SECONDS"
+      --confirm "$$BOT_CONFIRM"'
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
