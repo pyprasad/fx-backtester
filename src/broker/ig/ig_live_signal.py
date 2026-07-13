@@ -13,7 +13,7 @@ from src.indicators.indicator_engine import add_indicators
 from src.strategies.fx_swing_trend_reclaim import generate_signals
 
 from .ig_order_dry_run import build_dry_run_order
-from .ig_position_sizing import account_balance, active_account, dynamic_deal_size
+from .ig_position_sizing import account_balance, active_account, deal_size_from_contract
 from .ig_tick_store import latest_tick
 
 
@@ -218,16 +218,29 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
     signal_filter_enabled = entry_rules["signal_filter"]["enabled"]
     config.entry["short"]["enabled"] = signal_filter_enabled and direction_mode in {"short_only", "long_short"}
     config.entry["long"]["enabled"] = signal_filter_enabled and direction_mode in {"long_only", "long_short"}
-    config.risk["risk_per_trade_percent"] = contract["risk_management"]["risk_per_trade_percent"]
+    risk_management = contract.get("risk_management") or {}
+    if not risk_management:
+        exit_contract = contract.get("exit", {})
+        risk_management = {
+            "risk_per_trade_percent": 0.25,
+            "maximum_trade_duration_days": exit_contract["maximum_trade_duration_days"],
+            "move_to_breakeven_after_r": exit_contract["move_to_breakeven_after_r"],
+            "partial_take_profit_r": exit_contract["partial_take_profit_r"],
+            "partial_take_profit_percent": exit_contract["partial_take_profit_percent"],
+            "final_target_r": exit_contract["final_target_r"],
+            "trailing_atr_multiplier": exit_contract["trailing_atr_multiplier"],
+        }
+        contract["risk_management"] = risk_management
+    config.risk["risk_per_trade_percent"] = risk_management["risk_per_trade_percent"]
     config.risk["max_open_trades_total"] = contract["execution"]["max_open_positions"]
     config.risk["max_open_trades_per_market"] = contract["execution"]["max_open_positions"]
     config.stop_loss["atr_multiplier"] = contract["stop_loss"]["atr_multiplier"]
-    config.exit["partial_take_profit"]["at_r"] = contract["risk_management"]["partial_take_profit_r"]
-    config.exit["partial_take_profit"]["close_percent"] = contract["risk_management"]["partial_take_profit_percent"]
-    config.exit["move_stop_to_breakeven"]["after_r"] = contract["risk_management"]["move_to_breakeven_after_r"]
-    config.exit["runner"]["final_target_r"] = contract["risk_management"]["final_target_r"]
-    config.exit["runner"]["trailing_stop"]["atr_multiplier"] = contract["risk_management"]["trailing_atr_multiplier"]
-    config.max_trade_duration_days = contract["risk_management"]["maximum_trade_duration_days"]
+    config.exit["partial_take_profit"]["at_r"] = risk_management["partial_take_profit_r"]
+    config.exit["partial_take_profit"]["close_percent"] = risk_management["partial_take_profit_percent"]
+    config.exit["move_stop_to_breakeven"]["after_r"] = risk_management["move_to_breakeven_after_r"]
+    config.exit["runner"]["final_target_r"] = risk_management["final_target_r"]
+    config.exit["runner"]["trailing_stop"]["atr_multiplier"] = risk_management["trailing_atr_multiplier"]
+    config.max_trade_duration_days = risk_management["maximum_trade_duration_days"]
     config.execution["default_slippage_points"] = contract["execution"].get(
         "default_slippage_price_points",
         config.execution.get("default_slippage_points", 0),
@@ -372,9 +385,9 @@ def evaluate_live_signal_from_candles(*, client, config, contract: dict, epic: s
     positions = client.get_open_positions().get("positions", [])
     entry_price = tick.bid if signal.direction == "SHORT" else tick.ask
     risk_pips = abs(signal.proposed_stop - entry_price) / contract["strategy"]["pip_size"]
-    size, sizing = dynamic_deal_size(
+    size, sizing = deal_size_from_contract(
+        contract=contract,
         balance=account_balance(account),
-        risk_percent=float(contract["risk_management"]["risk_per_trade_percent"]),
         stop_distance_pips=risk_pips,
         min_deal_size=market_rules.min_deal_size,
         instrument_unit=market_rules.unit,

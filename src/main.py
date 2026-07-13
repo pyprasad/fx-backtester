@@ -35,6 +35,8 @@ from src.data.tick_loader import scan_ticks
 from src.data.tick_normalizer import normalize_ticks
 from src.forensics.trade_forensics import TradeForensicsEngine
 from src.reporting.html_report import add_forensic_link
+from src.research.pip_first_decision import write_pip_first_decision_report
+from src.research.pip_first import write_pip_first_report, write_pip_first_stress_report
 from src.robustness.robustness_runner import ParameterRobustnessRunner
 from src.stability.stability_runner import StabilityValidationRunner
 from src.stress.monte_carlo_runner import MonteCarloStressRunner
@@ -63,6 +65,13 @@ def session_window(value):
     if len(parts) == 4:
         result["timezone"] = parts[3]
     return result
+
+
+def float_list(value):
+    try:
+        return [float(item.strip()) for item in value.split(",") if item.strip()]
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Expected comma-separated numbers") from exc
 
 
 def quality(config, ticks=None):
@@ -98,6 +107,14 @@ def add_strategy_overrides(parser):
     parser.add_argument("--normalised-tick-path", help="Override strategy normalized Parquet input")
     parser.add_argument("--candle-path", help="Override candle output/input directory")
     parser.add_argument("--report-output-path", help="Override backtest report parent directory")
+    parser.add_argument("--entry-short-enabled", type=boolean)
+    parser.add_argument("--entry-long-enabled", type=boolean)
+    parser.add_argument("--max-trade-duration-days", type=int)
+    parser.add_argument("--risk-per-trade-percent", type=float)
+    parser.add_argument("--atr-stop-multiplier", type=float)
+    parser.add_argument("--final-target-r", type=float)
+    parser.add_argument("--partial-take-profit-r", type=float)
+    parser.add_argument("--breakeven-after-r", type=float)
 
 
 def add_news_guard_overrides(parser):
@@ -143,6 +160,14 @@ def strategy_config(args, path):
         news_calendar_file=getattr(args, "news_calendar_file", None),
         news_before_minutes=getattr(args, "news_before_minutes", None),
         news_after_minutes=getattr(args, "news_after_minutes", None),
+        entry_short_enabled=getattr(args, "entry_short_enabled", None),
+        entry_long_enabled=getattr(args, "entry_long_enabled", None),
+        max_trade_duration_days=getattr(args, "max_trade_duration_days", None),
+        risk_per_trade_percent=getattr(args, "risk_per_trade_percent", None),
+        atr_stop_multiplier=getattr(args, "atr_stop_multiplier", None),
+        final_target_r=getattr(args, "final_target_r", None),
+        partial_take_profit_r=getattr(args, "partial_take_profit_r", None),
+        breakeven_after_r=getattr(args, "breakeven_after_r", None),
     )
     if getattr(args, "weekend_policy_name", None):
         config = apply_weekend_policy_variant(
@@ -248,6 +273,26 @@ def main():
     bakeoff_parser.add_argument("--continue-on-error", type=boolean, default=True)
     bakeoff_parser.add_argument("--existing-guardrail-run-path")
     bakeoff_parser.add_argument("--existing-bakeoff-run-path")
+    pip_first_parser = sub.add_parser("pip-first-report")
+    pip_first_parser.add_argument("--run-path", action="append", required=True)
+    pip_first_parser.add_argument("--report-output-path", required=True)
+    pip_first_parser.add_argument("--pip-size", type=float, default=0.01)
+    pip_first_parser.add_argument("--pip-values", type=float_list, default=[0.1, 0.5, 1.0, 2.0])
+    pip_first_parser.add_argument("--starting-balance", type=float, default=0.0)
+    pip_stress_parser = sub.add_parser("pip-first-stress")
+    pip_stress_parser.add_argument("--run-path", action="append", required=True)
+    pip_stress_parser.add_argument("--report-output-path", required=True)
+    pip_stress_parser.add_argument("--pip-size", type=float, default=0.01)
+    pip_stress_parser.add_argument("--pip-values", type=float_list, default=[0.5, 1.0, 2.0])
+    pip_stress_parser.add_argument("--starting-balance", type=float, default=0.0)
+    pip_stress_parser.add_argument("--iterations", type=int, default=2000)
+    pip_stress_parser.add_argument("--seed", type=int, default=42)
+    pip_stress_parser.add_argument("--slippage-pips", type=float_list, default=[0.0, 0.2, 0.5, 1.0])
+    pip_stress_parser.add_argument("--missed-trade-rates", type=float_list, default=[0.0, 0.05, 0.10, 0.20])
+    pip_decision_parser = sub.add_parser("pip-first-decision")
+    pip_decision_parser.add_argument("--comparison-summary", required=True)
+    pip_decision_parser.add_argument("--stress-summary", required=True)
+    pip_decision_parser.add_argument("--report-output-path", required=True)
     for name in ("ig-demo-auth-check", "ig-demo-market-discovery", "ig-demo-market-rules",
                  "ig-demo-stream-prices", "ig-demo-stream-chart-ticks", "ig-demo-open-positions",
                  "ig-demo-readiness", "ig-demo-dry-run-order", "ig-demo-place-test-order",
@@ -347,6 +392,35 @@ def main():
             args.existing_bakeoff_run_path,
         ).run()
         print(f"Final guardrail bake-off report: {output / 'final_guardrail_bakeoff_report.html'}")
+    elif args.command == "pip-first-report":
+        output = write_pip_first_report(
+            args.run_path,
+            args.report_output_path,
+            pip_size=args.pip_size,
+            pip_values=args.pip_values,
+            starting_balance=args.starting_balance,
+        )
+        print(f"Pip-first report: {output / 'pip_first_report.html'}")
+    elif args.command == "pip-first-stress":
+        output = write_pip_first_stress_report(
+            args.run_path,
+            args.report_output_path,
+            pip_size=args.pip_size,
+            pip_values=args.pip_values,
+            starting_balance=args.starting_balance,
+            iterations=args.iterations,
+            seed=args.seed,
+            slippage_pips=args.slippage_pips,
+            missed_trade_rates=args.missed_trade_rates,
+        )
+        print(f"Pip-first stress report: {output / 'pip_first_stress_report.html'}")
+    elif args.command == "pip-first-decision":
+        output = write_pip_first_decision_report(
+            comparison_summary_path=args.comparison_summary,
+            stress_summary_path=args.stress_summary,
+            output_path=args.report_output_path,
+        )
+        print(f"Pip-first decision report: {output / 'pip_first_decision_report.html'}")
     elif args.command == "ig-demo-auth-check":
         ig_auth_check(args.env_file)
     elif args.command == "ig-demo-market-discovery":

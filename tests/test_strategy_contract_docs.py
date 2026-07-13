@@ -12,6 +12,7 @@ REQUIRED = {
     "usdjpy_funding_awareness.md",
     "usdjpy_validation_history.md",
     "usdjpy_demo_readiness_prerequisites.md",
+    "usdjpy_pip_first_long_only_candidate.md",
 }
 
 
@@ -22,6 +23,14 @@ def test_required_strategy_contract_docs_exist_and_state_research_boundary():
     assert "ig_min_stop_only" in combined
     assert "recommended_research_guardrail" in combined
     assert "not production-ready" in combined
+
+
+def test_pip_first_candidate_doc_states_fixed_size_research_boundary():
+    text = (DOCS / "usdjpy_pip_first_long_only_candidate.md").read_text()
+    assert "long-only" in text
+    assert "fixed-size" in text
+    assert "not production-ready" in text
+    assert "does not replace" in text
 
 
 def test_pipeline_contract_contains_required_contract_sections():

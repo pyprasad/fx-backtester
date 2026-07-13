@@ -128,6 +128,22 @@ def test_runtime_config_from_final_contract_accepts_london_session_contract_shap
     assert config.execution["default_slippage_points"] == 0.002
 
 
+def test_runtime_config_from_pip_first_contract_enables_long_only_fixed_size():
+    config, contract = runtime_config_from_contract(
+        "config/strategies/usdjpy_fx_swing_trend_reclaim_v1_pip_first_long_only_candidate.yaml",
+        "config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
+    )
+
+    assert contract["strategy"]["direction_mode"] == "long_only"
+    assert contract["position_sizing"]["mode"] == "fixed_deal_size"
+    assert contract["position_sizing"]["fixed_deal_size"] == 0.5
+    assert config.entry["short"]["enabled"] is False
+    assert config.entry["long"]["enabled"] is True
+    assert config.max_trade_duration_days == 1
+    assert config.broker_execution_guardrails["intraday_mode"]["enabled"] is True
+    assert config.news_guard["enabled"] is True
+
+
 def test_executable_target_uses_current_tick_entry_risk_like_backtest():
     signal = type("SignalStub", (), {
         "direction": "SHORT",

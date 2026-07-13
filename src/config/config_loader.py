@@ -101,6 +101,14 @@ def apply_strategy_overrides(
     news_calendar_file: str | None = None,
     news_before_minutes: int | None = None,
     news_after_minutes: int | None = None,
+    entry_short_enabled: bool | None = None,
+    entry_long_enabled: bool | None = None,
+    max_trade_duration_days: int | None = None,
+    risk_per_trade_percent: float | None = None,
+    atr_stop_multiplier: float | None = None,
+    final_target_r: float | None = None,
+    partial_take_profit_r: float | None = None,
+    breakeven_after_r: float | None = None,
 ) -> StrategyConfig:
     if normalised_tick_path:
         config.data["normalised_tick_path"] = normalised_tick_path
@@ -116,6 +124,22 @@ def apply_strategy_overrides(
         config.news_guard["before_minutes"] = news_before_minutes
     if news_after_minutes is not None:
         config.news_guard["after_minutes"] = news_after_minutes
+    if entry_short_enabled is not None:
+        config.entry["short"]["enabled"] = entry_short_enabled
+    if entry_long_enabled is not None:
+        config.entry["long"]["enabled"] = entry_long_enabled
+    if max_trade_duration_days is not None:
+        config.max_trade_duration_days = max_trade_duration_days
+    if risk_per_trade_percent is not None:
+        config.risk["risk_per_trade_percent"] = risk_per_trade_percent
+    if atr_stop_multiplier is not None:
+        config.stop_loss["atr_multiplier"] = atr_stop_multiplier
+    if final_target_r is not None:
+        config.exit["runner"]["final_target_r"] = final_target_r
+    if partial_take_profit_r is not None:
+        config.exit["partial_take_profit"]["at_r"] = partial_take_profit_r
+    if breakeven_after_r is not None:
+        config.exit["move_stop_to_breakeven"]["after_r"] = breakeven_after_r
     return config
 
 

@@ -1,6 +1,7 @@
 from statistics import mean, median
 
 from src.execution.trade import Trade
+from src.research.pip_first import calculate_pip_metrics
 
 
 def _round_metrics(metrics: dict) -> dict:
@@ -40,6 +41,11 @@ def calculate_metrics(trades: list[Trade], starting_balance: float) -> dict:
     short = [t for t in trades if t.direction == "SHORT"]
     long = [t for t in trades if t.direction == "LONG"]
     months = len({t.exit_timestamp_utc.strftime("%Y-%m") for t in trades})
+    pip_metrics = calculate_pip_metrics(
+        trades,
+        starting_balance=starting_balance,
+        label="strategy_backtest",
+    )
     return _round_metrics({
         "starting_balance": starting_balance, "ending_balance": ending,
         "total_return_percent": (ending / starting_balance - 1) * 100,
@@ -74,4 +80,17 @@ def calculate_metrics(trades: list[Trade], starting_balance: float) -> dict:
         "max_stop_amends_per_trade": max((t.stop_amend_count for t in trades), default=0),
         "trades_with_stop_amends": sum(t.stop_amend_count > 0 for t in trades),
         "partial_close_request_count": sum(t.partial_close_request_count for t in trades),
+        "net_pips": pip_metrics["net_pips"],
+        "gross_winning_pips": pip_metrics["gross_winning_pips"],
+        "gross_losing_pips": pip_metrics["gross_losing_pips"],
+        "pip_profit_factor": pip_metrics["pip_profit_factor"],
+        "average_trade_pips": pip_metrics["average_trade_pips"],
+        "average_win_pips": pip_metrics["average_win_pips"],
+        "average_loss_pips": pip_metrics["average_loss_pips"],
+        "best_trade_pips": pip_metrics["best_trade_pips"],
+        "worst_trade_pips": pip_metrics["worst_trade_pips"],
+        "max_pip_drawdown": pip_metrics["max_pip_drawdown"],
+        "return_over_pip_drawdown": pip_metrics["return_over_pip_drawdown"],
+        "short_net_pips": pip_metrics["short_net_pips"],
+        "long_net_pips": pip_metrics["long_net_pips"],
     })

@@ -66,3 +66,26 @@ def test_cli_news_guard_override_wins_after_env(monkeypatch):
     )
 
     assert config.news_guard["enabled"] is False
+
+
+def test_strategy_research_overrides_update_direction_and_exit_parameters():
+    config = apply_strategy_overrides(
+        load_strategy_config("config/strategy.usdjpy.fx_swing_trend_reclaim.yaml"),
+        entry_short_enabled=False,
+        entry_long_enabled=True,
+        max_trade_duration_days=1,
+        risk_per_trade_percent=0.1,
+        atr_stop_multiplier=1.5,
+        final_target_r=5.0,
+        partial_take_profit_r=2.5,
+        breakeven_after_r=1.5,
+    )
+
+    assert config.entry["short"]["enabled"] is False
+    assert config.entry["long"]["enabled"] is True
+    assert config.max_trade_duration_days == 1
+    assert config.risk["risk_per_trade_percent"] == 0.1
+    assert config.stop_loss["atr_multiplier"] == 1.5
+    assert config.exit["runner"]["final_target_r"] == 5.0
+    assert config.exit["partial_take_profit"]["at_r"] == 2.5
+    assert config.exit["move_stop_to_breakeven"]["after_r"] == 1.5

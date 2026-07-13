@@ -35,6 +35,22 @@ The documentation package starts at
 Gate; no live trading is included. DEMO order placement is disabled by default and restricted to
 an explicitly confirmed DEMO execution-plumbing test.
 
+## Pip-First Long-Only Research Candidate
+
+The `pip-first-intraday` branch locked a separate pip-first candidate for deeper validation:
+
+- Strategy: `FX Swing Trend Reclaim v1`
+- Market and direction: `USDJPY`, long only
+- Sizing research mode: fixed pounds per pip, not dynamic risk sizing
+- Locked evidence period: `2021-01-03` through `2026-06-12`
+- Status: research candidate only; not production-ready or live-trading approved
+
+This candidate does not replace the FX-2H short-only baseline and does not change the DEMO bot.
+The versioned candidate contract is
+[`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_pip_first_long_only_candidate.yaml`](config/strategies/usdjpy_fx_swing_trend_reclaim_v1_pip_first_long_only_candidate.yaml).
+The documentation and reproducible validation commands are in
+[`docs/strategies/usdjpy_pip_first_long_only_candidate.md`](docs/strategies/usdjpy_pip_first_long_only_candidate.md).
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule

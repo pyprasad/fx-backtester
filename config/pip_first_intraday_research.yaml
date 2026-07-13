@@ -1,0 +1,55 @@
+research:
+  name: pip_first_intraday
+  purpose: Rank historical intraday USDJPY strategy runs by pip production before money-management effects.
+  market: USDJPY
+  live_trading_approved: false
+  changes_demo_bot: false
+
+measurement:
+  pip_size: 0.01
+  primary_metric: net_pips
+  secondary_metrics:
+    - max_pip_drawdown
+    - return_over_pip_drawdown
+    - pip_profit_factor
+    - consecutive_pip_losses_max
+    - yearly_net_pips
+    - direction_net_pips
+    - session_net_pips
+  fixed_pip_values_gbp:
+    - 0.10
+    - 0.50
+    - 1.00
+    - 2.00
+
+candidate_dimensions:
+  direction_modes:
+    - short_only
+    - long_only
+    - long_short
+  sessions:
+    - London morning
+    - London New York overlap
+    - Tokyo
+    - combined
+  exit_models:
+    - fixed_r_target
+    - partial_take_profit_then_trailing
+  guardrails:
+    - force_close_friday_20_30
+    - intraday_funding_avoidance
+    - min_risk_3pips_or_broker_minimum
+
+selection_rules:
+  not_optimisation_note: Do not replace the existing research baseline automatically from this report.
+  required_human_review: true
+  prefer:
+    - durable positive net pips across years
+    - lower pip drawdown for similar net pips
+    - less concentration in one direction, month, or session
+    - realistic spread and executable-side pricing
+  reject_or_flag:
+    - strategy earns most pips from one month only
+    - worst losing streak is too large for the intended fixed pip value
+    - long and short results hide one weak side inside a combined total
+    - fixed pip-value drawdown exceeds planned cash tolerance

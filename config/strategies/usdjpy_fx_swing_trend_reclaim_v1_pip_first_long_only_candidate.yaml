@@ -1,0 +1,176 @@
+strategy:
+  name: fx_swing_trend_reclaim_v1
+  version: pip_first_long_only_candidate_20260713
+  status: locked_pip_first_research_candidate
+  market: USDJPY
+  direction_mode: long_only
+  broker_target: IG
+  pip_size: 0.01
+  source_timezone: UTC
+  production_ready: false
+  live_trading_approved: false
+
+research_scope:
+  purpose: Fixed-size pip-first research candidate for deeper validation.
+  selected_from_branch: pip-first-intraday
+  locked_after_review_date: "2026-07-13"
+  replaces_fx_2h_baseline: false
+  modifies_demo_bot: false
+  sizing_model_under_review: fixed_pounds_per_pip
+  dynamic_risk_sizing_selected: false
+
+timeframes:
+  trend_timeframe: 4H
+  signal_timeframe: 1H
+  execution_timeframe: tick
+
+indicators:
+  ema_fast: 20
+  ema_mid: 50
+  ema_slow: 200
+  rsi_period: 14
+  atr_period: 14
+
+entry_rules:
+  trend_filter:
+    enabled: true
+    rule: 4H close above EMA200
+  signal_filter:
+    enabled: true
+    rules:
+      - 1H close above EMA50
+      - pullback near EMA20 or EMA50 within 1.2 ATR
+      - RSI14 above 50
+      - RSI14 rising
+      - bullish candle close
+      - enter on next available tick after signal candle close
+  allowed_london_sessions:
+    - {name: London morning, start: "07:00", end: "11:30"}
+    - {name: London New York overlap, start: "13:00", end: "16:30"}
+
+execution:
+  use_bid_ask: true
+  long_entry_price: ask
+  long_exit_price: bid
+  short_entry_price: bid
+  short_exit_price: ask
+  allow_mid_for_indicators_only: true
+  enter_after_signal_close: true
+  max_open_positions: 1
+  allow_pyramiding: false
+  allow_averaging_down: false
+  allow_martingale: false
+  default_slippage_price_points: 0.002
+
+position_sizing:
+  mode: fixed_deal_size
+  fixed_deal_size: 0.5
+  unit: GBP_PER_PIP_OR_IG_AMOUNT
+  rationale: Start DEMO dry-run validation at a conservative fixed size; do not use dynamic risk sizing.
+  order_enabled_default: false
+
+stop_loss:
+  method: max_of_signal_low_and_atr
+  atr_multiplier: 1.2
+  swing_lookback_candles: 8
+  swing_buffer_atr_multiplier: 0.20
+
+exit:
+  maximum_trade_duration_days: 1
+  move_to_breakeven_after_r: 1.2
+  partial_take_profit_r: 2.0
+  partial_take_profit_percent: 50
+  final_target_r: 4.0
+  trailing_atr_enabled: true
+  trailing_atr_multiplier: 1.5
+
+risk_management:
+  risk_per_trade_percent: 0.25
+  maximum_trade_duration_days: 1
+  move_to_breakeven_after_r: 1.2
+  partial_take_profit_r: 2.0
+  partial_take_profit_percent: 50
+  final_target_r: 4.0
+  trailing_atr_enabled: true
+  trailing_atr_multiplier: 1.5
+
+broker_guardrails:
+  broker: IG
+  selected_guardrail_candidate: pip_first_long_only_fixed_size_dry_run
+  min_stop_distance_pips: 2.0
+  min_take_profit_distance_pips: 2.0
+  min_initial_risk_pips: 3.0
+  reject_initial_risk_below_minimum: true
+  validate_against_executable_entry_tick: true
+
+spread_guardrails:
+  track_entry_spread: true
+  track_exit_spread: true
+  track_spread_to_risk_ratio: true
+  signal_spread_reject_above_pips: 2.0
+  warn_spread_to_risk_ratio_above: 0.20
+  reject_spread_to_risk_ratio_above: null
+
+time_guards:
+  broker_timezone: Europe/London
+  block_new_entries_after: "21:30"
+  overnight_funding_cutoff: "22:00"
+  intraday_force_close_enabled: true
+  intraday_force_close_before: "21:55"
+
+weekend_policy:
+  name: force_close_friday_20_30
+  enabled: true
+  force_close_friday: true
+  close_time_utc: "20:30"
+  block_weekend_holding: true
+
+funding_awareness:
+  enabled: true
+  track_overnight_funding: false
+  cutoff_time_uk: "22:00"
+  apply_wednesday_triple_rollover: true
+  funding_rate_source: configurable_research_assumption
+  fetch_live_rates: false
+
+news_guard:
+  enabled: true
+  calendar_file: data/macro_calendar/usd_jpy_events_live_nasdaq.csv
+  affected_currencies: [USD, JPY]
+  impact_levels: [HIGH]
+  before_minutes: 60
+  after_minutes: 60
+  block_new_entries: true
+  close_existing_positions: false
+  log_skipped_signals: true
+
+pip_first_evidence:
+  data_period: "2021-01-03 to 2026-06-12"
+  source_run: reports/pip_first_decision_candidates/long_only/20260713_193606_usdjpy_fx_swing_trend_reclaim_v1
+  comparison_summary: reports/pip_first_decision_candidates/comparison/pip_first_summary.csv
+  stress_summary: reports/pip_first_decision_candidates/stress/pip_first_stress_summary.csv
+  decision_summary: reports/pip_first_decision_candidates/decision/pip_first_decision_summary.csv
+  total_trades: 929
+  net_pips: 3644.1
+  pip_profit_factor: 1.6413
+  max_pip_drawdown: 174.4
+  return_over_pip_drawdown: 20.8951
+  adverse_bootstrap_p05_net_pips:
+    scenario: "1 pip slippage and 10% randomly missed trades"
+    result: 843.95
+  miss_best_10pct_1pip_net_pips: -2253.75
+
+candidate_decision:
+  selected_for_next_validation: true
+  selected_over: long_short
+  rationale: Long-only produced fewer raw pips than long/short, but materially lower pip drawdown and no hard decision flags.
+  hard_flags: []
+  not_live_approval: true
+  requires_deeper_validation_before_demo_sizing: true
+
+next_validation_requirements:
+  - Pip-first stability review by year, month, session, and direction.
+  - Wider execution stress with fixed pounds-per-pip outcomes.
+  - Walk-forward or out-of-sample style validation where supported.
+  - Demo-only fixed-size signal/order audit before any order-enabled bot configuration.
+  - Human confirmation before modifying docker-compose.demo.intraday.yml or any executable demo config.

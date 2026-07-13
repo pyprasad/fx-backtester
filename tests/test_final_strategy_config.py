@@ -4,6 +4,7 @@ import yaml
 
 
 CONFIG = Path("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml")
+PIP_FIRST_CONFIG = Path("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_pip_first_long_only_candidate.yaml")
 RUNTIME_CONFIG = Path("config/strategy.usdjpy.fx_swing_trend_reclaim.yaml")
 
 
@@ -36,3 +37,15 @@ def test_executable_runtime_matches_selected_guardrail():
     assert guardrails["spread_to_risk_filter"]["enabled"] is False
     assert guardrails["abnormal_spread_filter"]["max_entry_spread_pips"] == 2.0
     assert guardrails["entry_time_guard"]["block_new_entries_after"] == "21:30"
+
+
+def test_pip_first_long_only_candidate_is_research_only():
+    config = yaml.safe_load(PIP_FIRST_CONFIG.read_text())
+    assert config["strategy"]["direction_mode"] == "long_only"
+    assert config["strategy"]["live_trading_approved"] is False
+    assert config["position_sizing"]["mode"] == "fixed_deal_size"
+    assert config["position_sizing"]["fixed_deal_size"] == 0.5
+    assert config["research_scope"]["dynamic_risk_sizing_selected"] is False
+    assert config["research_scope"]["modifies_demo_bot"] is False
+    assert config["candidate_decision"]["selected_for_next_validation"] is True
+    assert config["candidate_decision"]["not_live_approval"] is True
