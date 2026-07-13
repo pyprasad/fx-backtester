@@ -1,0 +1,50 @@
+{
+  "status": "RUNNING",
+  "started_at": "2026-07-13T21:13:46.761493+00:00",
+  "completed_at": null,
+  "tick_count": 1,
+  "last_evaluated_candle": "2026-07-13T20:00:00+00:00",
+  "last_signal_result": {
+    "status": "NO_SIGNAL",
+    "epic": "CS.D.USDJPY.TODAY.IP",
+    "latest_closed_1h_candle": "2026-07-13T20:00:00+00:00",
+    "signal_count": 7,
+    "rejection_count": 144,
+    "last_signal": {
+      "signal_id": "e3534d4f-7775-41d4-a16f-f7db19f8c7d4",
+      "timestamp_utc": "2026-07-13T13:00:00+00:00",
+      "timestamp_london": "2026-07-13T14:00:00+01:00",
+      "symbol": "USDJPY",
+      "direction": "LONG",
+      "entry_type": "market_on_next_tick_after_signal_close",
+      "signal_price_mid": 162.225,
+      "trend_timeframe": "4H",
+      "entry_timeframe": "1H",
+      "reason_codes": [
+        "trend_above_ema200",
+        "pullback",
+        "rsi_reclaim",
+        "bullish_close"
+      ],
+      "indicator_snapshot": {
+        "ema_fast": 162.03679560617832,
+        "ema_mid": 162.0192876696941,
+        "ema_slow": 161.98891365596558,
+        "rsi": 58.967141698171964,
+        "atr": 0.17356436957146498,
+        "atr_pips": 17.3564369571465
+      },
+      "proposed_stop": 162.01672275651424,
+      "proposed_target": 163.058108973943,
+      "spread_pips_at_signal": 0.9999999999990905,
+      "session": "London New York overlap"
+    },
+    "current_signal": null,
+    "dry_run_order": null,
+    "order_sent": false
+  },
+  "order_execution": null,
+  "reports": {
+    "bot_run": "reports/ig_demo_audit_pip_first_long_only_order/bot_run_usdjpy.json"
+  }
+}

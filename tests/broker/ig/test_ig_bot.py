@@ -8,6 +8,7 @@ from src.broker.ig.ig_bot import (
     BotRunResult,
     IGDemoBotRunner,
     active_session_windows,
+    contract_session_windows,
     latest_closed_hour,
     within_run_duration,
     write_bot_audit_event,
@@ -43,6 +44,26 @@ def test_active_session_windows_respects_per_session_timezones():
 
     assert [item["name"] for item in tokyo] == ["Tokyo"]
     assert [item["name"] for item in london_overlap] == ["London New York overlap"]
+
+
+def test_contract_session_windows_accepts_london_session_contract_shape():
+    windows = contract_session_windows({
+        "time_guards": {"broker_timezone": "Europe/London"},
+        "entry_rules": {
+            "allowed_london_sessions": [
+                {"name": "London morning", "start": "07:00", "end": "11:30"},
+            ],
+        },
+    })
+
+    assert windows == [
+        {
+            "name": "London morning",
+            "start": "07:00",
+            "end": "11:30",
+            "timezone": "Europe/London",
+        },
+    ]
 
 
 def test_write_bot_audit_event_appends_jsonl(tmp_path):

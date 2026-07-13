@@ -77,6 +77,19 @@ def active_session_windows(windows: list[dict], now_utc: datetime) -> list[dict]
     return active
 
 
+def contract_session_windows(contract: dict) -> list[dict]:
+    entry_rules = contract.get("entry_rules", {})
+    sessions = entry_rules.get("allowed_sessions")
+    if sessions is not None:
+        return sessions
+    broker_timezone = contract.get("time_guards", {}).get("broker_timezone", "UTC")
+    london_sessions = entry_rules.get("allowed_london_sessions", [])
+    return [
+        {**item, "timezone": item.get("timezone", broker_timezone)}
+        for item in london_sessions
+    ]
+
+
 def within_run_duration(started: datetime, duration_seconds: int, monotonic_deadline: float,
                         now: datetime | None = None, monotonic_now: float | None = None) -> bool:
     if duration_seconds <= 0:
@@ -512,7 +525,7 @@ class IGDemoBotRunner:
         last_evaluated: datetime | None = None
         first_evaluation = True
         session_tracker = SessionProgressTracker(
-            windows=self.contract["entry_rules"]["allowed_sessions"],
+            windows=contract_session_windows(self.contract),
             audit_output=self.config.audit_output_path,
             telegram=self.telegram,
         )

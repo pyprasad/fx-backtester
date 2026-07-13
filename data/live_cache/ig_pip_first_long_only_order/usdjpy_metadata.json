@@ -1,0 +1,44 @@
+{
+  "epic": "CS.D.USDJPY.TODAY.IP",
+  "refreshed_at": "2026-07-13T21:13:46.942921+00:00",
+  "history_points": 1000,
+  "keep_last": 1000,
+  "timeframes": {
+    "HOUR": {
+      "path": "data/live_cache/ig_pip_first_long_only_order/usdjpy_hour.parquet",
+      "rows": 999,
+      "latest_timestamp": "2026-07-13T20:00:00+00:00",
+      "rate_limited_using_existing_cache": false,
+      "used_existing_cache": false,
+      "fallback_reason": null,
+      "request_points": 1000,
+      "request_plan": {
+        "reason": "bootstrap_no_existing_cache",
+        "latest_cached_timestamp": null,
+        "target_closed_hour": null,
+        "missing_hours_estimate": null,
+        "overlap_hours": 2
+      },
+      "incoming_rows": 999,
+      "conversion_quality": {
+        "total_prices": 1000,
+        "valid_prices": 1000,
+        "skipped_missing_bid_ask": 0
+      }
+    },
+    "HOUR_4": {
+      "path": "data/live_cache/ig_pip_first_long_only_order/usdjpy_hour_4.parquet",
+      "rows": 257,
+      "latest_timestamp": "2026-07-13T20:00:00+00:00",
+      "source": "derived_from_cached_hour_utc_anchor",
+      "anchor_utc_hours": [
+        0,
+        4,
+        8,
+        12,
+        16,
+        20
+      ]
+    }
+  }
+}

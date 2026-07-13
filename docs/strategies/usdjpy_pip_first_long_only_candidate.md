@@ -111,6 +111,54 @@ Stop:
 docker compose -f docker-compose.demo.pip-first-long-only.yml down
 ```
 
+## DEMO Order-Enabled Docker Path
+
+After you explicitly accept DEMO order placement, use the separate order-enabled compose file:
+
+```text
+docker-compose.demo.pip-first-long-only.order.yml
+```
+
+It is configured with:
+
+- `IG_ORDER_EXECUTION_ENABLED=true`
+- `IG_DRY_RUN_ONLY=false`
+- `BOT_CONFIRM=PLACE_DEMO_ORDER`
+- fixed deal size `0.5`
+- separate audit path `reports/ig_demo_audit_pip_first_long_only_order`
+
+It still points at IG DEMO only. It places an order only when the latest closed 1H candle has a
+current long-only signal and all guardrails pass.
+
+Before starting this service, stop the dry-run service so only one pip-first bot is running:
+
+```bash
+docker compose -f docker-compose.demo.pip-first-long-only.yml down
+```
+
+Start order-enabled DEMO mode:
+
+```bash
+docker compose -f docker-compose.demo.pip-first-long-only.order.yml build
+docker compose -f docker-compose.demo.pip-first-long-only.order.yml up -d usdjpy-pip-first-long-only-order
+docker compose -f docker-compose.demo.pip-first-long-only.order.yml logs -f usdjpy-pip-first-long-only-order
+```
+
+Inspect:
+
+```bash
+cat reports/ig_demo_audit_pip_first_long_only_order/bot_run_usdjpy.json
+cat reports/ig_demo_audit_pip_first_long_only_order/signal_dry_run_order_usdjpy.json
+cat reports/ig_demo_audit_pip_first_long_only_order/demo_execution_test.json
+tail -100 reports/ig_demo_audit_pip_first_long_only_order/bot_audit_events_usdjpy.jsonl
+```
+
+Stop:
+
+```bash
+docker compose -f docker-compose.demo.pip-first-long-only.order.yml down
+```
+
 ## Reproducible Commands
 
 Backtest:
