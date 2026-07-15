@@ -108,6 +108,33 @@ def test_runtime_config_from_long_short_intraday_contract_enables_long_and_intra
     assert config.news_guard["calendar_file"] == "data/macro_calendar/usd_jpy_events_live_nasdaq.csv"
 
 
+def test_runtime_config_from_six_pip_demo_contract_enables_fixed_attached_take_profit():
+    config, contract = runtime_config_from_contract(
+        "config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml",
+        "config/strategy.usdjpy.fx_swing_trend_reclaim.yaml",
+    )
+
+    assert contract["strategy"]["direction_mode"] == "long_short"
+    assert contract["risk_management"]["fixed_take_profit_pips"] == 6.0
+    assert config.entry["short"]["enabled"] is True
+    assert config.entry["long"]["enabled"] is True
+    assert config.exit["fixed_take_profit"] == {
+        "enabled": True,
+        "target_pips": 6.0,
+        "execution_mode": "attached_limit",
+        "disable_partial_take_profit": True,
+        "disable_move_stop_to_breakeven": True,
+        "disable_runner": True,
+    }
+    assert config.exit["partial_take_profit"]["enabled"] is False
+    assert config.exit["move_stop_to_breakeven"]["enabled"] is False
+    assert config.exit["runner"]["enabled"] is False
+    assert config.broker_execution_guardrails["broker_distance_rules"]["min_stop_distance_pips"] == 6.0
+    assert config.broker_execution_guardrails["broker_distance_rules"]["min_take_profit_distance_pips"] == 6.0
+    assert config.broker_execution_guardrails["minimum_initial_risk"]["default_min_initial_risk_pips"] == 6.0
+    assert config.news_guard["enabled"] is True
+
+
 def test_runtime_config_from_final_contract_accepts_london_session_contract_shape():
     config, contract = runtime_config_from_contract(
         "config/strategies/usdjpy_fx_swing_trend_reclaim_v1_final.yaml",
@@ -168,6 +195,36 @@ def test_executable_target_uses_ask_entry_risk_for_long():
     contract = {"risk_management": {"final_target_r": 4.0}}
 
     assert round(_executable_target_from_tick(signal, tick, contract), 6) == 160.95
+
+
+def test_executable_target_uses_fixed_six_pip_target_for_short_and_long():
+    tick = InternalTick(
+        datetime(2026, 6, 15, 8, tzinfo=timezone.utc),
+        bid=160.10,
+        ask=160.11,
+        mid=160.105,
+        spread_pips=1,
+        source="test",
+        epic="USDJPY",
+        delayed=False,
+    )
+    contract = {
+        "strategy": {"pip_size": 0.01},
+        "risk_management": {"fixed_take_profit_pips": 6.0, "final_target_r": 4.0},
+    }
+    short_signal = type("SignalStub", (), {
+        "direction": "SHORT",
+        "proposed_stop": 160.30,
+        "proposed_target": 159.00,
+    })()
+    long_signal = type("SignalStub", (), {
+        "direction": "LONG",
+        "proposed_stop": 159.90,
+        "proposed_target": 161.00,
+    })()
+
+    assert round(_executable_target_from_tick(short_signal, tick, contract), 6) == 160.04
+    assert round(_executable_target_from_tick(long_signal, tick, contract), 6) == 160.17
 
 
 def test_write_signal_dry_run_report_never_marks_order_sent(tmp_path):

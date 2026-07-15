@@ -3,10 +3,12 @@
   "name": "USD/JPY",
   "status": "TRADEABLE",
   "expiry": "DFB",
-  "currency": "JPY",
+  "currency": "GBP",
   "pip_size": 0.01,
-  "min_stop_distance_pips": 2.0,
-  "min_limit_distance_pips": 2.0,
+  "unit": "AMOUNT",
+  "lot_size": 1.0,
+  "min_stop_distance_pips": 6.0,
+  "min_limit_distance_pips": 6.0,
   "min_deal_size": 0.04,
   "max_deal_size": 75.0,
   "margin_factor": 3.33,
@@ -32,21 +34,21 @@
         {
           "code": "JPY",
           "symbol": "\u00a5",
-          "baseExchangeRate": 215.04475,
+          "baseExchangeRate": 219.49306,
           "exchangeRate": 0.007,
           "isDefault": false
         },
         {
           "code": "EUR",
           "symbol": "E",
-          "baseExchangeRate": 1.157245,
+          "baseExchangeRate": 1.180965,
           "exchangeRate": 0.9,
           "isDefault": false
         },
         {
           "code": "USD",
           "symbol": "$",
-          "baseExchangeRate": 1.34114,
+          "baseExchangeRate": 1.354115,
           "exchangeRate": 0.66,
           "isDefault": false
         },
@@ -124,12 +126,12 @@
         "value": 0.04
       },
       "minControlledRiskStopDistance": {
-        "unit": "POINTS",
-        "value": 7.0
+        "unit": "PERCENTAGE",
+        "value": 2.0
       },
       "minNormalStopOrLimitDistance": {
         "unit": "POINTS",
-        "value": 2.0
+        "value": 6.0
       },
       "maxStopOrLimitDistance": {
         "unit": "PERCENTAGE",
@@ -144,23 +146,25 @@
     },
     "snapshot": {
       "marketStatus": "TRADEABLE",
-      "netChange": 13.3,
-      "percentageChange": 0.08,
-      "updateTime": "20:15:05",
+      "netChange": -9.7,
+      "percentageChange": -0.06,
+      "updateTime": "22:22:55",
       "delayTime": 0,
-      "bid": 16034.3,
-      "offer": 16035.3,
-      "high": 16040.3,
-      "low": 15970.5,
+      "bid": 16208.3,
+      "offer": 16211.3,
+      "high": 16223.9,
+      "low": 16205.3,
       "binaryOdds": null,
       "decimalPlacesFactor": 1,
       "scalingFactor": 1,
-      "controlledRiskExtraSpread": 3.6
+      "controlledRiskExtraSpread": null
     }
   },
   "strategy_validation": {
-    "ready": true,
-    "errors": [],
+    "ready": false,
+    "errors": [
+      "BROKER_MIN_STOP_EXCEEDS_STRATEGY_MIN_RISK"
+    ],
     "warnings": []
   }
 }

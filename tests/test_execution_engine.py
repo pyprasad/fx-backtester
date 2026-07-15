@@ -48,6 +48,118 @@ def test_executable_entry_guardrail_rejects_actual_tiny_risk(ticks, strategy_con
     assert "REJECT_BELOW_MIN_INITIAL_RISK_PIPS" in decision.rejection_reasons
 
 
+def test_fixed_take_profit_short_uses_ask_side(strategy_config):
+    strategy_config.execution["slippage_enabled"] = False
+    strategy_config.exit["fixed_take_profit"] = {
+        "enabled": True,
+        "target_pips": 4.0,
+        "execution_mode": "attached_limit",
+        "disable_partial_take_profit": True,
+        "disable_move_stop_to_breakeven": True,
+        "disable_runner": True,
+    }
+    signal = Signal(
+        "s", datetime(2021, 1, 4, 8, 59, tzinfo=timezone.utc),
+        datetime(2021, 1, 4, 8, 59, tzinfo=timezone.utc), "USDJPY", "SHORT", "market",
+        150.0, "4H", "1H", [], {}, 150.20, 149.50, 2.0,
+    )
+    ticks = pl.DataFrame({
+        "timestamp_utc": [
+            datetime(2021, 1, 4, 9, 0, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 1, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 2, tzinfo=timezone.utc),
+        ],
+        "bid": [150.00, 149.95, 149.94],
+        "ask": [150.02, 149.97, 149.96],
+        "spread_pips": [2.0, 2.0, 2.0],
+    })
+
+    trade = execute_signal(signal, ticks, strategy_config, 10000)
+
+    assert trade.exit_reason == "take_profit"
+    assert trade.entry_price == 150.00
+    assert trade.target_price == 149.96
+    assert trade.exit_timestamp_utc == datetime(2021, 1, 4, 9, 2, tzinfo=timezone.utc)
+    assert trade.exit_price == 149.96
+    assert trade.partial_exits == []
+    assert trade.breakeven_moved is False
+    assert trade.notes == "fixed_take_profit_pips=4.0;fixed_take_profit_execution_mode=attached_limit"
+
+
+def test_fixed_take_profit_long_uses_bid_side(strategy_config):
+    strategy_config.execution["slippage_enabled"] = False
+    strategy_config.entry["long"]["enabled"] = True
+    strategy_config.exit["fixed_take_profit"] = {
+        "enabled": True,
+        "target_pips": 3.0,
+        "execution_mode": "attached_limit",
+        "disable_partial_take_profit": True,
+        "disable_move_stop_to_breakeven": True,
+        "disable_runner": True,
+    }
+    signal = Signal(
+        "s", datetime(2021, 1, 4, 8, 59, tzinfo=timezone.utc),
+        datetime(2021, 1, 4, 8, 59, tzinfo=timezone.utc), "USDJPY", "LONG", "market",
+        150.0, "4H", "1H", [], {}, 149.80, 150.50, 2.0,
+    )
+    ticks = pl.DataFrame({
+        "timestamp_utc": [
+            datetime(2021, 1, 4, 9, 0, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 1, tzinfo=timezone.utc),
+            datetime(2021, 1, 4, 9, 2, tzinfo=timezone.utc),
+        ],
+        "bid": [150.00, 150.02, 150.05],
+        "ask": [150.02, 150.04, 150.07],
+        "spread_pips": [2.0, 2.0, 2.0],
+    })
+
+    trade = execute_signal(signal, ticks, strategy_config, 10000)
+
+    assert trade.exit_reason == "take_profit"
+    assert trade.entry_price == 150.02
+    assert trade.target_price == 150.05
+    assert trade.exit_timestamp_utc == datetime(2021, 1, 4, 9, 2, tzinfo=timezone.utc)
+    assert trade.exit_price == 150.05
+
+
+def test_fixed_take_profit_guardrail_uses_absolute_target_distance(ticks, strategy_config):
+    strategy_config.execution["slippage_enabled"] = False
+    strategy_config.exit["fixed_take_profit"] = {
+        "enabled": True,
+        "target_pips": 1.0,
+        "execution_mode": "attached_limit",
+        "disable_partial_take_profit": True,
+        "disable_move_stop_to_breakeven": True,
+        "disable_runner": True,
+    }
+    signal = _signal("SHORT")
+
+    decision = evaluate_executable_entry_guardrail(signal, ticks.sort("timestamp_utc"), strategy_config)
+
+    assert "REJECT_BELOW_BROKER_MIN_TP_DISTANCE" in decision.rejection_reasons
+
+
+def test_fixed_take_profit_managed_market_close_skips_attached_limit_min_tp_rejection(
+    ticks, strategy_config
+):
+    strategy_config.execution["slippage_enabled"] = False
+    strategy_config.exit["fixed_take_profit"] = {
+        "enabled": True,
+        "target_pips": 1.0,
+        "execution_mode": "managed_market_close",
+        "disable_partial_take_profit": True,
+        "disable_move_stop_to_breakeven": True,
+        "disable_runner": True,
+    }
+    signal = _signal("SHORT")
+
+    decision = evaluate_executable_entry_guardrail(signal, ticks.sort("timestamp_utc"), strategy_config)
+
+    assert decision.accepted
+    assert "REJECT_BELOW_BROKER_MIN_TP_DISTANCE" not in decision.rejection_reasons
+    assert "WARN_FIXED_TP_MANAGED_MARKET_CLOSE_NOT_ATTACHED_LIMIT" in decision.warnings
+
+
 def test_trade_lifecycle_throttles_stop_amends(strategy_config):
     strategy_config.execution["slippage_enabled"] = False
     strategy_config.broker_execution_guardrails["trade_lifecycle"] = {

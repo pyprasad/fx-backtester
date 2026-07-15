@@ -1,4 +1,5 @@
 from datetime import time, timedelta
+from copy import deepcopy
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -13,8 +14,42 @@ from src.strategies.signal import Signal
 from .trade import Trade
 
 
+def _pip_size(config: StrategyConfig) -> float:
+    return float(
+        config.strategy.get(
+            "pip_size",
+            config.broker_execution_guardrails.get("pip_size", 0.01),
+        )
+    )
+
+
+def _fixed_take_profit_settings(config: StrategyConfig) -> dict:
+    settings = config.exit.get("fixed_take_profit", {}) or {}
+    return settings if settings.get("enabled") else {}
+
+
+def _target_price(entry: float, initial_risk: float, is_long: bool, config: StrategyConfig) -> float:
+    fixed_tp = _fixed_take_profit_settings(config)
+    direction = 1 if is_long else -1
+    if fixed_tp:
+        target_pips = float(fixed_tp["target_pips"])
+        return entry + (target_pips * _pip_size(config) * direction)
+    return entry + (initial_risk * config.exit["runner"]["final_target_r"] * direction)
+
+
+def _guardrail_settings_for_target(config: StrategyConfig) -> dict:
+    fixed_tp = _fixed_take_profit_settings(config)
+    if fixed_tp.get("execution_mode") != "managed_market_close":
+        return config.broker_execution_guardrails
+    settings = deepcopy(config.broker_execution_guardrails)
+    distance = settings.get("broker_distance_rules", {})
+    distance["reject_if_take_profit_distance_below_broker_minimum"] = False
+    settings["broker_distance_rules"] = distance
+    return settings
+
+
 def evaluate_executable_entry_guardrail(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig):
-    settings = config.broker_execution_guardrails
+    settings = _guardrail_settings_for_target(config)
     if not settings.get("enabled"):
         return None
     future = ticks.filter(pl.col("timestamp_utc") > signal.timestamp_utc)
@@ -25,10 +60,14 @@ def evaluate_executable_entry_guardrail(signal: Signal, ticks: pl.DataFrame, con
     is_long = signal.direction == "LONG"
     entry = first["ask"] + slip if is_long else first["bid"] - slip
     initial_risk = abs(entry - signal.proposed_stop)
-    target = entry + initial_risk * config.exit["runner"]["final_target_r"] * (1 if is_long else -1)
-    return evaluate_proposed_signal(
+    target = _target_price(entry, initial_risk, is_long, config)
+    decision = evaluate_proposed_signal(
         first["timestamp_utc"], entry, signal.proposed_stop, target, first["spread_pips"], settings
     )
+    fixed_tp = _fixed_take_profit_settings(config)
+    if fixed_tp.get("execution_mode") == "managed_market_close":
+        decision.warnings.append("WARN_FIXED_TP_MANAGED_MARKET_CLOSE_NOT_ATTACHED_LIMIT")
+    return decision
 
 
 def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, balance: float) -> Trade | None:
@@ -44,12 +83,21 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
     if initial_risk <= 0:
         return None
     size, risk_amount = position_size(balance, config.risk["risk_per_trade_percent"], entry, stop)
+    fixed_tp_cfg = _fixed_take_profit_settings(config)
     partial_cfg = config.exit["partial_take_profit"]
     be_cfg = config.exit["move_stop_to_breakeven"]
-    final_r = config.exit["runner"]["final_target_r"]
+    partial_enabled = bool(partial_cfg["enabled"]) and not (
+        fixed_tp_cfg and fixed_tp_cfg.get("disable_partial_take_profit", True)
+    )
+    breakeven_enabled = bool(be_cfg["enabled"]) and not (
+        fixed_tp_cfg and fixed_tp_cfg.get("disable_move_stop_to_breakeven", True)
+    )
+    runner_enabled = bool(config.exit["runner"]["enabled"]) and not (
+        fixed_tp_cfg and fixed_tp_cfg.get("disable_runner", True)
+    )
     price_tolerance = config.forensics.get("stop_audit", {}).get("tolerance_price", 0.000001)
     weekend = WeekendPolicy(config.weekend_policy)
-    target = entry + (initial_risk * final_r * (1 if is_long else -1))
+    target = _target_price(entry, initial_risk, is_long, config)
     remaining, realized, partials = 1.0, 0.0, []
     stop_history = [{"timestamp": first["timestamp_utc"], "price": stop, "reason": "initial"}]
     trailing_history = []
@@ -173,17 +221,17 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
             reason = intraday.get("force_close_reason", "INTRADAY_FUNDING_AVOIDANCE_CLOSE")
             exit_row, exit_price = row, close_side - slip if is_long else close_side + slip
             break
-        if be_cfg["enabled"] and move >= initial_risk * be_cfg["after_r"]:
+        if breakeven_enabled and move >= initial_risk * be_cfg["after_r"]:
             candidate = max(final_stop, entry) if is_long else min(final_stop, entry)
             if try_amend_stop(candidate, row, "breakeven"):
                 breakeven_timestamp = row["timestamp_utc"]
-        if partial_cfg["enabled"] and remaining == 1.0 and move >= initial_risk * partial_cfg["at_r"]:
+        if partial_enabled and remaining == 1.0 and move >= initial_risk * partial_cfg["at_r"]:
             fraction = partial_cfg["close_percent"] / 100
             realized += move * size * fraction
             remaining -= fraction
             partial_close_request_count += 1
             partials.append({"timestamp": row["timestamp_utc"], "price": close_side, "fraction": fraction})
-        if config.exit["runner"]["enabled"] and remaining < 1.0:
+        if runner_enabled and remaining < 1.0:
             trail_distance = signal.indicator_snapshot.get(
                 "atr", signal.indicator_snapshot.get("atr_14", initial_risk)
             ) * config.exit["runner"]["trailing_stop"]["atr_multiplier"]
@@ -252,6 +300,12 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         exit_price = exit_row["bid"] if is_long else exit_row["ask"]
     realized += (exit_price - entry) * (1 if is_long else -1) * size * remaining
     duration = (exit_row["timestamp_utc"] - first["timestamp_utc"]).total_seconds()
+    notes = []
+    if fixed_tp_cfg:
+        notes.append(f"fixed_take_profit_pips={fixed_tp_cfg['target_pips']}")
+        notes.append(f"fixed_take_profit_execution_mode={fixed_tp_cfg.get('execution_mode', 'attached_limit')}")
+    if weekend.enabled:
+        notes.append(f"weekend_policy={weekend.policy_name}")
     trade = Trade(
         str(uuid4()), signal.signal_id, signal.symbol, signal.direction, first["timestamp_utc"],
         exit_row["timestamp_utc"], entry, exit_price, stop, final_stop, target, size, risk_amount,
@@ -274,7 +328,7 @@ def execute_signal(signal: Signal, ticks: pl.DataFrame, config: StrategyConfig, 
         stop_amend_skipped_count=stop_amend_skipped_count,
         stop_amend_skip_reasons=stop_amend_skip_reasons,
         partial_close_request_count=partial_close_request_count,
-        notes=f"weekend_policy={weekend.policy_name}" if weekend.enabled else "",
+        notes=";".join(notes),
     )
     for event in trade.weekend_policy_events:
         event["trade_id"] = trade.trade_id

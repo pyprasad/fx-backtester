@@ -344,7 +344,7 @@ class IGDemoBotRunner:
         indicator = signal.get("indicator_snapshot") or {}
         entry = self._scaled_confirmation_level(execution.get("confirmation"), self.price_state.latest_tick.bid)
         initial_stop = float(signal["proposed_stop"])
-        target = float(signal["proposed_target"])
+        target = float(order.limit_level if order.limit_level is not None else signal["proposed_target"])
         manager = IGTradeLifecycleManager(config=self.runtime_config.model_dump(), pip_size=self.market_rules.pip_size)
         manager.attach(ManagedPosition(
             deal_id=execution["deal_id"],

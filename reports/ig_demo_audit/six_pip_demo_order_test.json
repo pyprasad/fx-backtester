@@ -1,0 +1,99 @@
+{
+  "created_at": "2026-07-15T22:36:30.722394+00:00",
+  "environment": "DEMO",
+  "execution_type": "SIX_PIP_ATTACHED_STOP_LIMIT_DEMO_TEST",
+  "strategy_signal_used": false,
+  "epic": "CS.D.USDJPY.TODAY.IP",
+  "direction": "BUY",
+  "distance_pips": 6.0,
+  "market_rules": {
+    "status": "TRADEABLE",
+    "currency": "GBP",
+    "unit": "AMOUNT",
+    "min_stop_distance_pips": 6.0,
+    "min_limit_distance_pips": 6.0,
+    "min_deal_size": 0.04
+  },
+  "open_positions_for_epic_before_order": 0,
+  "dry_run_order": {
+    "payload": {
+      "deal_reference": "dry-88c9c8c8eabf4c539eec8c0e3",
+      "epic": "CS.D.USDJPY.TODAY.IP",
+      "direction": "BUY",
+      "size": 0.04,
+      "order_type": "MARKET",
+      "level": null,
+      "stop_distance": 6.0,
+      "stop_level": null,
+      "limit_distance": 6.0,
+      "limit_level": null,
+      "currency": "GBP",
+      "force_open": true,
+      "guaranteed_stop": false,
+      "time_in_force": "FILL_OR_KILL",
+      "expiry": "DFB",
+      "dry_run_only": true
+    },
+    "validation_status": "READY_FOR_DEMO_DRY_RUN",
+    "validation_errors": [],
+    "validation_warnings": []
+  },
+  "order_sent": true,
+  "execution": {
+    "submitted_at": "2026-07-15T22:36:30.820611+00:00",
+    "environment": "DEMO",
+    "execution_type": "MINIMUM_SIZE_EXECUTION_PLUMBING_TEST",
+    "strategy_signal_used": false,
+    "deal_reference": "demo-88c9c8c8eabf4c539eec8c0e3",
+    "deal_id": "DIAAAAX26LF9UAN",
+    "deal_status": "ACCEPTED",
+    "reason": "SUCCESS",
+    "confirmed": true,
+    "accepted": true,
+    "request": {
+      "currencyCode": "GBP",
+      "dealReference": "demo-88c9c8c8eabf4c539eec8c0e3",
+      "direction": "BUY",
+      "epic": "CS.D.USDJPY.TODAY.IP",
+      "expiry": "DFB",
+      "forceOpen": true,
+      "guaranteedStop": false,
+      "limitDistance": 6.0,
+      "orderType": "MARKET",
+      "size": 0.04,
+      "stopDistance": 6.0,
+      "timeInForce": "FILL_OR_KILL",
+      "trailingStop": false
+    },
+    "submission_response": {
+      "dealReference": "demo-88c9c8c8eabf4c539eec8c0e3"
+    },
+    "confirmation": {
+      "date": "2026-07-15T22:36:30.859",
+      "status": "OPEN",
+      "reason": "SUCCESS",
+      "dealStatus": "ACCEPTED",
+      "epic": "CS.D.USDJPY.TODAY.IP",
+      "expiry": "DFB",
+      "dealReference": "demo-88c9c8c8eabf4c539eec8c0e3",
+      "dealId": "DIAAAAX26LF9UAN",
+      "affectedDeals": [
+        {
+          "dealId": "DIAAAAX26LF9UAN",
+          "status": "OPENED"
+        }
+      ],
+      "level": 16214.7,
+      "size": 0.04,
+      "direction": "BUY",
+      "stopLevel": 16208.7,
+      "limitLevel": 16220.7,
+      "stopDistance": null,
+      "limitDistance": null,
+      "guaranteedStop": false,
+      "trailingStop": false,
+      "profit": null,
+      "profitCurrency": null
+    }
+  }
+}

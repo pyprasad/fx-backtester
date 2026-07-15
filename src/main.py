@@ -21,6 +21,7 @@ from src.broker.ig.ig_cli import (
     signal_dry_run_order as ig_signal_dry_run_order,
     stream_ticks as ig_stream_ticks,
 )
+from src.broker.ig.ig_live_signal import runtime_config_from_contract
 from src.broker.ig.telegram_controller import run_webhook_controller as ig_telegram_controller
 from src.config.config_loader import (
     apply_data_quality_overrides,
@@ -95,9 +96,34 @@ def add_data_overrides(parser):
 
 
 def add_strategy_overrides(parser):
+    parser.add_argument(
+        "--strategy-contract-config",
+        help=(
+            "Apply a versioned strategy contract, such as the intraday DEMO contract, "
+            "on top of --config before running the command."
+        ),
+    )
     parser.add_argument("--normalised-tick-path", help="Override strategy normalized Parquet input")
     parser.add_argument("--candle-path", help="Override candle output/input directory")
     parser.add_argument("--report-output-path", help="Override backtest report parent directory")
+    parser.add_argument(
+        "--fixed-take-profit-pips",
+        type=float,
+        help=(
+            "Research-only override: use an absolute fixed take-profit in pips "
+            "and disable partial TP, breakeven, and ATR runner exits."
+        ),
+    )
+    parser.add_argument(
+        "--fixed-take-profit-execution-mode",
+        choices=["attached_limit", "managed_market_close"],
+        default="attached_limit",
+        help=(
+            "attached_limit enforces broker minimum TP distance. managed_market_close "
+            "simulates bot-managed market close at the fixed TP and skips only the "
+            "attached-limit minimum TP rejection."
+        ),
+    )
 
 
 def add_news_guard_overrides(parser):
@@ -134,11 +160,20 @@ def data_config(args, path):
 
 
 def strategy_config(args, path):
+    contract_path = getattr(args, "strategy_contract_config", None)
+    if contract_path:
+        config, _ = runtime_config_from_contract(contract_path, path)
+    else:
+        config = load_strategy_config(path)
     config = apply_strategy_overrides(
-        load_strategy_config(path),
+        config,
         normalised_tick_path=getattr(args, "normalised_tick_path", None),
         candle_path=getattr(args, "candle_path", None),
         report_output_path=getattr(args, "report_output_path", None),
+        fixed_take_profit_pips=getattr(args, "fixed_take_profit_pips", None),
+        fixed_take_profit_execution_mode=getattr(
+            args, "fixed_take_profit_execution_mode", "attached_limit"
+        ),
         news_guard_enabled=getattr(args, "news_guard_enabled", None),
         news_calendar_file=getattr(args, "news_calendar_file", None),
         news_before_minutes=getattr(args, "news_before_minutes", None),

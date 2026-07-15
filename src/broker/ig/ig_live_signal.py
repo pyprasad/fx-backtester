@@ -227,6 +227,19 @@ def runtime_config_from_contract(contract_path: str | Path, runtime_config_path:
     config.exit["move_stop_to_breakeven"]["after_r"] = contract["risk_management"]["move_to_breakeven_after_r"]
     config.exit["runner"]["final_target_r"] = contract["risk_management"]["final_target_r"]
     config.exit["runner"]["trailing_stop"]["atr_multiplier"] = contract["risk_management"]["trailing_atr_multiplier"]
+    fixed_take_profit_pips = contract["risk_management"].get("fixed_take_profit_pips")
+    if fixed_take_profit_pips is not None:
+        config.exit["fixed_take_profit"] = {
+            "enabled": True,
+            "target_pips": float(fixed_take_profit_pips),
+            "execution_mode": contract["risk_management"].get("take_profit_execution_mode", "attached_limit"),
+            "disable_partial_take_profit": True,
+            "disable_move_stop_to_breakeven": True,
+            "disable_runner": True,
+        }
+        config.exit["partial_take_profit"]["enabled"] = False
+        config.exit["move_stop_to_breakeven"]["enabled"] = False
+        config.exit["runner"]["enabled"] = False
     config.max_trade_duration_days = contract["risk_management"]["maximum_trade_duration_days"]
     config.execution["default_slippage_points"] = contract["execution"].get(
         "default_slippage_price_points",
@@ -312,6 +325,10 @@ def _executable_target_from_tick(signal, tick, contract: dict) -> float:
     direction = "SELL" if signal.direction == "SHORT" else "BUY"
     is_short = direction == "SELL"
     entry = tick.bid if is_short else tick.ask
+    fixed_take_profit_pips = contract["risk_management"].get("fixed_take_profit_pips")
+    if fixed_take_profit_pips is not None:
+        distance = float(fixed_take_profit_pips) * float(contract["strategy"]["pip_size"])
+        return entry - distance if is_short else entry + distance
     risk = abs(signal.proposed_stop - entry)
     target_r = float(contract["risk_management"]["final_target_r"])
     return entry - risk * target_r if is_short else entry + risk * target_r

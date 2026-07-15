@@ -39,6 +39,61 @@ A future real-money IG LIVE port must follow the staged production contract in
 [`docs/broker/ig_live_production_port_plan.md`](docs/broker/ig_live_production_port_plan.md).
 Changing `.env` values alone is not a supported production-trading path.
 
+## Fixed Take-Profit Research Variant
+
+The fixed take-profit experiment is research-only and does not replace any selected baseline or
+DEMO validation contract. Use `--strategy-contract-config` when the test must match a versioned
+contract such as the intraday Docker strategy. That keeps the same signals, sessions, long/short
+mode, executable bid/ask entry pricing, calculated initial stop, broker guardrails, slippage,
+intraday close policy, news guard, and weekend policy, but exits at an absolute take-profit
+distance such as `3`, `4`, or `5` pips. When this override is enabled, partial take-profit,
+breakeven stop movement, and the ATR runner are disabled so the result is a clean fixed-target
+test.
+
+For short trades, the fixed target is hit only when the executable ask reaches the target. For long
+trades, the executable bid must reach the target.
+
+The intraday IG6 contract requires a 6-pip minimum attached take-profit distance. To research 3-5
+pip exits, use `--fixed-take-profit-execution-mode managed_market_close`; this simulates a
+bot-managed market close when the fixed TP is reached and skips only the attached-limit minimum TP
+rejection. It is not equivalent to placing an attached IG limit order.
+
+Example local runs using the Dukascopy tick folder:
+
+```bash
+INTRADAY_CONTRACT=config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_long_short_demo.yaml
+RUNTIME_CONFIG=config/strategy.usdjpy.fx_swing_trend_reclaim.yaml
+TICK_DATA=/Users/my/mayu_solutions/duka-range/data/usdjpy/ticks
+NORMALISED=data/normalised_ticks/USDJPY_2021_2026.parquet
+CANDLES=data/candles/USDJPY_2021_2026_intraday_fixed_tp
+
+PYTHONPATH=. .venv/bin/python -m src.main normalise \
+  --config config/data_quality.usdjpy.yaml \
+  --raw-tick-path "$TICK_DATA" \
+  --file-pattern 'usdjpy_ticks_202[1-6].csv' \
+  --normalised-output-path "$NORMALISED" \
+  --overwrite
+
+PYTHONPATH=. .venv/bin/python -m src.main build-candles \
+  --config "$RUNTIME_CONFIG" \
+  --strategy-contract-config "$INTRADAY_CONTRACT" \
+  --normalised-tick-path "$NORMALISED" \
+  --candle-path "$CANDLES"
+
+for TP in 3 4 5; do
+  PYTHONPATH=. .venv/bin/python -m src.main backtest \
+    --config "$RUNTIME_CONFIG" \
+    --strategy-contract-config "$INTRADAY_CONTRACT" \
+    --normalised-tick-path "$NORMALISED" \
+    --candle-path "$CANDLES" \
+    --report-output-path reports/fixed_take_profit_research/intraday_tp_${TP}_pips \
+    --fixed-take-profit-pips "$TP" \
+    --fixed-take-profit-execution-mode managed_market_close
+done
+```
+
+Share each run folder and the `strategy_summary.csv` / `trade_log.csv` outputs for review.
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule
@@ -766,5 +821,33 @@ Stop containers:
 ```bash
 docker compose -f docker-compose.demo.yml down
 ```
+
+6-pip attached-limit DEMO validation run:
+
+```bash
+docker compose -f docker-compose.demo.6pip.yml build
+docker compose -f docker-compose.demo.6pip.yml up -d usdjpy-6pip-demo-bot
+docker compose -f docker-compose.demo.6pip.yml logs -f usdjpy-6pip-demo-bot
+```
+
+This uses
+`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml`,
+keeps the same intraday long/short signal rules, and places DEMO-only MARKET orders with attached
+6-pip stop and 6-pip limit distances when all guardrails pass. Check these files after a run:
+
+```bash
+cat reports/ig_demo_audit_6pip/bot_run_usdjpy.json
+cat reports/ig_demo_audit_6pip/signal_dry_run_order_usdjpy.json
+tail -n 50 reports/ig_demo_audit_6pip/bot_audit_events_usdjpy.jsonl
+```
+
+Stop the 6-pip DEMO container:
+
+```bash
+docker compose -f docker-compose.demo.6pip.yml down
+```
+
+Close or account for any manually placed USDJPY DEMO test position before starting the bot, because
+the strategy allows only one open position.
 
 Do not paste `docker compose config` output into chat or logs; it expands `.env.demo` secrets.

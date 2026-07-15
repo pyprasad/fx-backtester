@@ -97,6 +97,8 @@ def apply_strategy_overrides(
     normalised_tick_path: str | None = None,
     candle_path: str | None = None,
     report_output_path: str | None = None,
+    fixed_take_profit_pips: float | None = None,
+    fixed_take_profit_execution_mode: str = "attached_limit",
     news_guard_enabled: bool | None = None,
     news_calendar_file: str | None = None,
     news_before_minutes: int | None = None,
@@ -108,6 +110,21 @@ def apply_strategy_overrides(
         config.data["candle_path"] = candle_path
     if report_output_path:
         config.reporting["output_path"] = report_output_path
+    if fixed_take_profit_pips is not None:
+        if fixed_take_profit_pips <= 0:
+            raise ValueError("fixed_take_profit_pips must be greater than zero")
+        if fixed_take_profit_execution_mode not in {"attached_limit", "managed_market_close"}:
+            raise ValueError(
+                "fixed_take_profit_execution_mode must be attached_limit or managed_market_close"
+            )
+        config.exit["fixed_take_profit"] = {
+            "enabled": True,
+            "target_pips": fixed_take_profit_pips,
+            "execution_mode": fixed_take_profit_execution_mode,
+            "disable_partial_take_profit": True,
+            "disable_move_stop_to_breakeven": True,
+            "disable_runner": True,
+        }
     if news_guard_enabled is not None:
         config.news_guard["enabled"] = news_guard_enabled
     if news_calendar_file:

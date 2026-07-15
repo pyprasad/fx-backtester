@@ -20,6 +20,10 @@ def _intraday_strategy():
     return yaml.safe_load(open("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_long_short_demo.yaml"))
 
 
+def _six_pip_strategy():
+    return yaml.safe_load(open("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml"))
+
+
 def _rules(status="TRADEABLE", minimum=2):
     return extract_market_rules({
         "instrument": {"epic": "USDJPY", "name": "USD/JPY", "expiry": "-", "pipSize": .01},
@@ -121,3 +125,28 @@ def test_intraday_long_short_demo_validates_buy_stop_and_target_side():
 
     assert "LONG_STOP_MUST_BE_BELOW_ENTRY" in errors
     assert "LONG_TARGET_MUST_BE_ABOVE_ENTRY" in errors
+
+
+def test_six_pip_demo_contract_accepts_exact_ig_minimum_attached_limit_distance():
+    strategy = _six_pip_strategy()
+    rules = _rules(minimum=6)
+
+    sell = _order(
+        strategy=strategy,
+        rules=rules,
+        tick=_tick(hour=8, spread_pips=0.5),
+        signal={"direction": "SELL", "stop_price": 150.07, "target_price": 149.94},
+    )
+    buy = _order(
+        strategy=strategy,
+        rules=rules,
+        tick=_tick(hour=8, spread_pips=0.5),
+        signal={"direction": "BUY", "stop_price": 149.94, "target_price": 150.065},
+    )
+
+    assert sell.validation_status == "READY_FOR_DEMO_DRY_RUN"
+    assert sell.limit_distance == 6.0
+    assert sell.stop_distance == 7.0
+    assert buy.validation_status == "READY_FOR_DEMO_DRY_RUN"
+    assert buy.limit_distance == 6.0
+    assert buy.stop_distance == 6.5
