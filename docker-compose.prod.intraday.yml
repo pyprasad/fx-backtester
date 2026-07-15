@@ -20,6 +20,9 @@ services:
       NEWS_GUARD_FORWARD_DAYS: "21"
       NEWS_GUARD_MIN_FORWARD_DAYS: "7"
       # Fail-closed prod server defaults. This repository still supports IG DEMO only.
+      IG_ENV: DEMO
+      IG_ACC_TYPE: DEMO
+      IG_REST_BASE_URL: https://demo-api.ig.com/gateway/deal
       BOT_CONFIRM: ""
       IG_ORDER_EXECUTION_ENABLED: "false"
       IG_DRY_RUN_ONLY: "true"

@@ -35,6 +35,10 @@ The documentation package starts at
 Gate; no live trading is included. DEMO order placement is disabled by default and restricted to
 an explicitly confirmed DEMO execution-plumbing test.
 
+A future real-money IG LIVE port must follow the staged production contract in
+[`docs/broker/ig_live_production_port_plan.md`](docs/broker/ig_live_production_port_plan.md).
+Changing `.env` values alone is not a supported production-trading path.
+
 ## FX-2I: IG DEMO Integration Foundation
 
 FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule
