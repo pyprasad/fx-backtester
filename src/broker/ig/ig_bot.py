@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, time as datetime_time, timedelta, timezone
 from pathlib import Path
 from threading import Lock
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from .ig_candle_cache import CandleCachePaths, load_cached_candles, refresh_candle_cache
@@ -16,7 +17,7 @@ from .ig_live_signal import (
 )
 from .ig_market_rules import extract_market_rules
 from .ig_streaming_client import IGStreamingClient
-from .ig_subscriptions import PriceUpdateListener, TradeUpdateListener
+from .ig_subscriptions import ChartTickListener, PriceUpdateListener, TradeUpdateListener
 from .ig_trade_lifecycle import (
     IGTradeLifecycleExecutor,
     IGTradeLifecycleManager,
@@ -40,6 +41,7 @@ class BotPriceState:
 class BotRunResult:
     status: str
     started_at: str
+    run_id: str | None = None
     completed_at: str | None = None
     tick_count: int = 0
     last_evaluated_candle: str | None = None
@@ -88,11 +90,21 @@ def within_run_duration(started: datetime, duration_seconds: int, monotonic_dead
 
 
 class SessionProgressTracker:
-    def __init__(self, *, windows: list[dict], audit_output: str | Path, telegram: TelegramNotifier):
+    def __init__(
+        self,
+        *,
+        windows: list[dict],
+        audit_output: str | Path,
+        telegram: TelegramNotifier,
+        run_id: str | None = None,
+        run_started_at: str | None = None,
+    ):
         self.windows = windows
         self.audit_output = audit_output
         self.telegram = telegram
         self.active_names: set[str] | None = None
+        self.run_id = run_id
+        self.run_started_at = run_started_at
 
     def check(self, now_utc: datetime | None = None) -> None:
         now_utc = now_utc or datetime.now(timezone.utc)
@@ -125,7 +137,7 @@ class SessionProgressTracker:
             now_utc.isoformat(),
             names,
         )
-        write_bot_audit_event(self.audit_output, {
+        self._write_audit({
             "event": "SESSION_STATUS",
             "utc": now_utc.isoformat(),
             "active_sessions": [item["name"] for item in active],
@@ -143,7 +155,7 @@ class SessionProgressTracker:
             window["start"],
             window["end"],
         )
-        write_bot_audit_event(self.audit_output, {
+        self._write_audit({
             "event": event,
             "session": window["name"],
             "utc": now_utc.isoformat(),
@@ -162,14 +174,34 @@ class SessionProgressTracker:
             category="system",
         )
 
+    def _write_audit(self, event: dict) -> Path:
+        return write_bot_audit_event(
+            self.audit_output,
+            event,
+            run_id=self.run_id,
+            run_started_at=self.run_started_at,
+        )
 
-def write_bot_audit_event(output: str | Path, event: dict) -> Path:
+
+def write_bot_audit_event(
+    output: str | Path,
+    event: dict,
+    *,
+    run_id: str | None = None,
+    run_started_at: str | None = None,
+) -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     path = output / "bot_audit_events_usdjpy.jsonl"
+    run_context = {}
+    if run_id:
+        run_context["run_id"] = run_id
+    if run_started_at:
+        run_context["run_started_at"] = run_started_at
     with path.open("a") as handle:
         handle.write(json.dumps({
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            **run_context,
             **event,
         }, default=str) + "\n")
     return path
@@ -215,6 +247,8 @@ class IGDemoBotRunner:
         self.telegram = TelegramNotifier(config)
         self._last_control_state = "ACTIVE"
         self._lock = Lock()
+        self.run_id: str | None = None
+        self.run_started_at: str | None = None
 
     def _write_run_snapshot(self, result: BotRunResult) -> Path:
         result.tick_count = self.price_state.tick_count
@@ -223,6 +257,14 @@ class IGDemoBotRunner:
         result.reports["bot_run"] = str(report)
         report.write_text(json.dumps(result.__dict__, indent=2, default=str))
         return report
+
+    def _write_audit_event(self, event: dict) -> Path:
+        return write_bot_audit_event(
+            self.config.audit_output_path,
+            event,
+            run_id=self.run_id,
+            run_started_at=self.run_started_at,
+        )
 
     def _on_tick(self, tick: InternalTick) -> None:
         with self._lock:
@@ -234,7 +276,7 @@ class IGDemoBotRunner:
             if self.lifecycle_manager:
                 self.lifecycle_manager.on_tick(tick)
         if first_tick:
-            write_bot_audit_event(self.config.audit_output_path, {
+            self._write_audit_event({
                 "event": "FIRST_TICK",
                 "epic": tick.epic,
                 "bid": tick.bid,
@@ -248,7 +290,7 @@ class IGDemoBotRunner:
             if self.lifecycle_manager:
                 self.lifecycle_manager.on_trade_update(update_type, payload)
                 self.lifecycle_writer.write(self.lifecycle_manager)
-        write_bot_audit_event(self.config.audit_output_path, {
+        self._write_audit_event({
             "event": "TRADE_STREAM_UPDATE",
             "update_type": update_type,
             "payload": payload,
@@ -268,7 +310,35 @@ class IGDemoBotRunner:
                 )
 
     def _audit_streaming_event(self, event: dict) -> None:
-        write_bot_audit_event(self.config.audit_output_path, event)
+        self._write_audit_event(event)
+
+    def _subscribe_price_stream(self, streaming: IGStreamingClient) -> None:
+        mode = self.config.streaming_mode.upper()
+        if mode == "CHART_TICK":
+            streaming.subscribe_chart_ticks(
+                self.epic,
+                ChartTickListener(
+                    self.epic,
+                    self._on_tick,
+                    self.market_rules.pip_size,
+                    self.config.price_scale_divisor,
+                    event_callback=self._audit_streaming_event,
+                ),
+            )
+            return
+        if mode == "PRICE":
+            streaming.subscribe_price(
+                self.epic,
+                PriceUpdateListener(
+                    self.epic,
+                    self._on_tick,
+                    self.market_rules.pip_size,
+                    self.config.price_scale_divisor,
+                    event_callback=self._audit_streaming_event,
+                ),
+            )
+            return
+        raise ValueError(f"Unsupported IG streaming mode: {self.config.streaming_mode}")
 
     def _prepare(self) -> dict:
         self.runtime_config, self.contract = runtime_config_from_contract(
@@ -321,7 +391,19 @@ class IGDemoBotRunner:
                 execution_tick=self.price_state.latest_tick,
             )
         report = write_signal_dry_run_report(self.config.audit_output_path, result)
-        write_bot_audit_event(self.config.audit_output_path, {
+        logger.info(
+            "IG bot signal evaluated | run_id=%s | candle=%s | status=%s | "
+            "current_signal=%s | dry_run_status=%s | order_sent=false",
+            self.run_id,
+            candle.isoformat(),
+            result["status"],
+            bool(result.get("current_signal")),
+            (
+                result.get("dry_run_order", {}).get("validation_status")
+                if result.get("dry_run_order") else None
+            ),
+        )
+        self._write_audit_event({
             "event": "SIGNAL_EVALUATED",
             "candle": candle.isoformat(),
             "status": result["status"],
@@ -370,7 +452,7 @@ class IGDemoBotRunner:
             price_scale_divisor=self.config.price_scale_divisor,
         )
         path = self.lifecycle_writer.write(manager)
-        write_bot_audit_event(self.config.audit_output_path, {
+        self._write_audit_event({
             "event": "LIFECYCLE_MANAGER_ATTACHED",
             "deal_id": execution["deal_id"],
             "report": str(path),
@@ -393,7 +475,7 @@ class IGDemoBotRunner:
         execution["signal"] = result.get("current_signal")
         self._attach_lifecycle_manager(result, execution, order)
         report = write_demo_execution_report(self.config.audit_output_path, execution)
-        write_bot_audit_event(self.config.audit_output_path, {
+        self._write_audit_event({
             "event": "ORDER_SUBMITTED",
             "deal_reference": execution.get("deal_reference"),
             "deal_id": execution.get("deal_id"),
@@ -427,7 +509,7 @@ class IGDemoBotRunner:
             with self._lock:
                 self.lifecycle_manager.mark_action_applied(action, result)
                 report = self.lifecycle_writer.write(self.lifecycle_manager)
-            write_bot_audit_event(self.config.audit_output_path, {
+            self._write_audit_event({
                 "event": "LIFECYCLE_ACTION_SUBMITTED",
                 "action": action.action_type,
                 "reason": action.reason,
@@ -454,7 +536,7 @@ class IGDemoBotRunner:
                     report = self.lifecycle_writer.write(self.lifecycle_manager)
                 else:
                     report = None
-            write_bot_audit_event(self.config.audit_output_path, {
+            self._write_audit_event({
                 "event": "LIFECYCLE_ACTION_FAILED",
                 "action": action.action_type,
                 "reason": action.reason,
@@ -478,7 +560,7 @@ class IGDemoBotRunner:
         state = control_state(self.config.telegram_control_path)
         if state != self._last_control_state:
             self._last_control_state = state
-            write_bot_audit_event(self.config.audit_output_path, {
+            self._write_audit_event({
                 "event": "CONTROL_STATE_CHANGED",
                 "state": state,
                 "control_path": str(self.config.telegram_control_path),
@@ -488,7 +570,13 @@ class IGDemoBotRunner:
 
     def run(self, *, duration_seconds: int, execute_confirmation: str | None = None) -> BotRunResult:
         started = datetime.now(timezone.utc)
-        result = BotRunResult(status="RUNNING", started_at=started.isoformat())
+        self.run_id = uuid4().hex
+        self.run_started_at = started.isoformat()
+        result = BotRunResult(
+            status="RUNNING",
+            started_at=self.run_started_at,
+            run_id=self.run_id,
+        )
         self._write_run_snapshot(result)
         self.telegram.send(
             "\n".join([
@@ -500,7 +588,7 @@ class IGDemoBotRunner:
             category="system",
         )
         cache_summary = self._prepare()
-        write_bot_audit_event(self.config.audit_output_path, {
+        self._write_audit_event({
             "event": "CANDLE_CACHE_READY",
             "cache": cache_summary,
         })
@@ -515,19 +603,12 @@ class IGDemoBotRunner:
             windows=self.contract["entry_rules"]["allowed_sessions"],
             audit_output=self.config.audit_output_path,
             telegram=self.telegram,
+            run_id=self.run_id,
+            run_started_at=self.run_started_at,
         )
         try:
             streaming.connect()
-            streaming.subscribe_price(
-                self.epic,
-                PriceUpdateListener(
-                    self.epic,
-                    self._on_tick,
-                    self.market_rules.pip_size,
-                    self.config.price_scale_divisor,
-                    event_callback=self._audit_streaming_event,
-                ),
-            )
+            self._subscribe_price_stream(streaming)
             streaming.subscribe_trade_updates(TradeUpdateListener(
                 self._on_trade_update,
                 event_callback=self._audit_streaming_event,
@@ -575,7 +656,7 @@ class IGDemoBotRunner:
                     self._write_run_snapshot(result)
                     next_status_snapshot = time.monotonic() + 30
                 if not self.price_state.latest_tick and time.monotonic() >= next_no_tick_warning:
-                    write_bot_audit_event(self.config.audit_output_path, {
+                    self._write_audit_event({
                         "event": "NO_PRICE_TICK_YET",
                         "streaming_status": streaming.status.value,
                         "tick_count": self.price_state.tick_count,

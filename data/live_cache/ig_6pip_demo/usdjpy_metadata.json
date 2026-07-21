@@ -1,35 +1,35 @@
 {
   "epic": "CS.D.USDJPY.TODAY.IP",
-  "refreshed_at": "2026-07-15T23:26:53.431925+00:00",
-  "history_points": 1000,
+  "refreshed_at": "2026-07-21T13:00:02.423232+00:00",
+  "history_points": 5,
   "keep_last": 1000,
   "timeframes": {
     "HOUR": {
       "path": "data/live_cache/ig_6pip_demo/usdjpy_hour.parquet",
-      "rows": 999,
-      "latest_timestamp": "2026-07-15T22:00:00+00:00",
+      "rows": 1000,
+      "latest_timestamp": "2026-07-21T12:00:00+00:00",
       "rate_limited_using_existing_cache": false,
       "used_existing_cache": false,
       "fallback_reason": null,
-      "request_points": 1000,
+      "request_points": 3,
       "request_plan": {
-        "reason": "bootstrap_no_existing_cache",
-        "latest_cached_timestamp": null,
-        "target_closed_hour": null,
-        "missing_hours_estimate": null,
+        "reason": "incremental_from_existing_cache",
+        "latest_cached_timestamp": "2026-07-21T11:00:00+00:00",
+        "target_closed_hour": "2026-07-21T12:00:00+00:00",
+        "missing_hours_estimate": 1,
         "overlap_hours": 2
       },
-      "incoming_rows": 999,
+      "incoming_rows": 2,
       "conversion_quality": {
-        "total_prices": 1000,
-        "valid_prices": 1000,
+        "total_prices": 3,
+        "valid_prices": 3,
         "skipped_missing_bid_ask": 0
       }
     },
     "HOUR_4": {
       "path": "data/live_cache/ig_6pip_demo/usdjpy_hour_4.parquet",
-      "rows": 256,
-      "latest_timestamp": "2026-07-15T20:00:00+00:00",
+      "rows": 257,
+      "latest_timestamp": "2026-07-21T12:00:00+00:00",
       "source": "derived_from_cached_hour_utc_anchor",
       "anchor_utc_hours": [
         0,

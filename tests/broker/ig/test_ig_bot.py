@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -53,6 +54,20 @@ def test_write_bot_audit_event_appends_jsonl(tmp_path):
     assert len(rows) == 2
     assert "SIGNAL_EVALUATED" in rows[0]
     assert "FIRST_TICK" in rows[1]
+
+
+def test_write_bot_audit_event_can_include_run_context(tmp_path):
+    path = write_bot_audit_event(
+        tmp_path,
+        {"event": "SIGNAL_EVALUATED", "status": "NO_SIGNAL"},
+        run_id="run-123",
+        run_started_at="2026-07-15T23:31:42+00:00",
+    )
+
+    row = json.loads(path.read_text())
+    assert row["run_id"] == "run-123"
+    assert row["run_started_at"] == "2026-07-15T23:31:42+00:00"
+    assert row["event"] == "SIGNAL_EVALUATED"
 
 
 def test_within_run_duration_respects_wall_clock_and_monotonic_deadlines():
@@ -144,10 +159,52 @@ def test_write_run_snapshot_updates_status_file(tmp_path):
         runtime_strategy_config="runtime.yaml",
     )
     runner.price_state.tick_count = 42
-    result = BotRunResult(status="RUNNING", started_at="2026-06-18T00:00:00+00:00")
+    result = BotRunResult(
+        status="RUNNING",
+        started_at="2026-06-18T00:00:00+00:00",
+        run_id="run-abc",
+    )
 
     path = runner._write_run_snapshot(result)
 
     assert path.exists()
     assert '"status": "RUNNING"' in path.read_text()
+    assert '"run_id": "run-abc"' in path.read_text()
     assert '"tick_count": 42' in path.read_text()
+
+
+def test_bot_subscribes_to_chart_tick_stream_when_configured(tmp_path):
+    class Streaming:
+        def __init__(self):
+            self.price_calls = []
+            self.chart_calls = []
+
+        def subscribe_price(self, epic, listener):
+            self.price_calls.append((epic, listener))
+
+        def subscribe_chart_ticks(self, epic, listener):
+            self.chart_calls.append((epic, listener))
+
+    config = SimpleNamespace(
+        audit_output_path=tmp_path / "audit",
+        price_scale_divisor=100,
+        streaming_mode="CHART_TICK",
+        telegram_enabled=False,
+    )
+    runner = IGDemoBotRunner(
+        config=config,
+        session=SimpleNamespace(),
+        client=SimpleNamespace(),
+        env_file=".env.demo",
+        strategy_path="contract.yaml",
+        epic="CS.D.USDJPY.TODAY.IP",
+        runtime_strategy_config="runtime.yaml",
+    )
+    runner.market_rules = SimpleNamespace(pip_size=0.01)
+    streaming = Streaming()
+
+    runner._subscribe_price_stream(streaming)
+
+    assert streaming.price_calls == []
+    assert len(streaming.chart_calls) == 1
+    assert streaming.chart_calls[0][0] == "CS.D.USDJPY.TODAY.IP"

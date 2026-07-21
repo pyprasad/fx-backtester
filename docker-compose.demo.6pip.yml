@@ -23,6 +23,7 @@ services:
       BOT_CONFIRM: "PLACE_DEMO_ORDER"
       IG_ORDER_EXECUTION_ENABLED: "true"
       IG_DRY_RUN_ONLY: "false"
+      IG_STREAMING_MODE: CHART_TICK
       IG_AUDIT_OUTPUT_PATH: reports/ig_demo_audit_6pip
       IG_TICK_OUTPUT_PATH: data/live_demo_ticks/usdjpy_6pip
       IG_TOKEN_CACHE_PATH: .runtime/ig_demo_6pip_session.json

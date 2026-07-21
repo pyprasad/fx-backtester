@@ -455,6 +455,15 @@ def write_live_signal_report(output: str | Path, result: dict) -> Path:
 def write_signal_dry_run_report(output: str | Path, result: dict) -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
+    last_signal = result.get("last_signal")
+    latest_closed = result.get("latest_closed_1h_candle")
+    last_signal_timestamp = last_signal.get("timestamp_utc") if last_signal else None
+    last_signal_is_current = bool(
+        result.get("current_signal")
+        and last_signal_timestamp
+        and latest_closed
+        and last_signal_timestamp == latest_closed
+    )
     payload = {
         "status": result["status"],
         "epic": result.get("epic"),
@@ -464,9 +473,14 @@ def write_signal_dry_run_report(output: str | Path, result: dict) -> Path:
         "current_signal": result.get("current_signal"),
         "dry_run_order": result.get("dry_run_order"),
         "order_sent": False,
+        "last_signal_is_current": last_signal_is_current,
+        "last_signal_note": (
+            "historical_context_only"
+            if last_signal and not last_signal_is_current else None
+        ),
     }
     if result.get("status") == "NO_SIGNAL":
-        payload["last_signal"] = result.get("last_signal")
+        payload["last_signal"] = last_signal
     path = output / "signal_dry_run_order_usdjpy.json"
     path.write_text(json.dumps(payload, indent=2, default=str))
     md = output / "signal_dry_run_order_usdjpy.md"

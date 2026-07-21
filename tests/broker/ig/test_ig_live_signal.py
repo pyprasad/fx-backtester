@@ -246,3 +246,27 @@ def test_write_signal_dry_run_report_never_marks_order_sent(tmp_path):
     assert payload["rejection_count"] == 5
     assert payload["dry_run_order"]["validation_status"] == "READY_FOR_DEMO_DRY_RUN"
     assert payload["order_sent"] is False
+
+
+def test_write_signal_dry_run_report_labels_old_last_signal_as_historical(tmp_path):
+    report = write_signal_dry_run_report(tmp_path, {
+        "status": "NO_SIGNAL",
+        "epic": "CS.D.USDJPY.TODAY.IP",
+        "latest_closed_1h_candle": "2026-07-16T10:00:00+00:00",
+        "signal_count": 17,
+        "rejection_count": 87,
+        "current_signal": None,
+        "dry_run_order": None,
+        "order_sent": False,
+        "last_signal": {
+            "timestamp_utc": "2026-07-15T07:00:00+00:00",
+            "direction": "LONG",
+        },
+    })
+
+    payload = json.loads(report.read_text())
+    assert payload["status"] == "NO_SIGNAL"
+    assert payload["current_signal"] is None
+    assert payload["last_signal"]["timestamp_utc"] == "2026-07-15T07:00:00+00:00"
+    assert payload["last_signal_is_current"] is False
+    assert payload["last_signal_note"] == "historical_context_only"
