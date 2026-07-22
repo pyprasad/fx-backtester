@@ -63,6 +63,11 @@ class IGDemoConfig:
     historical_account_id: str = ""
     historical_token_cache_enabled: bool = False
     historical_token_cache_path: Path = Path(".runtime/ig_demo_historical_session.json")
+    news_guard_calendar_refresh_enabled: bool = True
+    news_guard_calendar_forward_days: int = 21
+    news_guard_calendar_min_forward_days: int = 7
+    news_guard_calendar_refresh_minutes_before_session: int = 30
+    news_guard_calendar_cache_dir: Path = Path("data/macro_calendar/cache/nasdaq_live")
     telegram_enabled: bool = False
     telegram_bot_token: str = ""
     telegram_chat_id: str = ""
@@ -155,6 +160,13 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         historical_token_cache_path=Path(
             get("IG_HISTORICAL_TOKEN_CACHE_PATH", ".runtime/ig_demo_historical_session.json")
         ),
+        news_guard_calendar_refresh_enabled=_bool(get("NEWS_GUARD_CALENDAR_REFRESH_ENABLED", "true"), True),
+        news_guard_calendar_forward_days=int(get("NEWS_GUARD_FORWARD_DAYS", "21")),
+        news_guard_calendar_min_forward_days=int(get("NEWS_GUARD_MIN_FORWARD_DAYS", "7")),
+        news_guard_calendar_refresh_minutes_before_session=int(
+            get("NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION", "30")
+        ),
+        news_guard_calendar_cache_dir=Path(get("NEWS_GUARD_CACHE_DIR", "data/macro_calendar/cache/nasdaq_live")),
         telegram_enabled=_bool(get("TELEGRAM_ENABLED", "false"), False),
         telegram_bot_token=get("TELEGRAM_BOT_TOKEN"),
         telegram_chat_id=get("TELEGRAM_CHAT_ID"),
@@ -188,6 +200,12 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         raise ValueError("MARKET subscription is deprecated; use PRICE or CHART_TICK")
     if config.price_scale_divisor is not None and config.price_scale_divisor <= 0:
         raise ValueError("IG_PRICE_SCALE_DIVISOR must be greater than zero")
+    if config.news_guard_calendar_forward_days < config.news_guard_calendar_min_forward_days:
+        raise ValueError("NEWS_GUARD_FORWARD_DAYS must be >= NEWS_GUARD_MIN_FORWARD_DAYS")
+    if config.news_guard_calendar_min_forward_days < 1:
+        raise ValueError("NEWS_GUARD_MIN_FORWARD_DAYS must be at least 1")
+    if config.news_guard_calendar_refresh_minutes_before_session < 0:
+        raise ValueError("NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION must be >= 0")
     if config.historical_data_override_enabled and not all((
         config.historical_api_key, config.historical_username, config.historical_password,
     )):

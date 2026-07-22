@@ -8,6 +8,7 @@ import polars as pl
 from src.broker.ig.ig_bot import (
     BotRunResult,
     IGDemoBotRunner,
+    NewsCalendarRefreshGuard,
     active_session_windows,
     latest_closed_hour,
     within_run_duration,
@@ -106,6 +107,106 @@ def test_within_run_duration_zero_means_indefinite():
         now=datetime(2030, 1, 1, tzinfo=timezone.utc),
         monotonic_now=999999,
     )
+
+
+def test_news_calendar_refresh_guard_waits_until_before_first_session(tmp_path):
+    calendar = tmp_path / "events.csv"
+    calendar.write_text(
+        "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
+        "future,2026-07-31T10:00:00Z,United States,USD,CPI,HIGH,,,,test\n"
+    )
+    events = []
+    guard = NewsCalendarRefreshGuard(
+        config=SimpleNamespace(
+            news_guard_calendar_refresh_enabled=True,
+            news_guard_calendar_min_forward_days=7,
+            news_guard_calendar_refresh_minutes_before_session=30,
+        ),
+        contract={"news_guard": {"enabled": True, "calendar_file": str(calendar)}},
+        audit_callback=events.append,
+        first_session={"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+    )
+
+    assert guard.check(datetime(2026, 7, 22, 23, 29, tzinfo=timezone.utc))
+    assert events == []
+    assert guard.check(datetime(2026, 7, 22, 23, 30, tzinfo=timezone.utc))
+    assert events[0]["event"] == "NEWS_CALENDAR_REFRESH_CHECK"
+    assert events[0]["status"] == "CURRENT"
+    assert events[0]["session"] == "Tokyo"
+    assert events[0]["scheduled_refresh_at_utc"] == "2026-07-22T23:30:00+00:00"
+    assert events[0]["session_start_utc"] == "2026-07-23T00:00:00+00:00"
+
+
+def test_news_calendar_refresh_guard_refreshes_stale_calendar(tmp_path, monkeypatch):
+    calendar = tmp_path / "events.csv"
+    calendar.write_text(
+        "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
+        "old,2026-07-23T10:00:00Z,United States,USD,CPI,HIGH,,,,test\n"
+    )
+    events = []
+
+    def refresh(**kwargs):
+        calendar.write_text(
+            "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
+            "future,2026-08-10T10:00:00Z,United States,USD,CPI,HIGH,,,,test\n"
+        )
+        return {"status": "REFRESHED", "output": str(kwargs["output"])}
+
+    monkeypatch.setattr("src.broker.ig.ig_bot.refresh_calendar", refresh)
+    guard = NewsCalendarRefreshGuard(
+        config=SimpleNamespace(
+            news_guard_calendar_refresh_enabled=True,
+            news_guard_calendar_forward_days=21,
+            news_guard_calendar_min_forward_days=7,
+            news_guard_calendar_refresh_minutes_before_session=30,
+            news_guard_calendar_cache_dir=tmp_path / "cache",
+        ),
+        contract={"news_guard": {"enabled": True, "calendar_file": str(calendar)}},
+        audit_callback=events.append,
+        first_session={"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+    )
+
+    assert guard.check(datetime(2026, 7, 22, 23, 30, tzinfo=timezone.utc))
+    assert [event["event"] for event in events] == [
+        "NEWS_CALENDAR_REFRESH_CHECK",
+        "NEWS_CALENDAR_REFRESHED",
+    ]
+    assert events[0]["status"] == "STALE"
+    assert events[1]["status"] == "CURRENT"
+
+
+def test_news_calendar_refresh_guard_fails_closed_and_does_not_retry_same_day(tmp_path, monkeypatch):
+    calendar = tmp_path / "events.csv"
+    calendar.write_text(
+        "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
+        "old,2026-07-23T10:00:00Z,United States,USD,CPI,HIGH,,,,test\n"
+    )
+    events = []
+
+    def refresh(**_kwargs):
+        raise RuntimeError("network unavailable")
+
+    monkeypatch.setattr("src.broker.ig.ig_bot.refresh_calendar", refresh)
+    guard = NewsCalendarRefreshGuard(
+        config=SimpleNamespace(
+            news_guard_calendar_refresh_enabled=True,
+            news_guard_calendar_forward_days=21,
+            news_guard_calendar_min_forward_days=7,
+            news_guard_calendar_refresh_minutes_before_session=30,
+            news_guard_calendar_cache_dir=tmp_path / "cache",
+        ),
+        contract={"news_guard": {"enabled": True, "calendar_file": str(calendar)}},
+        audit_callback=events.append,
+        first_session={"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+    )
+
+    assert not guard.check(datetime(2026, 7, 22, 23, 30, tzinfo=timezone.utc))
+    assert not guard.check(datetime(2026, 7, 22, 23, 35, tzinfo=timezone.utc))
+    assert [event["event"] for event in events] == [
+        "NEWS_CALENDAR_REFRESH_CHECK",
+        "NEWS_CALENDAR_REFRESH_FAILED",
+    ]
+    assert events[-1]["status"] == "BLOCK_NEW_ENTRIES"
 
 
 def test_evaluate_blocks_when_target_candle_is_newer_than_cache(tmp_path, monkeypatch):

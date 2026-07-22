@@ -19,6 +19,9 @@ services:
       NEWS_GUARD_CALENDAR_FILE: data/macro_calendar/usd_jpy_events_live_nasdaq.csv
       NEWS_GUARD_FORWARD_DAYS: "21"
       NEWS_GUARD_MIN_FORWARD_DAYS: "7"
+      NEWS_GUARD_CALENDAR_REFRESH_ENABLED: "true"
+      NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION: "30"
+      NEWS_GUARD_CACHE_DIR: data/macro_calendar/cache/nasdaq_live
       # Explicit DEMO-only order placement. Keep .env.demo pointed at IG DEMO credentials.
       BOT_CONFIRM: "PLACE_DEMO_ORDER"
       IG_ORDER_EXECUTION_ENABLED: "true"

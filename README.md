@@ -844,6 +844,14 @@ cat reports/ig_demo_audit_6pip/signal_dry_run_order_usdjpy.json
 tail -n 50 reports/ig_demo_audit_6pip/bot_audit_events_usdjpy.jsonl
 ```
 
+The container checks the live Nasdaq USD/JPY calendar at startup and the running bot performs one
+calendar health/refresh check per trading day, 30 minutes before the first configured session
+(`Tokyo`, `09:00 Asia/Tokyo` in the 6-pip contract). The check requires at least 7 days of forward
+coverage and refreshes up to 21 days ahead if stale. Audit events are written as
+`NEWS_CALENDAR_REFRESH_CHECK`, `NEWS_CALENDAR_REFRESHED`, or `NEWS_CALENDAR_REFRESH_FAILED`; a failed
+or still-stale refresh blocks new signal evaluation with `BLOCKED_NEWS_CALENDAR_STALE` until the next
+daily check or restart.
+
 Stop the 6-pip DEMO container:
 
 ```bash

@@ -26,6 +26,7 @@ from .ig_trade_lifecycle import (
 )
 from .models import DryRunOrder, InternalTick
 from .telegram_notifier import TelegramNotifier, control_state
+from scripts.ensure_live_usdjpy_macro_calendar import calendar_status, refresh_calendar
 
 logger = logging.getLogger(__name__)
 
@@ -180,6 +181,133 @@ class SessionProgressTracker:
             event,
             run_id=self.run_id,
             run_started_at=self.run_started_at,
+        )
+
+
+class NewsCalendarRefreshGuard:
+    def __init__(
+        self,
+        *,
+        config,
+        contract: dict,
+        audit_callback,
+        first_session: dict,
+    ):
+        self.config = config
+        self.contract = contract
+        self.audit_callback = audit_callback
+        self.first_session = first_session
+        self.checked_keys: set[str] = set()
+        self.block_new_entries = False
+        self.last_status: dict | None = None
+
+    @property
+    def enabled(self) -> bool:
+        news_guard = self.contract.get("news_guard") or {}
+        return bool(
+            getattr(self.config, "news_guard_calendar_refresh_enabled", True)
+            and news_guard.get("enabled")
+            and news_guard.get("calendar_file")
+        )
+
+    @property
+    def calendar_path(self) -> Path:
+        path = Path(self.contract["news_guard"]["calendar_file"])
+        return path if path.is_absolute() else Path.cwd() / path
+
+    def _scheduled_key(self, now_utc: datetime) -> tuple[str, datetime, datetime] | None:
+        tz_name = self.first_session.get("timezone", "UTC")
+        local_now = now_utc.astimezone(ZoneInfo(tz_name))
+        session_date = local_now.date()
+        session_start = datetime.combine(
+            session_date,
+            _parse_hhmm(self.first_session["start"]),
+            ZoneInfo(tz_name),
+        )
+        refresh_at = session_start - timedelta(
+            minutes=getattr(self.config, "news_guard_calendar_refresh_minutes_before_session", 30)
+        )
+        if local_now < refresh_at:
+            return None
+        key = f"{self.first_session['name']}:{session_date.isoformat()}"
+        return key, refresh_at.astimezone(timezone.utc), session_start.astimezone(timezone.utc)
+
+    def check(self, now_utc: datetime | None = None) -> bool:
+        if not self.enabled:
+            return True
+        now_utc = now_utc or datetime.now(timezone.utc)
+        scheduled = self._scheduled_key(now_utc)
+        if scheduled is None:
+            return not self.block_new_entries
+        key, refresh_at_utc, session_start_utc = scheduled
+        if key in self.checked_keys:
+            return not self.block_new_entries
+
+        status = self._status(now_utc)
+        event = {
+            "event": "NEWS_CALENDAR_REFRESH_CHECK",
+            "status": "CURRENT" if status["covers_min_forward_window"] else "STALE",
+            "calendar_file": str(self.calendar_path),
+            "session": self.first_session["name"],
+            "scheduled_refresh_at_utc": refresh_at_utc.isoformat(),
+            "session_start_utc": session_start_utc.isoformat(),
+            **status,
+        }
+        self.audit_callback(event)
+        if status["covers_min_forward_window"]:
+            self.block_new_entries = False
+            self.checked_keys.add(key)
+            self.last_status = event
+            return True
+
+        try:
+            refreshed = refresh_calendar(
+                start_date=now_utc.date().isoformat(),
+                end_date=(now_utc.date() + timedelta(
+                    days=getattr(self.config, "news_guard_calendar_forward_days", 21)
+                )).isoformat(),
+                output=self.calendar_path,
+                cache_dir=getattr(
+                    self.config,
+                    "news_guard_calendar_cache_dir",
+                    Path("data/macro_calendar/cache/nasdaq_live"),
+                ),
+                refresh_cache=False,
+                sleep_seconds=0.25,
+                timeout_seconds=30,
+                retries=3,
+                retry_sleep_seconds=5.0,
+            )
+            status = self._status(now_utc)
+            event = {
+                "event": "NEWS_CALENDAR_REFRESHED",
+                "refresh": refreshed,
+                "status": "CURRENT" if status["covers_min_forward_window"] else "STALE_AFTER_REFRESH",
+                **status,
+            }
+            self.audit_callback(event)
+            self.block_new_entries = not status["covers_min_forward_window"]
+            self.checked_keys.add(key)
+            self.last_status = event
+            return not self.block_new_entries
+        except Exception as exc:
+            event = {
+                "event": "NEWS_CALENDAR_REFRESH_FAILED",
+                "status": "BLOCK_NEW_ENTRIES",
+                "calendar_file": str(self.calendar_path),
+                "error": str(exc),
+            }
+            self.audit_callback(event)
+            self.block_new_entries = True
+            self.checked_keys.add(key)
+            self.last_status = event
+            return False
+
+    def _status(self, now_utc: datetime) -> dict:
+        return calendar_status(
+            self.calendar_path,
+            now_utc=now_utc,
+            min_forward_days=getattr(self.config, "news_guard_calendar_min_forward_days", 7),
         )
 
 
@@ -606,6 +734,12 @@ class IGDemoBotRunner:
             run_id=self.run_id,
             run_started_at=self.run_started_at,
         )
+        calendar_guard = NewsCalendarRefreshGuard(
+            config=self.config,
+            contract=self.contract,
+            audit_callback=self._write_audit_event,
+            first_session=self.contract["entry_rules"]["allowed_sessions"][0],
+        )
         try:
             streaming.connect()
             self._subscribe_price_stream(streaming)
@@ -626,7 +760,33 @@ class IGDemoBotRunner:
                     result.status = "STOPPED_BY_CONTROL"
                     break
                 candle = latest_closed_hour()
+                calendar_ready = calendar_guard.check()
                 if state == "PAUSED":
+                    time.sleep(self.poll_seconds)
+                    continue
+                if not calendar_ready:
+                    if candle != last_evaluated:
+                        signal_result = {
+                            "status": "BLOCKED_NEWS_CALENDAR_STALE",
+                            "epic": self.epic,
+                            "latest_closed_1h_candle": candle.isoformat(),
+                            "order_sent": False,
+                            "news_calendar_status": calendar_guard.last_status,
+                        }
+                        report = write_signal_dry_run_report(
+                            self.config.audit_output_path,
+                            signal_result,
+                        )
+                        self._write_audit_event({
+                            "event": "SIGNAL_EVALUATION_BLOCKED",
+                            "reason": "NEWS_CALENDAR_STALE",
+                            "candle": candle.isoformat(),
+                            "report": str(report),
+                        })
+                        result.last_evaluated_candle = candle.isoformat()
+                        result.last_signal_result = signal_result
+                        last_evaluated = candle
+                        self._write_run_snapshot(result)
                     time.sleep(self.poll_seconds)
                     continue
                 if self.price_state.latest_tick and candle != last_evaluated:

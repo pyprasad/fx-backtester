@@ -109,3 +109,29 @@ def test_rejects_partial_historical_credentials(tmp_path, monkeypatch):
     monkeypatch.delenv("IG_ENV", raising=False)
     with pytest.raises(ValueError, match="Set all or none"):
         load_ig_demo_config(_env(tmp_path, IG_HISTORICAL_USERNAME="hist-user"))
+
+
+def test_validates_news_calendar_refresh_settings(tmp_path, monkeypatch):
+    monkeypatch.delenv("IG_ENV", raising=False)
+
+    with pytest.raises(ValueError, match="FORWARD_DAYS"):
+        load_ig_demo_config(_env(
+            tmp_path,
+            NEWS_GUARD_FORWARD_DAYS="3",
+            NEWS_GUARD_MIN_FORWARD_DAYS="7",
+        ))
+    with pytest.raises(ValueError, match="MIN_FORWARD_DAYS"):
+        load_ig_demo_config(_env(tmp_path, NEWS_GUARD_MIN_FORWARD_DAYS="0"))
+    with pytest.raises(ValueError, match="REFRESH_MINUTES"):
+        load_ig_demo_config(_env(tmp_path, NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION="-1"))
+
+    config = load_ig_demo_config(_env(
+        tmp_path,
+        NEWS_GUARD_FORWARD_DAYS="21",
+        NEWS_GUARD_MIN_FORWARD_DAYS="7",
+        NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION="30",
+        NEWS_GUARD_CACHE_DIR="data/macro_calendar/cache/nasdaq_live",
+    ))
+    assert config.news_guard_calendar_forward_days == 21
+    assert config.news_guard_calendar_min_forward_days == 7
+    assert config.news_guard_calendar_refresh_minutes_before_session == 30

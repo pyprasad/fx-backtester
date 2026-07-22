@@ -44,11 +44,10 @@ def _parse_utc(value: str) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
-def calendar_covers(path: Path, *, now_utc: datetime, min_forward_days: int) -> bool:
+def latest_calendar_event(path: Path) -> datetime | None:
     if not path.exists() or not path.read_text().strip():
-        return False
+        return None
 
-    required_until = now_utc + timedelta(days=min_forward_days)
     latest_event: datetime | None = None
     try:
         with path.open(newline="") as handle:
@@ -57,9 +56,32 @@ def calendar_covers(path: Path, *, now_utc: datetime, min_forward_days: int) -> 
                 if event_time and (latest_event is None or event_time > latest_event):
                     latest_event = event_time
     except csv.Error:
-        return False
+        return None
+    return latest_event
 
-    return bool(latest_event and latest_event >= required_until)
+
+def calendar_status(path: Path, *, now_utc: datetime, min_forward_days: int) -> dict:
+    required_until = now_utc + timedelta(days=min_forward_days)
+    latest_event = latest_calendar_event(path)
+    covers = bool(latest_event and latest_event >= required_until)
+    return {
+        "covers_min_forward_window": covers,
+        "path": str(path),
+        "required_until": required_until.isoformat(),
+        "latest_event_time_utc": latest_event.isoformat() if latest_event else None,
+        "min_forward_days": min_forward_days,
+    }
+
+
+def calendar_covers(path: Path, *, now_utc: datetime, min_forward_days: int) -> bool:
+    try:
+        return bool(calendar_status(
+            path,
+            now_utc=now_utc,
+            min_forward_days=min_forward_days,
+        )["covers_min_forward_window"])
+    except csv.Error:
+        return False
 
 
 def refresh_calendar(
@@ -143,11 +165,14 @@ def main() -> None:
     now_utc = datetime.now(timezone.utc)
     output = Path(args.output)
 
-    if calendar_covers(output, now_utc=now_utc, min_forward_days=args.min_forward_days):
+    status = calendar_status(output, now_utc=now_utc, min_forward_days=args.min_forward_days)
+    if status["covers_min_forward_window"]:
         print(json.dumps({
             "status": "CURRENT",
             "output": str(output),
             "min_forward_days": args.min_forward_days,
+            "latest_event_time_utc": status["latest_event_time_utc"],
+            "required_until": status["required_until"],
         }, indent=2))
         return
 
