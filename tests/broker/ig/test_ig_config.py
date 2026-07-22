@@ -124,14 +124,18 @@ def test_validates_news_calendar_refresh_settings(tmp_path, monkeypatch):
         load_ig_demo_config(_env(tmp_path, NEWS_GUARD_MIN_FORWARD_DAYS="0"))
     with pytest.raises(ValueError, match="REFRESH_MINUTES"):
         load_ig_demo_config(_env(tmp_path, NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION="-1"))
+    with pytest.raises(ValueError, match="PRUNE_RETENTION"):
+        load_ig_demo_config(_env(tmp_path, NEWS_GUARD_PRUNE_RETENTION_HOURS="0"))
 
     config = load_ig_demo_config(_env(
         tmp_path,
         NEWS_GUARD_FORWARD_DAYS="21",
         NEWS_GUARD_MIN_FORWARD_DAYS="7",
         NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION="30",
+        NEWS_GUARD_PRUNE_RETENTION_HOURS="24",
         NEWS_GUARD_CACHE_DIR="data/macro_calendar/cache/nasdaq_live",
     ))
     assert config.news_guard_calendar_forward_days == 21
     assert config.news_guard_calendar_min_forward_days == 7
     assert config.news_guard_calendar_refresh_minutes_before_session == 30
+    assert config.news_guard_calendar_prune_retention_hours == 24

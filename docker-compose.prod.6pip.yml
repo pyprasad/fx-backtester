@@ -21,6 +21,7 @@ services:
       NEWS_GUARD_MIN_FORWARD_DAYS: "7"
       NEWS_GUARD_CALENDAR_REFRESH_ENABLED: "true"
       NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION: "30"
+      NEWS_GUARD_PRUNE_RETENTION_HOURS: "24"
       NEWS_GUARD_CACHE_DIR: data/macro_calendar/cache/nasdaq_live
       # PROD is supported here for read-only account, market data, signal, and dry-run validation only.
       IG_ENV: LIVE

@@ -21,6 +21,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from scripts.fetch_nasdaq_usdjpy_macro_calendar import (  # noqa: E402
     CalendarEvent,
+    CSV_FIELDS,
     fetch_day,
     iter_dates,
     normalise_rows,
@@ -58,6 +59,43 @@ def latest_calendar_event(path: Path) -> datetime | None:
     except csv.Error:
         return None
     return latest_event
+
+
+def prune_calendar(path: Path, *, now_utc: datetime, retention_hours: int) -> dict:
+    """Drop old events using UTC time while retaining a post-event safety buffer."""
+    if not path.exists() or not path.read_text().strip():
+        return {
+            "enabled": True,
+            "path": str(path),
+            "retention_hours": retention_hours,
+            "cutoff_utc": (now_utc - timedelta(hours=retention_hours)).isoformat(),
+            "rows_before": 0,
+            "rows_after": 0,
+            "rows_pruned": 0,
+        }
+
+    cutoff = now_utc - timedelta(hours=retention_hours)
+    with path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    kept = [
+        row for row in rows
+        if (event_time := _parse_utc(row.get("event_time_utc", ""))) is None or event_time >= cutoff
+    ]
+    if len(kept) != len(rows):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=CSV_FIELDS)
+            writer.writeheader()
+            writer.writerows({field: row.get(field, "") for field in CSV_FIELDS} for row in kept)
+    return {
+        "enabled": True,
+        "path": str(path),
+        "retention_hours": retention_hours,
+        "cutoff_utc": cutoff.isoformat(),
+        "rows_before": len(rows),
+        "rows_after": len(kept),
+        "rows_pruned": len(rows) - len(kept),
+    }
 
 
 def calendar_status(path: Path, *, now_utc: datetime, min_forward_days: int) -> dict:
@@ -157,6 +195,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--retries", type=int, default=3)
     parser.add_argument("--retry-sleep-seconds", type=float, default=5.0)
     parser.add_argument("--refresh-cache", action="store_true")
+    parser.add_argument("--prune-past-events", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--prune-retention-hours",
+        type=int,
+        default=24,
+        help="Keep recent past events for post-news blackout/audit safety; timestamps are UTC.",
+    )
     return parser.parse_args()
 
 
@@ -165,6 +210,10 @@ def main() -> None:
     now_utc = datetime.now(timezone.utc)
     output = Path(args.output)
 
+    prune = (
+        prune_calendar(output, now_utc=now_utc, retention_hours=args.prune_retention_hours)
+        if args.prune_past_events else {"enabled": False}
+    )
     status = calendar_status(output, now_utc=now_utc, min_forward_days=args.min_forward_days)
     if status["covers_min_forward_window"]:
         print(json.dumps({
@@ -173,6 +222,7 @@ def main() -> None:
             "min_forward_days": args.min_forward_days,
             "latest_event_time_utc": status["latest_event_time_utc"],
             "required_until": status["required_until"],
+            "prune": prune,
         }, indent=2))
         return
 
@@ -189,6 +239,12 @@ def main() -> None:
         retries=args.retries,
         retry_sleep_seconds=args.retry_sleep_seconds,
     )
+    if args.prune_past_events:
+        result["prune"] = prune_calendar(
+            output,
+            now_utc=now_utc,
+            retention_hours=args.prune_retention_hours,
+        )
     print(json.dumps(result, indent=2))
 
 

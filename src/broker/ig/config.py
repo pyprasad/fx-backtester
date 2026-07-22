@@ -67,6 +67,7 @@ class IGDemoConfig:
     news_guard_calendar_forward_days: int = 21
     news_guard_calendar_min_forward_days: int = 7
     news_guard_calendar_refresh_minutes_before_session: int = 30
+    news_guard_calendar_prune_retention_hours: int = 24
     news_guard_calendar_cache_dir: Path = Path("data/macro_calendar/cache/nasdaq_live")
     telegram_enabled: bool = False
     telegram_bot_token: str = ""
@@ -166,6 +167,7 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         news_guard_calendar_refresh_minutes_before_session=int(
             get("NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION", "30")
         ),
+        news_guard_calendar_prune_retention_hours=int(get("NEWS_GUARD_PRUNE_RETENTION_HOURS", "24")),
         news_guard_calendar_cache_dir=Path(get("NEWS_GUARD_CACHE_DIR", "data/macro_calendar/cache/nasdaq_live")),
         telegram_enabled=_bool(get("TELEGRAM_ENABLED", "false"), False),
         telegram_bot_token=get("TELEGRAM_BOT_TOKEN"),
@@ -206,6 +208,8 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         raise ValueError("NEWS_GUARD_MIN_FORWARD_DAYS must be at least 1")
     if config.news_guard_calendar_refresh_minutes_before_session < 0:
         raise ValueError("NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION must be >= 0")
+    if config.news_guard_calendar_prune_retention_hours < 1:
+        raise ValueError("NEWS_GUARD_PRUNE_RETENTION_HOURS must be at least 1")
     if config.historical_data_override_enabled and not all((
         config.historical_api_key, config.historical_username, config.historical_password,
     )):

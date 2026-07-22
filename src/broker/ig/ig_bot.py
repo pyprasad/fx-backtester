@@ -26,7 +26,7 @@ from .ig_trade_lifecycle import (
 )
 from .models import DryRunOrder, InternalTick
 from .telegram_notifier import TelegramNotifier, control_state
-from scripts.ensure_live_usdjpy_macro_calendar import calendar_status, refresh_calendar
+from scripts.ensure_live_usdjpy_macro_calendar import calendar_status, prune_calendar, refresh_calendar
 
 logger = logging.getLogger(__name__)
 
@@ -304,11 +304,16 @@ class NewsCalendarRefreshGuard:
             return False
 
     def _status(self, now_utc: datetime) -> dict:
+        prune = prune_calendar(
+            self.calendar_path,
+            now_utc=now_utc,
+            retention_hours=getattr(self.config, "news_guard_calendar_prune_retention_hours", 24),
+        )
         return calendar_status(
             self.calendar_path,
             now_utc=now_utc,
             min_forward_days=getattr(self.config, "news_guard_calendar_min_forward_days", 7),
-        )
+        ) | {"prune": prune}
 
 
 def write_bot_audit_event(
