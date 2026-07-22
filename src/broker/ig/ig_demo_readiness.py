@@ -106,6 +106,6 @@ def write_readiness_report(output: str | Path, result: dict) -> Path:
     checks = "\n".join(f"- [{'x' if value else ' '}] {key}" for key, value in result["checks"].items())
     path.write_text(
         f"# IG DEMO Readiness Report\n\nStatus: **{result['status']}**\n\n{checks}\n\n"
-        "No order was sent by this readiness command. READY_FOR_LIVE is not an allowed FX-2I status.\n"
+        "No order was sent by this readiness command.\n"
     )
     return path

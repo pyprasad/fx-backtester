@@ -1,9 +1,9 @@
 {
   "status": "RUNNING",
-  "started_at": "2026-07-22T22:07:25.780359+00:00",
-  "run_id": "3d77a257284242bf8d7019eeef8b1035",
+  "started_at": "2026-07-22T22:30:45.640722+00:00",
+  "run_id": "eff8d4c67bee41a8b5bb3124ce9c3b3f",
   "completed_at": null,
-  "tick_count": 264,
+  "tick_count": 101,
   "last_evaluated_candle": "2026-07-22T21:00:00+00:00",
   "last_signal_result": {
     "status": "NO_SIGNAL",
@@ -12,7 +12,7 @@
     "signal_count": 30,
     "rejection_count": 90,
     "last_signal": {
-      "signal_id": "c7b040e4-685b-486d-9393-bfa9ae68039a",
+      "signal_id": "28d3605b-54de-4bf7-ac05-04ca8dcb948a",
       "timestamp_utc": "2026-07-22T14:00:00+00:00",
       "timestamp_london": "2026-07-22T15:00:00+01:00",
       "symbol": "USDJPY",
@@ -30,7 +30,7 @@
       "indicator_snapshot": {
         "ema_fast": 163.04310411749572,
         "ema_mid": 162.87471538234635,
-        "ema_slow": 162.46905548820632,
+        "ema_slow": 162.46905760282115,
         "rsi": 59.237381007302396,
         "atr": 0.1105889444330126,
         "atr_pips": 11.058894443301261

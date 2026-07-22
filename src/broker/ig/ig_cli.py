@@ -227,6 +227,11 @@ def dry_run_order(env_file, strategy_path, epic):
 def place_demo_test_order_cli(env_file, strategy_path, epic, confirmation):
     config, session, client = _connect(env_file)
     try:
+        if config.is_live:
+            raise RuntimeError(
+                "Standalone test orders are DEMO-only; use the 6-pip PROD bot for "
+                "strategy-signal LIVE execution"
+            )
         if not config.order_execution_enabled or config.dry_run_only:
             raise RuntimeError(
                 "Enable IG_ORDER_EXECUTION_ENABLED=true and IG_DRY_RUN_ONLY=false "

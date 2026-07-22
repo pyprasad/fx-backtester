@@ -7,6 +7,7 @@ from .ig_rest_client import IGAPIError
 from .models import DryRunOrder
 
 DEMO_CONFIRMATION_PHRASE = "PLACE_DEMO_ORDER"
+LIVE_CONFIRMATION_PHRASE = "PLACE_LIVE_ORDER"
 
 
 def create_position_payload(order: DryRunOrder, currency_code: str) -> dict:
@@ -32,9 +33,14 @@ def create_position_payload(order: DryRunOrder, currency_code: str) -> dict:
 def place_demo_test_order(client, order: DryRunOrder, *, currency_code: str,
                           confirmation: str, attempts: int = 10,
                           poll_interval_seconds: float = 1) -> dict:
-    if confirmation != DEMO_CONFIRMATION_PHRASE:
-        raise ValueError(f"Explicit confirmation required: {DEMO_CONFIRMATION_PHRASE}")
+    required_confirmation = (
+        LIVE_CONFIRMATION_PHRASE if client.config.is_live else DEMO_CONFIRMATION_PHRASE
+    )
+    if confirmation != required_confirmation:
+        raise ValueError(f"Explicit confirmation required: {required_confirmation}")
     payload = create_position_payload(order, currency_code)
+    if client.config.is_live:
+        payload["dealReference"] = order.deal_reference.replace("dry-", "live-", 1)
     response = client.create_demo_position(payload)
     deal_reference = response.get("dealReference") or payload["dealReference"]
     confirmation_response = None
@@ -61,8 +67,11 @@ def place_demo_test_order(client, order: DryRunOrder, *, currency_code: str,
         reason = confirmation_response.get("reason")
     return {
         "submitted_at": datetime.now(timezone.utc).isoformat(),
-        "environment": "DEMO",
-        "execution_type": "MINIMUM_SIZE_EXECUTION_PLUMBING_TEST",
+        "environment": client.config.env,
+        "execution_type": (
+            "LIVE_STRATEGY_SIGNAL_ORDER" if client.config.is_live
+            else "MINIMUM_SIZE_EXECUTION_PLUMBING_TEST"
+        ),
         "strategy_signal_used": False,
         "deal_reference": deal_reference,
         "deal_id": deal_id,

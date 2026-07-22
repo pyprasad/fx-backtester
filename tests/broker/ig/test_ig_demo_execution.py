@@ -45,7 +45,7 @@ def test_create_position_payload_rejects_invalid_order():
 
 
 def test_place_demo_test_order_requires_confirmation_and_audits_result():
-    client = SimpleNamespace()
+    client = SimpleNamespace(config=SimpleNamespace(is_live=False, env="DEMO"))
     client.create_demo_position = lambda payload: {"dealReference": payload["dealReference"]}
     client.get_confirms = lambda reference: {
         "dealReference": reference, "dealStatus": "ACCEPTED", "dealId": "DEAL1"
@@ -69,7 +69,7 @@ def test_place_demo_test_order_requires_confirmation_and_audits_result():
 
 
 def test_place_demo_test_order_extracts_deal_id_from_affected_deals():
-    client = SimpleNamespace()
+    client = SimpleNamespace(config=SimpleNamespace(is_live=False, env="DEMO"))
     client.create_demo_position = lambda payload: {"dealReference": payload["dealReference"]}
     client.get_confirms = lambda reference: {
         "dealReference": reference,
@@ -83,3 +83,27 @@ def test_place_demo_test_order_extracts_deal_id_from_affected_deals():
     )
 
     assert result["deal_id"] == "AFFECTED1"
+
+
+def test_place_live_order_requires_live_confirmation():
+    client = SimpleNamespace(config=SimpleNamespace(is_live=True, env="LIVE"))
+    client.create_demo_position = lambda payload: {"dealReference": payload["dealReference"]}
+    client.get_confirms = lambda reference: {
+        "dealReference": reference, "dealStatus": "ACCEPTED", "dealId": "LIVE1"
+    }
+
+    with pytest.raises(ValueError, match="PLACE_LIVE_ORDER"):
+        place_demo_test_order(
+            client, order(), currency_code="GBP", confirmation="PLACE_DEMO_ORDER",
+            poll_interval_seconds=0,
+        )
+
+    result = place_demo_test_order(
+        client, order(), currency_code="GBP", confirmation="PLACE_LIVE_ORDER",
+        poll_interval_seconds=0,
+    )
+
+    assert result["environment"] == "LIVE"
+    assert result["execution_type"] == "LIVE_STRATEGY_SIGNAL_ORDER"
+    assert result["deal_reference"] == "live-1234567890123456789012345"
+    assert result["deal_id"] == "LIVE1"

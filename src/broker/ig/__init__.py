@@ -1,1 +1,1 @@
-"""IG integration with DEMO-only execution and read-only LIVE account support."""
+"""IG integration with DEMO and explicitly confirmed LIVE execution support."""

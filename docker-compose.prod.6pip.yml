@@ -1,5 +1,5 @@
 services:
-  usdjpy-6pip-prod-readonly-bot:
+  usdjpy-6pip-prod-bot:
     build:
       context: .
       dockerfile: Dockerfile
@@ -15,7 +15,7 @@ services:
       BOT_POLL_SECONDS: "5"
       BOT_HISTORY_POINTS: "1000"
       BOT_REFRESH_POINTS: "5"
-      BOT_CACHE_PATH: data/live_cache/ig_6pip_prod_readonly
+      BOT_CACHE_PATH: data/live_cache/ig_6pip_prod
       NEWS_GUARD_CALENDAR_FILE: data/macro_calendar/usd_jpy_events_live_nasdaq.csv
       NEWS_GUARD_FORWARD_DAYS: "21"
       NEWS_GUARD_MIN_FORWARD_DAYS: "7"
@@ -23,13 +23,13 @@ services:
       NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION: "30"
       NEWS_GUARD_PRUNE_RETENTION_HOURS: "24"
       NEWS_GUARD_CACHE_DIR: data/macro_calendar/cache/nasdaq_live
-      # PROD is supported here for read-only account, market data, signal, and dry-run validation only.
+      # Explicit LIVE order placement. Keep .env.prod pointed at the intended IG LIVE account.
       IG_ENV: LIVE
       IG_ACC_TYPE: LIVE
       IG_REST_BASE_URL: https://api.ig.com/gateway/deal
-      BOT_CONFIRM: ""
-      IG_ORDER_EXECUTION_ENABLED: "false"
-      IG_DRY_RUN_ONLY: "true"
+      BOT_CONFIRM: "PLACE_LIVE_ORDER"
+      IG_ORDER_EXECUTION_ENABLED: "true"
+      IG_DRY_RUN_ONLY: "false"
       IG_STREAMING_MODE: CHART_TICK
       IG_AUDIT_OUTPUT_PATH: reports/ig_prod_audit_6pip
       IG_TICK_OUTPUT_PATH: data/live_prod_ticks/usdjpy_6pip
@@ -58,7 +58,8 @@ services:
       --refresh-points "$$BOT_REFRESH_POINTS"
       --cache-path "$$BOT_CACHE_PATH"
       --duration-seconds "$$BOT_DURATION_SECONDS"
-      --poll-seconds "$$BOT_POLL_SECONDS"'
+      --poll-seconds "$$BOT_POLL_SECONDS"
+      --confirm "$$BOT_CONFIRM"'
     restart: unless-stopped
     stop_grace_period: 30s
     logging:

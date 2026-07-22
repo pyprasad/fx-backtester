@@ -88,26 +88,33 @@ def test_create_demo_position_requires_execution_mode_and_posts_v2(tmp_path):
     assert requests[0].headers["Version"] == "2"
 
 
-def test_position_changes_are_blocked_for_live_even_if_flags_are_forced(tmp_path):
+def test_live_position_changes_require_execution_mode(tmp_path):
+    requests = []
+
+    def opener(request, timeout):
+        requests.append(request)
+        return Response({"dealReference": "live-reference"})
+
     cfg = replace(
         config(tmp_path),
         env="LIVE",
         acc_type="LIVE",
         rest_base_url="https://api.ig.com/gateway/deal",
-        order_execution_enabled=True,
-        dry_run_only=False,
     )
     session = create_session(cfg, lambda *_args, **_kwargs: Response(
         {"currentAccountId": "ABC123"}, {"CST": "cst", "X-SECURITY-TOKEN": "xst"}
     ))
-    client = IGRestClient(cfg, session, lambda *_args, **_kwargs: Response({}))
+    client = IGRestClient(cfg, session, opener)
 
-    with pytest.raises(ValueError, match="restricted to IG DEMO"):
+    with pytest.raises(ValueError, match="not enabled"):
         client.create_demo_position({"epic": "USDJPY"})
-    with pytest.raises(ValueError, match="restricted to IG DEMO"):
-        client.amend_position("DEAL1", {"stopLevel": 160.1})
-    with pytest.raises(ValueError, match="restricted to IG DEMO"):
-        client.close_position({"dealId": "DEAL1"})
+
+    execution = replace(cfg, order_execution_enabled=True, dry_run_only=False)
+    response = IGRestClient(execution, session, opener).create_demo_position({"epic": "USDJPY"})
+
+    assert response["dealReference"] == "live-reference"
+    assert requests[0].method == "POST"
+    assert requests[0].full_url.endswith("/positions/otc")
 
 
 def test_amend_and_close_position_require_execution_mode(tmp_path):

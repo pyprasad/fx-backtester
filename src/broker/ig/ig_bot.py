@@ -603,7 +603,9 @@ class IGDemoBotRunner:
             currency_code=order.currency,
             confirmation=confirmation,
         )
-        execution["execution_type"] = "STRATEGY_SIGNAL_DEMO_ORDER"
+        execution["execution_type"] = (
+            "STRATEGY_SIGNAL_LIVE_ORDER" if self.config.is_live else "STRATEGY_SIGNAL_DEMO_ORDER"
+        )
         execution["strategy_signal_used"] = True
         execution["signal"] = result.get("current_signal")
         self._attach_lifecycle_manager(result, execution, order)
@@ -617,7 +619,7 @@ class IGDemoBotRunner:
         })
         self.telegram.send(
             "\n".join([
-                "USDJPY DEMO order submitted",
+                f"USDJPY {self.config.env} order submitted",
                 f"status: {execution.get('deal_status')}",
                 f"reason: {execution.get('reason')}",
                 f"deal_id: {execution.get('deal_id')}",

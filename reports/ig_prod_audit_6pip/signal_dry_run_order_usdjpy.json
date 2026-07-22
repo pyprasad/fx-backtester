@@ -10,7 +10,7 @@
   "last_signal_is_current": false,
   "last_signal_note": "historical_context_only",
   "last_signal": {
-    "signal_id": "c7b040e4-685b-486d-9393-bfa9ae68039a",
+    "signal_id": "28d3605b-54de-4bf7-ac05-04ca8dcb948a",
     "timestamp_utc": "2026-07-22T14:00:00+00:00",
     "timestamp_london": "2026-07-22T15:00:00+01:00",
     "symbol": "USDJPY",
@@ -28,7 +28,7 @@
     "indicator_snapshot": {
       "ema_fast": 163.04310411749572,
       "ema_mid": 162.87471538234635,
-      "ema_slow": 162.46905548820632,
+      "ema_slow": 162.46905760282115,
       "rsi": 59.237381007302396,
       "atr": 0.1105889444330126,
       "atr_pips": 11.058894443301261
