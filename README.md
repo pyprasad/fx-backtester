@@ -25,6 +25,8 @@ The human-confirmed final research baseline after FX-2H is:
 - Strategy: `FX Swing Trend Reclaim v1`
 - Market and direction: `USDJPY`, short only
 - Selected guardrail: `min_risk_3pips`
+- Backup guardrail: `ig_min_stop_only`
+- Not selected: `recommended_research_guardrail`
 - Weekend policy: `force_close_friday_20_30`
 - Status: historical research only; not production-ready or live-trading approved
 
@@ -41,6 +43,21 @@ Changing `.env` values alone is not a supported production-trading path.
 The repository can authenticate to an IG LIVE account for read-only market data, open-position
 inspection, signal checks, and dry-run validation, but all position creation/amend/close paths remain
 restricted to DEMO.
+
+## Current 6-Pip Operational Validation Candidate
+
+The Docker 6-pip candidate is a separate DEMO/prod-read-only operational validation contract:
+
+- Contract:
+  [`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml`](config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml)
+- Mode: `long_short`
+- Risk: `0.25%`
+- Broker guardrail: 6-pip minimum stop and 6-pip attached take-profit distance
+- News guard: enabled with the live Nasdaq USD/JPY calendar
+- PROD support: read-only account connectivity, market data, signal evaluation, and dry-run audit only
+
+This contract is used for DEMO execution validation and PROD account observation. It does not replace
+the human-confirmed final research baseline and does not authorize live order placement.
 
 ## Fixed Take-Profit Research Variant
 
@@ -97,18 +114,20 @@ done
 
 Share each run folder and the `strategy_summary.csv` / `trade_log.csv` outputs for review.
 
-## FX-2I: IG DEMO Integration Foundation
+## FX-2I: IG Integration Foundation
 
-FX-2I adds DEMO-only REST authentication, account and USDJPY market discovery, market-rule
-extraction, modern Lightstreamer `PRICE`/optional `CHART:TICK` capture, local DEMO tick storage,
-dry-run SELL payload validation, readiness reporting, and an optional DEMO-only execution-plumbing
-test. The DEMO test order uses the strategy risk percentage, active DEMO account balance, current
-IG stop-distance rules, and IG `AMOUNT` sizing. It is still not a strategy-generated live signal.
+FX-2I adds DEMO REST authentication, account and USDJPY market discovery, market-rule extraction,
+modern Lightstreamer `PRICE`/optional `CHART:TICK` capture, local tick storage, dry-run SELL payload
+validation, readiness reporting, PROD read-only account observation, and an optional DEMO-only
+execution-plumbing test. The DEMO test order uses the strategy risk percentage, active DEMO account
+balance, current IG stop-distance rules, and IG `AMOUNT` sizing. It is still not a
+strategy-generated live signal.
 
 Copy `.env.demo.example` to the gitignored `.env.demo` and add credentials locally. Keep
 `IG_ORDER_EXECUTION_ENABLED=false` and `IG_DRY_RUN_ONLY=true` except during an explicitly confirmed
-DEMO order test. The loader rejects LIVE mode, inconsistent execution flags, and deprecated
-`MARKET` subscriptions. The REST client cannot create live-account orders.
+DEMO order test. The loader accepts `LIVE` only when `IG_ORDER_EXECUTION_ENABLED=false` and
+`IG_DRY_RUN_ONLY=true`; inconsistent execution flags and deprecated `MARKET` subscriptions are
+rejected. The REST client cannot create, amend, or close live-account positions.
 
 Start with:
 
@@ -874,8 +893,23 @@ docker compose -f docker-compose.prod.6pip.yml logs -f usdjpy-6pip-prod-readonly
 ```
 
 This uses the same 6-pip strategy contract as the DEMO run and writes PROD read-only audit output
-under `reports/ig_prod_audit_6pip`. It evaluates signals and dry-run orders only; the code blocks
-LIVE position creation, amendment, and close calls.
+under `reports/ig_prod_audit_6pip`. It authenticates to the IG LIVE gateway, loads LIVE market
+rules, subscribes to LIVE `CHART:TICK`, refreshes the candle cache, evaluates the strategy signal,
+and writes dry-run order validation when a current signal exists. It does not submit, amend, or close
+LIVE positions.
+
+Review the PROD read-only audit files:
+
+```bash
+cat reports/ig_prod_audit_6pip/bot_run_usdjpy.json
+cat reports/ig_prod_audit_6pip/signal_dry_run_order_usdjpy.json
+tail -n 50 reports/ig_prod_audit_6pip/bot_audit_events_usdjpy.jsonl
+```
+
+Healthy PROD read-only evidence should show `CHART_TICK_SUBSCRIPTION_ACTIVE`,
+`SIGNAL_EVALUATED`, and `order_sent=false`. If a signal passes all guardrails, the status can become
+`SIGNAL_READY_FOR_DEMO_DRY_RUN`; in PROD read-only mode this remains an audit/dry-run signal and does
+not permit live execution.
 
 Do not paste `docker compose config` output into chat or logs; it expands `.env.demo`/`.env.prod`
 secrets.
