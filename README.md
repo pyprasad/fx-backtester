@@ -38,6 +38,9 @@ an explicitly confirmed DEMO execution-plumbing test.
 A future real-money IG LIVE port must follow the staged production contract in
 [`docs/broker/ig_live_production_port_plan.md`](docs/broker/ig_live_production_port_plan.md).
 Changing `.env` values alone is not a supported production-trading path.
+The repository can authenticate to an IG LIVE account for read-only market data, open-position
+inspection, signal checks, and dry-run validation, but all position creation/amend/close paths remain
+restricted to DEMO.
 
 ## Fixed Take-Profit Research Variant
 
@@ -850,4 +853,21 @@ docker compose -f docker-compose.demo.6pip.yml down
 Close or account for any manually placed USDJPY DEMO test position before starting the bot, because
 the strategy allows only one open position.
 
-Do not paste `docker compose config` output into chat or logs; it expands `.env.demo` secrets.
+6-pip PROD account read-only run:
+
+```bash
+cp .env.prod.example .env.prod
+# Fill in IG LIVE credentials locally. Keep execution disabled:
+# IG_ORDER_EXECUTION_ENABLED=false
+# IG_DRY_RUN_ONLY=true
+docker compose -f docker-compose.prod.6pip.yml build
+docker compose -f docker-compose.prod.6pip.yml up -d usdjpy-6pip-prod-readonly-bot
+docker compose -f docker-compose.prod.6pip.yml logs -f usdjpy-6pip-prod-readonly-bot
+```
+
+This uses the same 6-pip strategy contract as the DEMO run and writes PROD read-only audit output
+under `reports/ig_prod_audit_6pip`. It evaluates signals and dry-run orders only; the code blocks
+LIVE position creation, amendment, and close calls.
+
+Do not paste `docker compose config` output into chat or logs; it expands `.env.demo`/`.env.prod`
+secrets.

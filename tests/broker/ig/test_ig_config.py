@@ -25,13 +25,31 @@ def test_loads_demo_and_redacts_secrets(tmp_path, monkeypatch):
     assert "secret-api-key" not in text
 
 
-def test_rejects_live_and_inconsistent_execution_flags(tmp_path, monkeypatch):
+def test_supports_live_read_only_and_rejects_inconsistent_execution_flags(tmp_path, monkeypatch):
     monkeypatch.delenv("IG_ENV", raising=False)
-    with pytest.raises(ValueError, match="DEMO only"):
-        load_ig_demo_config(_env(tmp_path, IG_ENV="LIVE"))
-    with pytest.raises(ValueError, match="DEMO gateway"):
+    live = load_ig_demo_config(_env(
+        tmp_path,
+        IG_ENV="LIVE",
+        IG_ACC_TYPE="LIVE",
+        IG_REST_BASE_URL="https://api.ig.com/gateway/deal",
+    ))
+    assert live.env == "LIVE"
+    assert live.acc_type == "LIVE"
+    assert live.order_execution_enabled is False
+    assert live.dry_run_only is True
+    assert live.is_live is True
+    with pytest.raises(ValueError, match="must be https://demo-api.ig.com/gateway/deal"):
         load_ig_demo_config(_env(
             tmp_path, IG_REST_BASE_URL="https://api.ig.com/gateway/deal"
+        ))
+    with pytest.raises(ValueError, match="read-only"):
+        load_ig_demo_config(_env(
+            tmp_path,
+            IG_ENV="LIVE",
+            IG_ACC_TYPE="LIVE",
+            IG_REST_BASE_URL="https://api.ig.com/gateway/deal",
+            IG_ORDER_EXECUTION_ENABLED="true",
+            IG_DRY_RUN_ONLY="false",
         ))
     execution = load_ig_demo_config(_env(
         tmp_path, IG_ORDER_EXECUTION_ENABLED="true", IG_DRY_RUN_ONLY="false"

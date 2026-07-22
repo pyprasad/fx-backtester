@@ -5,6 +5,9 @@ from pathlib import Path
 
 from .models import redact
 
+DEMO_REST_BASE_URL = "https://demo-api.ig.com/gateway/deal"
+LIVE_REST_BASE_URL = "https://api.ig.com/gateway/deal"
+
 
 def _bool(value: str | bool | None, default: bool) -> bool:
     if value is None:
@@ -92,6 +95,14 @@ class IGDemoConfig:
     def historical_data_override_enabled(self) -> bool:
         return bool(self.historical_api_key or self.historical_username or self.historical_password)
 
+    @property
+    def is_demo(self) -> bool:
+        return self.env == "DEMO" and self.acc_type == "DEMO"
+
+    @property
+    def is_live(self) -> bool:
+        return self.env == "LIVE" and self.acc_type == "LIVE"
+
     def historical_data_config(self) -> "IGDemoConfig":
         if not all((self.historical_api_key, self.historical_username, self.historical_password)):
             raise ValueError(
@@ -119,7 +130,7 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
     config = IGDemoConfig(
         env=get("IG_ENV", "DEMO").upper(), api_key=get("IG_API_KEY"), username=get("IG_USERNAME"),
         password=get("IG_PASSWORD"), account_id=get("IG_ACCOUNT_ID"), acc_type=get("IG_ACC_TYPE", "DEMO").upper(),
-        rest_base_url=get("IG_REST_BASE_URL", "https://demo-api.ig.com/gateway/deal").rstrip("/"),
+        rest_base_url=get("IG_REST_BASE_URL", DEMO_REST_BASE_URL).rstrip("/"),
         streaming_enabled=_bool(get("IG_STREAMING_ENABLED", "true"), True),
         streaming_mode=get("IG_STREAMING_MODE", "PRICE").upper(),
         market_search_term=get("IG_MARKET_SEARCH_TERM", "USD/JPY"), market_epic=get("IG_MARKET_EPIC"),
@@ -155,11 +166,21 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         telegram_control_path=Path(get("TELEGRAM_CONTROL_PATH", ".runtime/ig_bot_control.json")),
         telegram_status_path=Path(get("TELEGRAM_STATUS_PATH", "reports/ig_demo_audit/bot_run_usdjpy.json")),
     )
-    if config.env != "DEMO" or config.acc_type != "DEMO":
-        raise ValueError("FX-2I supports IG DEMO only")
-    if config.rest_base_url != "https://demo-api.ig.com/gateway/deal":
-        raise ValueError("IG_REST_BASE_URL must be the IG DEMO gateway")
-    if config.order_execution_enabled == config.dry_run_only:
+    if config.env not in {"DEMO", "LIVE"}:
+        raise ValueError("IG_ENV must be DEMO or LIVE")
+    if config.acc_type not in {"DEMO", "LIVE"}:
+        raise ValueError("IG_ACC_TYPE must be DEMO or LIVE")
+    if config.env != config.acc_type:
+        raise ValueError("IG_ENV and IG_ACC_TYPE must match")
+    expected_gateway = DEMO_REST_BASE_URL if config.is_demo else LIVE_REST_BASE_URL
+    if config.rest_base_url != expected_gateway:
+        raise ValueError(f"IG_REST_BASE_URL must be {expected_gateway} for {config.env}")
+    if config.is_live and (config.order_execution_enabled or not config.dry_run_only):
+        raise ValueError(
+            "IG LIVE support is read-only in this repository; set "
+            "IG_ORDER_EXECUTION_ENABLED=false and IG_DRY_RUN_ONLY=true"
+        )
+    if config.is_demo and config.order_execution_enabled == config.dry_run_only:
         raise ValueError(
             "IG_ORDER_EXECUTION_ENABLED and IG_DRY_RUN_ONLY must be opposite values"
         )
@@ -175,7 +196,7 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
             "and IG_HISTORICAL_PASSWORD"
         )
     if require_credentials and not all((config.api_key, config.username, config.password)):
-        raise ValueError("IG DEMO API key, username, and password are required")
+        raise ValueError(f"IG {config.env} API key, username, and password are required")
     if config.telegram_enabled and not all((config.telegram_bot_token, config.telegram_chat_id)):
         raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required when TELEGRAM_ENABLED=true")
     if not config.account_id:
