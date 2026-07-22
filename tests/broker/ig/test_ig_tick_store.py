@@ -1,6 +1,11 @@
 from datetime import datetime, timezone
 
-from src.broker.ig.ig_subscriptions import normalise_price_update
+from src.broker.ig.ig_subscriptions import (
+    ChartTickListener,
+    IncompleteTickUpdate,
+    normalise_chart_tick,
+    normalise_price_update,
+)
 from src.broker.ig.ig_tick_store import IGDemoTickStore, latest_tick
 from src.data.tick_loader import load_ticks
 import pytest
@@ -56,6 +61,51 @@ def test_price_update_ignores_unsubscribed_fallback_fields():
 
     assert tick.bid == 150
     assert tick.ask == 150.01
+
+
+def test_chart_tick_can_merge_partial_updates_with_previous_quote():
+    first = normalise_chart_tick(
+        {"BID": "16286.8", "OFR": "16287.8", "UTM": "1784725201000"},
+        "USDJPY",
+        price_scale_divisor=100,
+    )
+    partial = normalise_chart_tick(
+        {"UTM": "1784725202000"},
+        "USDJPY",
+        price_scale_divisor=100,
+        previous_raw=first.raw,
+    )
+
+    assert partial.bid == 162.868
+    assert partial.ask == 162.878
+    assert partial.timestamp_utc.isoformat() == "2026-07-22T13:00:02+00:00"
+
+
+def test_chart_tick_without_quote_state_is_incomplete():
+    with pytest.raises(IncompleteTickUpdate):
+        normalise_chart_tick({"UTM": "1784725202000"}, "USDJPY", price_scale_divisor=100)
+
+
+def test_chart_tick_listener_ignores_initial_partial_then_uses_state():
+    ticks = []
+    listener = ChartTickListener(
+        "USDJPY",
+        ticks.append,
+        price_scale_divisor=100,
+    )
+
+    listener.onItemUpdate({"UTM": "1784725200000"})
+    listener.onItemUpdate({"BID": "16286.8", "OFR": "16287.8", "UTM": "1784725201000"})
+    listener.onItemUpdate({"UTM": "1784725202000"})
+
+    assert [tick.timestamp_utc.isoformat() for tick in ticks] == [
+        "2026-07-22T13:00:01+00:00",
+        "2026-07-22T13:00:02+00:00",
+    ]
+    assert [(tick.bid, tick.ask) for tick in ticks] == [
+        (162.868, 162.878),
+        (162.868, 162.878),
+    ]
 
 
 def test_unconfirmed_scaled_fx_price_is_rejected():

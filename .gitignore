@@ -19,3 +19,4 @@ data/macro_calendar/*
 !data/macro_calendar/usd_jpy_events_sample.csv
 reports/ig_prod_audit/
 reports/ig_prod_audit_intraday/
+audit/

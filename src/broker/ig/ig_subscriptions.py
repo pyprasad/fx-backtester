@@ -7,9 +7,13 @@ from .models import InternalTick
 logger = logging.getLogger(__name__)
 
 
+class IncompleteTickUpdate(ValueError):
+    pass
+
+
 def _fields(update, names: tuple[str, ...]) -> dict:
     if isinstance(update, dict):
-        return update
+        return dict(update)
     values = {}
     for name in names:
         try:
@@ -36,13 +40,14 @@ def _timestamp(value, *, epoch_ms: bool = False) -> datetime:
 
 
 def _normalise_bid_ask(raw: dict, bid_fields: tuple[str, ...], ask_fields: tuple[str, ...],
-                       price_scale_divisor: float | None) -> tuple[float, float]:
+                       price_scale_divisor: float | None,
+                       missing_error=ValueError) -> tuple[float, float]:
     def first(fields):
         return next((raw[field] for field in fields if raw.get(field) not in (None, "")), None)
 
     raw_bid, raw_ask = first(bid_fields), first(ask_fields)
     if raw_bid is None or raw_ask is None:
-        raise ValueError(f"Bid/ask fields missing; expected {bid_fields} and {ask_fields}")
+        raise missing_error(f"Bid/ask fields missing; expected {bid_fields} and {ask_fields}")
     divisor = price_scale_divisor or 1.0
     bid, ask = float(raw_bid) / divisor, float(raw_ask) / divisor
     if bid <= 0 or ask <= 0 or ask < bid:
@@ -71,9 +76,21 @@ def normalise_price_update(update, epic: str, pip_size: float = 0.01,
 
 
 def normalise_chart_tick(update, epic: str, pip_size: float = 0.01,
-                         price_scale_divisor: float | None = None) -> InternalTick:
+                         price_scale_divisor: float | None = None,
+                         previous_raw: dict | None = None) -> InternalTick:
     raw = _fields(update, ("BID", "OFR", "LTP", "UTM"))
-    bid, ask = _normalise_bid_ask(raw, ("BID",), ("OFR",), price_scale_divisor)
+    if previous_raw:
+        raw = {
+            **{
+                key: value
+                for key, value in previous_raw.items()
+                if key in {"BID", "OFR", "LTP", "UTM"} and value not in (None, "")
+            },
+            **{key: value for key, value in raw.items() if value not in (None, "")},
+        }
+    bid, ask = _normalise_bid_ask(
+        raw, ("BID",), ("OFR",), price_scale_divisor, missing_error=IncompleteTickUpdate
+    )
     return InternalTick(
         _timestamp(raw.get("UTM"), epoch_ms=True), bid, ask, (bid + ask) / 2,
         round((ask - bid) / pip_size, 8), "IG_DEMO_CHART_TICK", epic, False, raw=raw,
@@ -122,16 +139,31 @@ class ChartTickListener:
         self.epic, self.callback, self.pip_size = epic, callback, pip_size
         self.price_scale_divisor = price_scale_divisor
         self.event_callback = event_callback
+        self.latest_raw: dict = {}
 
     def _emit_event(self, event: dict) -> None:
         if self.event_callback:
             self.event_callback(event)
 
     def onItemUpdate(self, update):
+        raw = _fields(update, ("BID", "OFR", "LTP", "UTM"))
         try:
-            self.callback(normalise_chart_tick(
-                update, self.epic, self.pip_size, self.price_scale_divisor
-            ))
+            tick = normalise_chart_tick(
+                raw, self.epic, self.pip_size, self.price_scale_divisor,
+                previous_raw=self.latest_raw,
+            )
+            self.latest_raw = {
+                key: value
+                for key, value in tick.raw.items()
+                if key in {"BID", "OFR", "LTP", "UTM"} and value not in (None, "")
+            }
+            self.callback(tick)
+        except IncompleteTickUpdate:
+            logger.debug(
+                "IG CHART:TICK partial update ignored before first complete quote | epic=%s | fields=%s",
+                self.epic,
+                sorted(key for key, value in raw.items() if value not in (None, "")),
+            )
         except Exception:
             logger.exception("IG CHART:TICK update rejected | epic=%s", self.epic)
 
