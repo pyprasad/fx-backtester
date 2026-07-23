@@ -31,6 +31,15 @@ def _config():
             },
         },
         "broker_execution_guardrails": {
+            "overnight_funding": {
+                "timezone": "Europe/London",
+            },
+            "intraday_mode": {
+                "enabled": True,
+                "force_close_before_funding_cutoff": True,
+                "force_close_time": "21:55",
+                "force_close_reason": "INTRADAY_FUNDING_AVOIDANCE_CLOSE",
+            },
             "trade_lifecycle": {
                 "enabled": True,
                 "stop_amend_min_interval_seconds": 10,
@@ -186,4 +195,22 @@ def test_lifecycle_emits_full_close_for_friday_weekend_cutoff():
 
     assert action.action_type == "FULL_CLOSE"
     assert action.reason == "weekend_force_close"
+    assert action.size == 12.0
+
+
+def test_lifecycle_emits_full_close_for_intraday_funding_cutoff_london_time():
+    manager = IGTradeLifecycleManager(config=_config())
+    position = _position()
+    manager.attach(position)
+
+    before_cutoff = manager.on_tick(
+        _tick_at(datetime(2026, 6, 18, 20, 54, tzinfo=timezone.utc), 160.0, 160.01)
+    )
+    action = manager.on_tick(
+        _tick_at(datetime(2026, 6, 18, 20, 55, tzinfo=timezone.utc), 160.0, 160.01)
+    )
+
+    assert before_cutoff is None
+    assert action.action_type == "FULL_CLOSE"
+    assert action.reason == "INTRADAY_FUNDING_AVOIDANCE_CLOSE"
     assert action.size == 12.0

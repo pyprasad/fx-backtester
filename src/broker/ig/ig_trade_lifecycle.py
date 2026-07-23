@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from .models import InternalTick
 
@@ -136,6 +137,21 @@ class IGTradeLifecycleManager:
                 return LifecycleAction(
                     "FULL_CLOSE",
                     force.get("close_reason", "weekend_force_close"),
+                    position.deal_id,
+                    position.deal_reference,
+                    size=position.remaining_size,
+                )
+        guardrails = self.config.get("broker_execution_guardrails", {})
+        intraday = guardrails.get("intraday_mode", {})
+        funding = guardrails.get("overnight_funding", {})
+        if intraday.get("enabled") and intraday.get("force_close_before_funding_cutoff"):
+            timezone_name = funding.get("timezone", "Europe/London")
+            local_timestamp = tick.timestamp_utc.astimezone(ZoneInfo(timezone_name))
+            close_time = datetime.strptime(intraday["force_close_time"], "%H:%M").time()
+            if local_timestamp.time() >= close_time:
+                return LifecycleAction(
+                    "FULL_CLOSE",
+                    intraday.get("force_close_reason", "INTRADAY_FUNDING_AVOIDANCE_CLOSE"),
                     position.deal_id,
                     position.deal_reference,
                     size=position.remaining_size,
