@@ -20,3 +20,4 @@ data/macro_calendar/*
 reports/ig_prod_audit/
 reports/ig_prod_audit_intraday/
 audit/
+tmp/
