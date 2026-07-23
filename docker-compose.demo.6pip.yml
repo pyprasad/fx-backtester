@@ -32,7 +32,7 @@ services:
       IG_TICK_OUTPUT_PATH: data/live_demo_ticks/usdjpy_6pip
       IG_TOKEN_CACHE_PATH: .runtime/ig_demo_6pip_session.json
       IG_HISTORICAL_TOKEN_CACHE_PATH: .runtime/ig_demo_6pip_historical_session.json
-      TELEGRAM_ENABLED: "false"
+      TELEGRAM_ENABLED: "true"
       TELEGRAM_CONTROL_PATH: .runtime/ig_6pip_bot_control.json
       TELEGRAM_STATUS_PATH: reports/ig_demo_audit_6pip/bot_run_usdjpy.json
     volumes:
@@ -59,6 +59,37 @@ services:
       --confirm "$$BOT_CONFIRM"'
     restart: unless-stopped
     stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  telegram-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env.demo
+    environment:
+      PYTHONPATH: /app
+      TELEGRAM_ENABLED: "true"
+      TELEGRAM_CONTROLLER_PORT: "3000"
+      TELEGRAM_CONTROL_PATH: .runtime/ig_6pip_bot_control.json
+      TELEGRAM_STATUS_PATH: reports/ig_demo_audit_6pip/bot_run_usdjpy.json
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./reports:/app/reports
+      - ig_6pip_demo_runtime:/app/.runtime
+      - ./.env.demo:/app/.env.demo:ro
+    command: >
+      sh -c 'python -m src.main ig-telegram-controller
+      --env-file .env.demo
+      --host 0.0.0.0
+      --port "$$TELEGRAM_CONTROLLER_PORT"'
+    restart: unless-stopped
+    stop_grace_period: 15s
     logging:
       driver: json-file
       options:
