@@ -31,6 +31,88 @@ from scripts.ensure_live_usdjpy_macro_calendar import calendar_status, prune_cal
 logger = logging.getLogger(__name__)
 
 
+def _parse_broker_datetime(value: str | None) -> datetime:
+    if not value:
+        return datetime.now(timezone.utc)
+    text = str(value).replace("Z", "+00:00")
+    for candidate in (text, text.replace("/", "-")):
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    for fmt in ("%Y/%m/%d %H:%M:%S:%f", "%Y-%m-%d %H:%M:%S:%f", "%Y-%m-%dT%H:%M:%S.%f"):
+        try:
+            return datetime.strptime(text, fmt).replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return datetime.now(timezone.utc)
+
+
+def _scaled_broker_level(value, price_scale_divisor: float | None) -> float | None:
+    if value in (None, ""):
+        return None
+    level = float(value)
+    if price_scale_divisor and abs(level) > 1000:
+        level = level / price_scale_divisor
+    return round(level, 8)
+
+
+def _position_epic(item: dict) -> str | None:
+    return (item.get("market") or {}).get("epic") or (item.get("position") or {}).get("epic")
+
+
+def _managed_position_from_broker_position(
+    item: dict,
+    *,
+    price_scale_divisor: float | None,
+    pip_size: float,
+    fallback_atr: float = 0.0,
+) -> ManagedPosition:
+    position = item.get("position") or {}
+    market = item.get("market") or {}
+    deal_id = position.get("dealId")
+    if not deal_id:
+        raise ValueError("BROKER_POSITION_MISSING_DEAL_ID")
+    entry = _scaled_broker_level(position.get("openLevel", position.get("level")), price_scale_divisor)
+    stop = _scaled_broker_level(position.get("stopLevel"), price_scale_divisor)
+    target = _scaled_broker_level(position.get("limitLevel"), price_scale_divisor)
+    if entry is None or stop is None or target is None:
+        raise ValueError("BROKER_POSITION_MISSING_STOP_OR_LIMIT")
+    size = float(position.get("dealSize", position.get("size", 0)) or 0)
+    direction = str(position.get("direction") or "").upper()
+    opened_at = _parse_broker_datetime(position.get("createdDateUTC") or position.get("createdDate"))
+    restored = ManagedPosition(
+        deal_id=deal_id,
+        deal_reference=position.get("dealReference") or f"recovered-{deal_id}",
+        epic=market.get("epic") or position.get("epic"),
+        direction=direction,
+        size=size,
+        remaining_size=size,
+        entry_price=entry,
+        initial_stop=stop,
+        current_stop=stop,
+        target_price=target,
+        initial_risk=abs(entry - stop),
+        atr=float(fallback_atr or 0.0),
+        opened_at=opened_at,
+        currency=position.get("currency") or "GBP",
+        expiry=market.get("expiry") or position.get("expiry") or "DFB",
+    )
+    restored.lifecycle_events.append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": "POSITION_RECOVERED_FROM_BROKER",
+        "deal_id": deal_id,
+        "direction": direction,
+        "size": size,
+        "entry_price": entry,
+        "initial_stop": stop,
+        "target_price": target,
+        "pip_size": pip_size,
+    })
+    return restored
+
+
 @dataclass
 class BotPriceState:
     latest_tick: InternalTick | None = None
@@ -382,6 +464,8 @@ class IGDemoBotRunner:
         self._lock = Lock()
         self.run_id: str | None = None
         self.run_started_at: str | None = None
+        self.lifecycle_reconciled = False
+        self.lifecycle_reconciliation_block_reason: str | None = None
 
     def _write_run_snapshot(self, result: BotRunResult) -> Path:
         result.tick_count = self.price_state.tick_count
@@ -431,6 +515,18 @@ class IGDemoBotRunner:
         if self.lifecycle_manager and self.lifecycle_manager.position:
             if payload.get("dealId") == self.lifecycle_manager.position.deal_id:
                 status = payload.get("status") or payload.get("dealStatus") or update_type
+                if (
+                    self.lifecycle_manager.position.remaining_size <= 0
+                    and str(status).upper() in {"OPEN", "OPENED"}
+                ):
+                    self._write_audit_event({
+                        "event": "TRADE_STREAM_UPDATE_SUPPRESSED",
+                        "reason": "STALE_OPEN_UPDATE_FOR_CLOSED_POSITION",
+                        "update_type": update_type,
+                        "deal_id": payload.get("dealId"),
+                        "payload_timestamp": payload.get("timestamp") or payload.get("date"),
+                    })
+                    return
                 self.telegram.send(
                     "\n".join([
                         "USDJPY trade update",
@@ -591,10 +687,158 @@ class IGDemoBotRunner:
             "report": str(path),
         })
 
+    def _reconcile_lifecycle_state(self) -> None:
+        try:
+            positions = self.client.get_open_positions().get("positions", [])
+        except Exception as exc:
+            self.lifecycle_reconciled = False
+            self.lifecycle_reconciliation_block_reason = "BROKER_POSITION_RECONCILIATION_FAILED"
+            self._write_audit_event({
+                "event": "BROKER_POSITION_RECONCILIATION",
+                "status": "FAILED",
+                "epic": self.epic,
+                "error": str(exc),
+            })
+            self.telegram.send(
+                "\n".join([
+                    "USDJPY broker position reconciliation failed",
+                    f"epic: {self.epic}",
+                    f"error: {exc}",
+                    "new_entries: blocked until restart/reconcile succeeds",
+                ]),
+                category="system",
+            )
+            return
+
+        matching = [item for item in positions if _position_epic(item) == self.epic]
+        if not matching:
+            self.lifecycle_manager = None
+            self.lifecycle_executor = None
+            path = self.lifecycle_writer.clear(reason="NO_OPEN_BROKER_POSITION")
+            self.lifecycle_reconciled = True
+            self.lifecycle_reconciliation_block_reason = None
+            self._write_audit_event({
+                "event": "BROKER_POSITION_RECONCILIATION",
+                "status": "NO_OPEN_POSITION",
+                "epic": self.epic,
+                "open_position_count": 0,
+                "report": str(path),
+            })
+            return
+
+        if len(matching) > 1:
+            self.lifecycle_manager = None
+            self.lifecycle_executor = None
+            self.lifecycle_reconciled = True
+            self.lifecycle_reconciliation_block_reason = "MULTIPLE_OPEN_POSITIONS"
+            self._write_audit_event({
+                "event": "BROKER_POSITION_RECONCILIATION",
+                "status": "MULTIPLE_OPEN_POSITIONS",
+                "epic": self.epic,
+                "open_position_count": len(matching),
+                "deal_ids": [
+                    (item.get("position") or {}).get("dealId")
+                    for item in matching
+                ],
+            })
+            self.telegram.send(
+                "\n".join([
+                    "USDJPY broker position reconciliation needs review",
+                    f"epic: {self.epic}",
+                    f"open_positions: {len(matching)}",
+                    "lifecycle: not attached",
+                ]),
+                category="system",
+            )
+            return
+
+        try:
+            restored = _managed_position_from_broker_position(
+                matching[0],
+                price_scale_divisor=self.config.price_scale_divisor,
+                pip_size=self.market_rules.pip_size,
+            )
+        except Exception as exc:
+            self.lifecycle_manager = None
+            self.lifecycle_executor = None
+            self.lifecycle_reconciled = True
+            self.lifecycle_reconciliation_block_reason = "OPEN_POSITION_NOT_ATTACHED"
+            self._write_audit_event({
+                "event": "BROKER_POSITION_RECONCILIATION",
+                "status": "OPEN_POSITION_NOT_ATTACHED",
+                "epic": self.epic,
+                "error": str(exc),
+                "broker_position": matching[0],
+            })
+            self.telegram.send(
+                "\n".join([
+                    "USDJPY broker position found but lifecycle not attached",
+                    f"epic: {self.epic}",
+                    f"error: {exc}",
+                ]),
+                category="system",
+            )
+            return
+
+        manager = IGTradeLifecycleManager(
+            config=self.runtime_config.model_dump(),
+            pip_size=self.market_rules.pip_size,
+        )
+        manager.attach(restored)
+        self.lifecycle_manager = manager
+        self.lifecycle_executor = IGTradeLifecycleExecutor(
+            client=self.client,
+            config=self.config,
+            price_scale_divisor=self.config.price_scale_divisor,
+        )
+        path = self.lifecycle_writer.write(manager)
+        self.lifecycle_reconciled = True
+        self.lifecycle_reconciliation_block_reason = None
+        self._write_audit_event({
+            "event": "BROKER_POSITION_RECONCILIATION",
+            "status": "RECOVERED_OPEN_POSITION",
+            "epic": self.epic,
+            "deal_id": restored.deal_id,
+            "direction": restored.direction,
+            "size": restored.size,
+            "report": str(path),
+        })
+        self.telegram.send(
+            "\n".join([
+                "USDJPY broker position recovered",
+                f"deal_id: {restored.deal_id}",
+                f"direction: {restored.direction}",
+                f"size: {restored.size}",
+            ]),
+            category="system",
+        )
+
     def _maybe_execute(self, result: dict, confirmation: str | None) -> dict | None:
         if result.get("status") != "SIGNAL_READY_FOR_DEMO_DRY_RUN":
             return None
         if not confirmation:
+            return None
+        if not self.lifecycle_reconciled:
+            self._write_audit_event({
+                "event": "ORDER_BLOCKED",
+                "reason": "BROKER_POSITION_RECONCILIATION_NOT_READY",
+                "signal_status": result.get("status"),
+            })
+            self.telegram.send(
+                "USDJPY order blocked: broker position reconciliation not ready",
+                category="trade",
+            )
+            return None
+        if self.lifecycle_reconciliation_block_reason:
+            self._write_audit_event({
+                "event": "ORDER_BLOCKED",
+                "reason": self.lifecycle_reconciliation_block_reason,
+                "signal_status": result.get("status"),
+            })
+            self.telegram.send(
+                f"USDJPY order blocked: {self.lifecycle_reconciliation_block_reason}",
+                category="trade",
+            )
             return None
         order = _order_from_result(result)
         execution = place_demo_test_order(
@@ -727,6 +971,7 @@ class IGDemoBotRunner:
             "event": "CANDLE_CACHE_READY",
             "cache": cache_summary,
         })
+        self._reconcile_lifecycle_state()
         streaming = IGStreamingClient(
             self.config,
             self.session,

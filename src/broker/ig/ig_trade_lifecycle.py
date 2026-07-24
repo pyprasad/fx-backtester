@@ -336,3 +336,13 @@ class LifecycleJSONWriter:
         path = self.output / "trade_lifecycle_usdjpy.json"
         path.write_text(json.dumps(manager.snapshot(), indent=2, default=str))
         return path
+
+    def clear(self, *, reason: str) -> Path:
+        self.output.mkdir(parents=True, exist_ok=True)
+        path = self.output / "trade_lifecycle_usdjpy.json"
+        path.write_text(json.dumps({
+            "position": None,
+            "reconciled_at": datetime.now(timezone.utc).isoformat(),
+            "reason": reason,
+        }, indent=2))
+        return path

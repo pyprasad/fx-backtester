@@ -15,6 +15,7 @@ from src.broker.ig.ig_bot import (
     write_bot_audit_event,
 )
 from src.broker.ig.ig_candle_cache import CandleCachePaths
+from src.broker.ig.ig_trade_lifecycle import IGTradeLifecycleManager, ManagedPosition
 
 
 def test_latest_closed_hour_returns_previous_complete_hour():
@@ -309,3 +310,118 @@ def test_bot_subscribes_to_chart_tick_stream_when_configured(tmp_path):
     assert streaming.price_calls == []
     assert len(streaming.chart_calls) == 1
     assert streaming.chart_calls[0][0] == "CS.D.USDJPY.TODAY.IP"
+
+
+def _runner_for_reconciliation(tmp_path, client):
+    config = SimpleNamespace(
+        audit_output_path=tmp_path / "audit",
+        price_scale_divisor=100,
+        streaming_mode="CHART_TICK",
+        telegram_enabled=False,
+    )
+    runner = IGDemoBotRunner(
+        config=config,
+        session=SimpleNamespace(),
+        client=client,
+        env_file=".env.demo",
+        strategy_path="contract.yaml",
+        epic="CS.D.USDJPY.TODAY.IP",
+        runtime_strategy_config="runtime.yaml",
+    )
+    runner.market_rules = SimpleNamespace(pip_size=0.01)
+    runner.runtime_config = SimpleNamespace(model_dump=lambda: {
+        "max_trade_duration_days": 1,
+        "weekend_policy": {"enabled": False},
+        "exit": {
+            "move_stop_to_breakeven": {"enabled": False},
+            "partial_take_profit": {"enabled": False},
+            "runner": {"enabled": False, "trailing_stop": {"atr_multiplier": 1.5}},
+        },
+        "broker_execution_guardrails": {
+            "trade_lifecycle": {"enabled": True},
+            "intraday_mode": {"enabled": False},
+            "overnight_funding": {"timezone": "Europe/London"},
+        },
+    })
+    return runner
+
+
+def test_reconciliation_recovers_single_open_broker_position(tmp_path):
+    client = SimpleNamespace(get_open_positions=lambda: {"positions": [{
+        "market": {"epic": "CS.D.USDJPY.TODAY.IP", "expiry": "DFB"},
+        "position": {
+            "dealId": "DEAL1",
+            "dealReference": "REF1",
+            "direction": "BUY",
+            "dealSize": 4.13,
+            "level": 16381.4,
+            "stopLevel": 16363.4,
+            "limitLevel": 16387.4,
+            "currency": "GBP",
+            "createdDateUTC": "2026-07-24T04:00:01.307",
+        },
+    }]})
+    runner = _runner_for_reconciliation(tmp_path, client)
+
+    runner._reconcile_lifecycle_state()
+
+    assert runner.lifecycle_reconciled is True
+    assert runner.lifecycle_manager.position.deal_id == "DEAL1"
+    assert runner.lifecycle_manager.position.entry_price == 163.814
+    assert runner.lifecycle_manager.position.current_stop == 163.634
+    assert runner.lifecycle_manager.position.target_price == 163.874
+    assert (tmp_path / "audit" / "trade_lifecycle_usdjpy.json").exists()
+
+
+def test_reconciliation_clears_local_lifecycle_when_broker_has_no_position(tmp_path):
+    client = SimpleNamespace(get_open_positions=lambda: {"positions": []})
+    runner = _runner_for_reconciliation(tmp_path, client)
+    lifecycle = tmp_path / "audit" / "trade_lifecycle_usdjpy.json"
+    lifecycle.parent.mkdir(parents=True)
+    lifecycle.write_text(json.dumps({"deal_id": "OLD", "remaining_size": 4.13}))
+
+    runner._reconcile_lifecycle_state()
+
+    assert runner.lifecycle_reconciled is True
+    assert runner.lifecycle_manager is None
+    snapshot = json.loads(lifecycle.read_text())
+    assert snapshot["position"] is None
+    assert snapshot["reason"] == "NO_OPEN_BROKER_POSITION"
+
+
+def test_stale_open_trade_update_for_closed_position_is_not_notified(tmp_path):
+    client = SimpleNamespace()
+    runner = _runner_for_reconciliation(tmp_path, client)
+    sends = []
+    runner.telegram = SimpleNamespace(send=lambda text, *, category="system": sends.append((category, text)))
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="DEAL1",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=0,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    runner.lifecycle_manager = manager
+
+    runner._on_trade_update("CONFIRMS", {
+        "dealId": "DEAL1",
+        "status": "OPEN",
+        "direction": "BUY",
+        "size": 4.13,
+        "date": "2026-07-24T04:00:01.307",
+    })
+
+    assert sends == []
+    rows = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
+    assert "TRADE_STREAM_UPDATE_SUPPRESSED" in rows
