@@ -357,11 +357,18 @@ def evaluate_live_signal_from_candles(*, client, config, contract: dict, epic: s
     trend = add_indicators(four_hour, parameters=config.indicators)
     signals, rejections = generate_signals(entry, trend, config)
     latest_closed = entry["timestamp"].max()
-    current_signals = [signal for signal in signals if signal.timestamp_utc == latest_closed]
+    latest_signal_time = latest_closed + timedelta(hours=1) if latest_closed else None
+    current_signals = [
+        signal for signal in signals
+        if latest_signal_time and signal.timestamp_utc == latest_signal_time
+    ]
     result = {
         "status": "NO_SIGNAL",
         "epic": epic,
         "latest_closed_1h_candle": latest_closed.isoformat() if latest_closed else None,
+        "latest_closed_1h_candle_signal_time": (
+            latest_signal_time.isoformat() if latest_signal_time else None
+        ),
         "signal_count": len(signals),
         "rejection_count": len(rejections),
         "last_signal": _signal_payload(signals[-1]) if signals else None,
@@ -457,17 +464,19 @@ def write_signal_dry_run_report(output: str | Path, result: dict) -> Path:
     output.mkdir(parents=True, exist_ok=True)
     last_signal = result.get("last_signal")
     latest_closed = result.get("latest_closed_1h_candle")
+    latest_signal_time = result.get("latest_closed_1h_candle_signal_time") or latest_closed
     last_signal_timestamp = last_signal.get("timestamp_utc") if last_signal else None
     last_signal_is_current = bool(
         result.get("current_signal")
         and last_signal_timestamp
-        and latest_closed
-        and last_signal_timestamp == latest_closed
+        and latest_signal_time
+        and last_signal_timestamp == latest_signal_time
     )
     payload = {
         "status": result["status"],
         "epic": result.get("epic"),
         "latest_closed_1h_candle": result.get("latest_closed_1h_candle"),
+        "latest_closed_1h_candle_signal_time": result.get("latest_closed_1h_candle_signal_time"),
         "signal_count": result.get("signal_count"),
         "rejection_count": result.get("rejection_count"),
         "current_signal": result.get("current_signal"),

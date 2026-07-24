@@ -26,7 +26,7 @@ def test_configured_minimum_initial_risk(strategy_config):
 
 def test_tiny_risk_strategy_setup_is_rejected_before_execution(strategy_config):
     import polars as pl
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
 
     times = [datetime(2025, 1, 6, 9, tzinfo=timezone.utc), datetime(2025, 1, 6, 10, tzinfo=timezone.utc)]
     entry = pl.DataFrame({
@@ -37,7 +37,8 @@ def test_tiny_risk_strategy_setup_is_rejected_before_execution(strategy_config):
         "rsi_14": [45.0, 40.0],
         "atr_14": [.001, .001], "atr_14_pips": [.1, .1],
     })
-    trend = pl.DataFrame({"timestamp": times, "mid_close": [149.0, 149.0], "ema_200": [150.0, 150.0]})
+    trend_times = [value - timedelta(hours=3) for value in times]
+    trend = pl.DataFrame({"timestamp": trend_times, "mid_close": [149.0, 149.0], "ema_200": [150.0, 150.0]})
     signals, rejected = generate_signals(entry, trend, strategy_config)
     assert not signals
     assert any(row["rejection_reason"] == "REJECT_BELOW_MIN_INITIAL_RISK_PIPS" for row in rejected)

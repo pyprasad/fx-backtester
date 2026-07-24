@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import time, timedelta
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -11,6 +11,18 @@ from src.news_guard.calendar_loader import load_economic_events
 from src.risk.weekend_policy import WeekendPolicy
 
 from .signal import Signal
+
+
+def _timeframe_duration(value: str) -> timedelta:
+    amount = int(value[:-1])
+    unit = value[-1].upper()
+    if unit == "M":
+        return timedelta(minutes=amount)
+    if unit == "H":
+        return timedelta(hours=amount)
+    if unit == "D":
+        return timedelta(days=amount)
+    raise ValueError(f"Unsupported timeframe: {value}")
 
 
 def _session(timestamp_utc, windows: list[dict], default_timezone: str) -> tuple[str | None, object]:
@@ -40,12 +52,22 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         *(pl.col(source).alias(target) for target, source in aliases.items()
           if target not in trend.columns and source in trend.columns)
     )
+    entry_duration = _timeframe_duration(config.timeframes.get("entry", "1H"))
+    trend_duration = _timeframe_duration(config.timeframes.get("trend", "4H"))
+    entry = entry.with_columns(
+        (pl.col("timestamp") + entry_duration).alias("signal_timestamp_utc")
+    )
     trend_view = trend.select(
-        "timestamp",
+        (pl.col("timestamp") + trend_duration).alias("trend_available_timestamp"),
         pl.col("mid_close").alias("trend_close"),
         pl.col("ema_slow").alias("trend_ema_slow"),
     )
-    joined = entry.sort("timestamp").join_asof(trend_view.sort("timestamp"), on="timestamp", strategy="backward")
+    joined = entry.sort("signal_timestamp_utc").join_asof(
+        trend_view.sort("trend_available_timestamp"),
+        left_on="signal_timestamp_utc",
+        right_on="trend_available_timestamp",
+        strategy="backward",
+    )
     signals, rejected = [], []
     weekend = WeekendPolicy(config.weekend_policy)
     guardrails = config.broker_execution_guardrails
@@ -63,7 +85,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         if not news_guard.get("enabled") or not news_guard.get("block_new_entries", True):
             return False
         blocked, event = is_news_blackout(
-            row["timestamp"],
+            row["signal_timestamp_utc"],
             news_events,
             int(news_guard.get("before_minutes", 0)),
             int(news_guard.get("after_minutes", 0)),
@@ -72,8 +94,8 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             return False
         if news_guard.get("log_skipped_signals", True):
             rejected.append({
-                "timestamp": row["timestamp"],
-                "timestamp_utc": row["timestamp"],
+                "timestamp": row["signal_timestamp_utc"],
+                "timestamp_utc": row["signal_timestamp_utc"],
                 "strategy": config.strategy["name"],
                 "market": config.strategy["market"],
                 "signal_direction": direction,
@@ -92,7 +114,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         if not guardrails.get("enabled"):
             return False
         decision = evaluate_proposed_signal(
-            row["timestamp"], row["mid_close"], stop, target, spread_pips, guardrails
+            row["signal_timestamp_utc"], row["mid_close"], stop, target, spread_pips, guardrails
         )
         if decision.accepted:
             return False
@@ -106,7 +128,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         }
         for reason in decision.rejection_reasons:
             rejected.append({
-                "timestamp": row["timestamp"], "timestamp_utc": row["timestamp"],
+                "timestamp": row["signal_timestamp_utc"], "timestamp_utc": row["signal_timestamp_utc"],
                 "rejection_reason": reason, "reason": reason, "rejection_group": groups[reason],
                 "initial_risk_pips": decision.initial_risk_pips,
                 "entry_spread_pips": decision.entry_spread_pips,
@@ -120,16 +142,17 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         return True
 
     def weekend_rejection(row: dict, session: str | None) -> str | None:
-        blocked, reason = weekend.should_block_new_entry(row["timestamp"])
-        if not blocked and row["timestamp"].weekday() == 6:
-            week_open = row["timestamp"].replace(hour=21, minute=0, second=0, microsecond=0)
-            blocked, reason = weekend.should_block_sunday_open_entry(row["timestamp"], week_open)
+        signal_time = row["signal_timestamp_utc"]
+        blocked, reason = weekend.should_block_new_entry(signal_time)
+        if not blocked and signal_time.weekday() == 6:
+            week_open = signal_time.replace(hour=21, minute=0, second=0, microsecond=0)
+            blocked, reason = weekend.should_block_sunday_open_entry(signal_time, week_open)
         if not blocked:
             return None
         rejected.append({
-            "timestamp": row["timestamp"], "timestamp_utc": row["timestamp"],
+            "timestamp": signal_time, "timestamp_utc": signal_time,
             "reason": reason, "rejection_reason": reason,
-            "day_of_week": row["timestamp"].strftime("%A"), "hour_utc": row["timestamp"].hour,
+            "day_of_week": signal_time.strftime("%A"), "hour_utc": signal_time.hour,
             "policy_name": weekend.policy_name, "session_label": session,
         })
         return reason
@@ -141,7 +164,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         )):
             continue
         session, session_local = _session(
-            row["timestamp"], config.session_filter["entry_windows"],
+            row["signal_timestamp_utc"], config.session_filter["entry_windows"],
             config.session_filter["timezone"],
         )
         spread_pips = row["spread_avg"] / 0.01
@@ -154,9 +177,10 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             common_reason = "spread_too_high"
         if common_reason:
             rejected.append({
-                "timestamp": row["timestamp"], "timestamp_utc": row["timestamp"],
+                "timestamp": row["signal_timestamp_utc"], "timestamp_utc": row["signal_timestamp_utc"],
                 "reason": common_reason, "rejection_reason": common_reason,
-                "day_of_week": row["timestamp"].strftime("%A"), "hour_utc": row["timestamp"].hour,
+                "day_of_week": row["signal_timestamp_utc"].strftime("%A"),
+                "hour_utc": row["signal_timestamp_utc"].hour,
                 "policy_name": weekend.policy_name, "session_label": session,
             })
             continue
@@ -177,7 +201,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             if news_rejection(row, "SHORT"):
                 continue
             signals.append(Signal(
-                str(uuid4()), row["timestamp"], session_local, row["symbol"], "SHORT",
+                str(uuid4()), row["signal_timestamp_utc"], session_local, row["symbol"], "SHORT",
                 "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                 ["trend_below_ema200", "pullback", "rsi_rejection", "bearish_close"],
                 {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},
@@ -197,7 +221,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
                 if news_rejection(row, "LONG"):
                     continue
                 signals.append(Signal(
-                    str(uuid4()), row["timestamp"], session_local, row["symbol"], "LONG",
+                    str(uuid4()), row["signal_timestamp_utc"], session_local, row["symbol"], "LONG",
                     "market_on_next_tick_after_signal_close", row["mid_close"], "4H", "1H",
                     ["trend_above_ema200", "pullback", "rsi_reclaim", "bullish_close"],
                     {k: row[k] for k in ("ema_fast", "ema_mid", "ema_slow", "rsi", "atr", "atr_pips")},

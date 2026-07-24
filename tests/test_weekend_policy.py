@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from src.risk.weekend_policy import WeekendPolicy
 from src.strategies.fx_swing_trend_reclaim import generate_signals
@@ -50,7 +50,7 @@ def test_policy_does_not_log_rejection_for_non_signal_candle(strategy_config):
         "spread_avg": [0.001], "ema_20": [150.0], "ema_50": [149.9], "rsi_14": [60.0],
         "atr_14": [0.1], "atr_14_pips": [10.0],
     })
-    trend = pl.DataFrame({"timestamp": [friday], "mid_close": [150.0], "ema_200": [149.0]})
+    trend = pl.DataFrame({"timestamp": [friday - timedelta(hours=3)], "mid_close": [150.0], "ema_200": [149.0]})
     signals, rejected = generate_signals(entry, trend, strategy_config)
     assert not signals
     assert not any(item["reason"].startswith("REJECT_WEEKEND_POLICY") for item in rejected)
