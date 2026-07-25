@@ -2,6 +2,7 @@ import os
 import warnings
 from dataclasses import dataclass, replace
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .models import redact
 
@@ -79,6 +80,10 @@ class IGDemoConfig:
     telegram_admin_user_id: str = ""
     telegram_control_path: Path = Path(".runtime/ig_bot_control.json")
     telegram_status_path: Path = Path("reports/ig_demo_audit/bot_run_usdjpy.json")
+    market_hibernate_enabled: bool = True
+    market_hibernate_timezone: str = "Europe/London"
+    market_hibernate_friday_close: str = "22:00"
+    market_hibernate_sunday_resume: str = "23:00"
 
     def redacted(self) -> dict:
         return {
@@ -92,6 +97,10 @@ class IGDemoConfig:
             "telegram_enabled": self.telegram_enabled,
             "telegram_chat_id": redact(self.telegram_chat_id),
             "telegram_admin_user_id": redact(self.telegram_admin_user_id),
+            "market_hibernate_enabled": self.market_hibernate_enabled,
+            "market_hibernate_timezone": self.market_hibernate_timezone,
+            "market_hibernate_friday_close": self.market_hibernate_friday_close,
+            "market_hibernate_sunday_resume": self.market_hibernate_sunday_resume,
         }
 
     def __repr__(self) -> str:
@@ -179,6 +188,10 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         telegram_admin_user_id=get("TELEGRAM_ADMIN_USER_ID"),
         telegram_control_path=Path(get("TELEGRAM_CONTROL_PATH", ".runtime/ig_bot_control.json")),
         telegram_status_path=Path(get("TELEGRAM_STATUS_PATH", "reports/ig_demo_audit/bot_run_usdjpy.json")),
+        market_hibernate_enabled=_bool(get("MARKET_HIBERNATE_ENABLED", "true"), True),
+        market_hibernate_timezone=get("MARKET_HIBERNATE_TIMEZONE", "Europe/London"),
+        market_hibernate_friday_close=get("MARKET_HIBERNATE_FRIDAY_CLOSE", "22:00"),
+        market_hibernate_sunday_resume=get("MARKET_HIBERNATE_SUNDAY_RESUME", "23:00"),
     )
     if config.env not in {"DEMO", "LIVE"}:
         raise ValueError("IG_ENV must be DEMO or LIVE")
@@ -205,6 +218,23 @@ def load_ig_demo_config(env_file: str | None = None, require_credentials: bool =
         raise ValueError("NEWS_GUARD_REFRESH_MINUTES_BEFORE_SESSION must be >= 0")
     if config.news_guard_calendar_prune_retention_hours < 1:
         raise ValueError("NEWS_GUARD_PRUNE_RETENTION_HOURS must be at least 1")
+    for field_name, value in (
+        ("MARKET_HIBERNATE_FRIDAY_CLOSE", config.market_hibernate_friday_close),
+        ("MARKET_HIBERNATE_SUNDAY_RESUME", config.market_hibernate_sunday_resume),
+    ):
+        try:
+            time_parts = value.split(":")
+            if len(time_parts) != 2:
+                raise ValueError
+            hour, minute = int(time_parts[0]), int(time_parts[1])
+            if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                raise ValueError
+        except ValueError:
+            raise ValueError(f"{field_name} must be HH:MM in 24-hour time") from None
+    try:
+        ZoneInfo(config.market_hibernate_timezone)
+    except ZoneInfoNotFoundError:
+        raise ValueError("MARKET_HIBERNATE_TIMEZONE must be a valid IANA timezone") from None
     if config.historical_data_override_enabled and not all((
         config.historical_api_key, config.historical_username, config.historical_password,
     )):

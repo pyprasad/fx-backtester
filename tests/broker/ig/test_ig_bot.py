@@ -9,6 +9,7 @@ from src.broker.ig.ig_bot import (
     BotRunResult,
     IGDemoBotRunner,
     NewsCalendarRefreshGuard,
+    SessionProgressTracker,
     active_session_windows,
     latest_closed_hour,
     within_run_duration,
@@ -16,6 +17,7 @@ from src.broker.ig.ig_bot import (
 )
 from src.broker.ig.ig_candle_cache import CandleCachePaths
 from src.broker.ig.ig_trade_lifecycle import IGTradeLifecycleManager, ManagedPosition
+from src.broker_guardrails.time_guard import weekend_market_hibernate_window
 
 
 def test_latest_closed_hour_returns_previous_complete_hour():
@@ -46,6 +48,25 @@ def test_active_session_windows_respects_per_session_timezones():
 
     assert [item["name"] for item in tokyo] == ["Tokyo"]
     assert [item["name"] for item in london_overlap] == ["London New York overlap"]
+
+
+def test_session_tracker_suppresses_weekend_session_notifications(tmp_path):
+    sends = []
+    tracker = SessionProgressTracker(
+        windows=[{"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"}],
+        audit_output=tmp_path,
+        telegram=SimpleNamespace(send=lambda text, *, category="system": sends.append(text)),
+    )
+    now_utc = datetime(2026, 7, 25, 0, 0, 1, tzinfo=timezone.utc)
+
+    tracker.check(now_utc, weekend_market_hibernate_window(now_utc))
+
+    assert len(sends) == 1
+    assert "market hibernating" in sends[0]
+    assert "session started" not in sends[0]
+    rows = (tmp_path / "bot_audit_events_usdjpy.jsonl").read_text()
+    assert "MARKET_HIBERNATE_STARTED" in rows
+    assert "SESSION_STARTED" not in rows
 
 
 def test_write_bot_audit_event_appends_jsonl(tmp_path):

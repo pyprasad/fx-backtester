@@ -8,6 +8,8 @@ from threading import Lock
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
+from src.broker_guardrails.time_guard import weekend_market_hibernate_window
+
 from .ig_candle_cache import CandleCachePaths, load_cached_candles, refresh_candle_cache
 from .ig_demo_execution import place_demo_test_order, write_demo_execution_report
 from .ig_live_signal import (
@@ -188,9 +190,23 @@ class SessionProgressTracker:
         self.active_names: set[str] | None = None
         self.run_id = run_id
         self.run_started_at = run_started_at
+        self.hibernating = False
 
-    def check(self, now_utc: datetime | None = None) -> None:
+    def check(self, now_utc: datetime | None = None, hibernate_window=None) -> None:
         now_utc = now_utc or datetime.now(timezone.utc)
+        if hibernate_window and hibernate_window.enabled:
+            if not self.hibernating:
+                self.hibernating = True
+                self.active_names = set()
+                self._log_hibernate_started(now_utc, hibernate_window)
+            return
+        if self.hibernating:
+            self.hibernating = False
+            self.active_names = None
+            self._write_audit({
+                "event": "MARKET_HIBERNATE_ENDED",
+                "utc": now_utc.isoformat(),
+            })
         active = active_session_windows(self.windows, now_utc)
         active_names = {item["name"] for item in active}
         active_by_name = {item["name"]: item for item in active}
@@ -253,6 +269,32 @@ class SessionProgressTracker:
                 f"utc: {now_utc.isoformat()}",
                 f"local: {local_now.isoformat()}",
                 f"window: {window['start']}-{window['end']} {window['timezone']}",
+            ]),
+            category="system",
+        )
+
+    def _log_hibernate_started(self, now_utc: datetime, hibernate_window) -> None:
+        logger.info(
+            "IG bot market hibernate started | utc=%s | local=%s | resume_at_utc=%s",
+            now_utc.isoformat(),
+            hibernate_window.timestamp_local.isoformat(),
+            hibernate_window.resume_at_utc.isoformat(),
+        )
+        event = {
+            "event": "MARKET_HIBERNATE_STARTED",
+            "reason": hibernate_window.reason,
+            "utc": now_utc.isoformat(),
+            "local": hibernate_window.timestamp_local.isoformat(),
+            "resume_at_utc": hibernate_window.resume_at_utc.isoformat(),
+            "resume_at_local": hibernate_window.resume_at_local.isoformat(),
+        }
+        self._write_audit(event)
+        self.telegram.send(
+            "\n".join([
+                "USDJPY market hibernating",
+                f"reason: {hibernate_window.reason}",
+                f"resume_at_utc: {hibernate_window.resume_at_utc.isoformat()}",
+                f"resume_at_local: {hibernate_window.resume_at_local.isoformat()}",
             ]),
             category="system",
         )
@@ -947,6 +989,16 @@ class IGDemoBotRunner:
             self.telegram.send(f"USDJPY bot control state changed: {state}", category="system")
         return state
 
+    def _market_hibernate_window(self, now_utc: datetime):
+        if not getattr(self.config, "market_hibernate_enabled", True):
+            return None
+        return weekend_market_hibernate_window(
+            now_utc,
+            timezone_name=getattr(self.config, "market_hibernate_timezone", "Europe/London"),
+            friday_close=getattr(self.config, "market_hibernate_friday_close", "22:00"),
+            sunday_resume=getattr(self.config, "market_hibernate_sunday_resume", "23:00"),
+        )
+
     def run(self, *, duration_seconds: int, execute_confirmation: str | None = None) -> BotRunResult:
         started = datetime.now(timezone.utc)
         self.run_id = uuid4().hex
@@ -1005,13 +1057,27 @@ class IGDemoBotRunner:
             next_status_snapshot = time.monotonic() + 30
             next_no_tick_warning = time.monotonic() + 300
             while within_run_duration(started, duration_seconds, monotonic_deadline):
-                self._process_lifecycle_action()
-                session_tracker.check()
+                now_utc = datetime.now(timezone.utc)
+                hibernate_window = self._market_hibernate_window(now_utc)
+                session_tracker.check(now_utc, hibernate_window)
                 state = self._control_state()
                 if state == "STOP_REQUESTED":
                     result.status = "STOPPED_BY_CONTROL"
                     break
-                candle = latest_closed_hour()
+                if hibernate_window and hibernate_window.enabled:
+                    result.last_signal_result = {
+                        "status": "MARKET_HIBERNATING",
+                        "reason": hibernate_window.reason,
+                        "resume_at_utc": hibernate_window.resume_at_utc.isoformat(),
+                        "resume_at_local": hibernate_window.resume_at_local.isoformat(),
+                    }
+                    if time.monotonic() >= next_status_snapshot:
+                        self._write_run_snapshot(result)
+                        next_status_snapshot = time.monotonic() + 30
+                    time.sleep(self.poll_seconds)
+                    continue
+                self._process_lifecycle_action()
+                candle = latest_closed_hour(now_utc)
                 calendar_ready = calendar_guard.check()
                 if state == "PAUSED":
                     time.sleep(self.poll_seconds)

@@ -140,3 +140,26 @@ def test_validates_news_calendar_refresh_settings(tmp_path, monkeypatch):
     assert config.news_guard_calendar_min_forward_days == 7
     assert config.news_guard_calendar_refresh_minutes_before_session == 30
     assert config.news_guard_calendar_prune_retention_hours == 24
+
+
+def test_validates_market_hibernate_settings(tmp_path, monkeypatch):
+    monkeypatch.delenv("IG_ENV", raising=False)
+
+    config = load_ig_demo_config(_env(
+        tmp_path,
+        MARKET_HIBERNATE_ENABLED="true",
+        MARKET_HIBERNATE_TIMEZONE="Europe/London",
+        MARKET_HIBERNATE_FRIDAY_CLOSE="22:00",
+        MARKET_HIBERNATE_SUNDAY_RESUME="23:00",
+    ))
+    assert config.market_hibernate_enabled is True
+    assert config.market_hibernate_timezone == "Europe/London"
+    assert config.market_hibernate_friday_close == "22:00"
+    assert config.market_hibernate_sunday_resume == "23:00"
+
+    with pytest.raises(ValueError, match="MARKET_HIBERNATE_FRIDAY_CLOSE"):
+        load_ig_demo_config(_env(tmp_path, MARKET_HIBERNATE_FRIDAY_CLOSE="25:00"))
+    with pytest.raises(ValueError, match="MARKET_HIBERNATE_SUNDAY_RESUME"):
+        load_ig_demo_config(_env(tmp_path, MARKET_HIBERNATE_SUNDAY_RESUME="bad"))
+    with pytest.raises(ValueError, match="MARKET_HIBERNATE_TIMEZONE"):
+        load_ig_demo_config(_env(tmp_path, MARKET_HIBERNATE_TIMEZONE="Not/AZone"))
