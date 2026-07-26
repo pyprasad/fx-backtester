@@ -146,6 +146,16 @@ def _parse_hhmm(value: str) -> datetime_time:
     return datetime_time(int(hour), int(minute))
 
 
+def _bot_label(epic: str, contract: dict | None = None) -> str:
+    market = (contract or {}).get("strategy", {}).get("market")
+    if market:
+        return str(market).upper()
+    for part in str(epic or "").split("."):
+        if part.isalpha() and len(part) == 6:
+            return part.upper()
+    return str(epic or "IG").upper()
+
+
 def active_session_windows(windows: list[dict], now_utc: datetime) -> list[dict]:
     active = []
     for window in windows:
@@ -184,6 +194,7 @@ class SessionProgressTracker:
         telegram: TelegramNotifier,
         run_id: str | None = None,
         run_started_at: str | None = None,
+        bot_label: str = "IG",
     ):
         self.windows = windows
         self.audit_output = audit_output
@@ -192,6 +203,7 @@ class SessionProgressTracker:
         self.run_id = run_id
         self.run_started_at = run_started_at
         self.hibernating = False
+        self.bot_label = bot_label
 
     def check(self, now_utc: datetime | None = None, hibernate_window=None) -> None:
         now_utc = now_utc or datetime.now(timezone.utc)
@@ -265,7 +277,7 @@ class SessionProgressTracker:
         })
         self.telegram.send(
             "\n".join([
-                f"USDJPY {event.replace('_', ' ').lower()}",
+                f"{self.bot_label} {event.replace('_', ' ').lower()}",
                 f"session: {window['name']}",
                 f"utc: {now_utc.isoformat()}",
                 f"local: {local_now.isoformat()}",
@@ -292,7 +304,7 @@ class SessionProgressTracker:
         self._write_audit(event)
         self.telegram.send(
             "\n".join([
-                "USDJPY market hibernating",
+                f"{self.bot_label} market hibernating",
                 f"reason: {hibernate_window.reason}",
                 f"resume_at_utc: {hibernate_window.resume_at_utc.isoformat()}",
                 f"resume_at_local: {hibernate_window.resume_at_local.isoformat()}",
@@ -516,6 +528,10 @@ class IGDemoBotRunner:
         self.lifecycle_reconciled = False
         self.lifecycle_reconciliation_block_reason: str | None = None
 
+    @property
+    def bot_label(self) -> str:
+        return _bot_label(self.epic, self.contract)
+
     def _write_run_snapshot(self, result: BotRunResult) -> Path:
         result.tick_count = self.price_state.tick_count
         report = Path(self.config.audit_output_path) / "bot_run_usdjpy.json"
@@ -578,7 +594,7 @@ class IGDemoBotRunner:
                     return
                 self.telegram.send(
                     "\n".join([
-                        "USDJPY trade update",
+                        f"{self.bot_label} trade update",
                         f"deal_id: {payload.get('dealId')}",
                         f"status: {status}",
                         f"direction: {payload.get('direction')}",
@@ -750,7 +766,7 @@ class IGDemoBotRunner:
             })
             self.telegram.send(
                 "\n".join([
-                    "USDJPY broker position reconciliation failed",
+                    f"{self.bot_label} broker position reconciliation failed",
                     f"epic: {self.epic}",
                     f"error: {exc}",
                     "new_entries: blocked until restart/reconcile succeeds",
@@ -792,7 +808,7 @@ class IGDemoBotRunner:
             })
             self.telegram.send(
                 "\n".join([
-                    "USDJPY broker position reconciliation needs review",
+                    f"{self.bot_label} broker position reconciliation needs review",
                     f"epic: {self.epic}",
                     f"open_positions: {len(matching)}",
                     "lifecycle: not attached",
@@ -821,7 +837,7 @@ class IGDemoBotRunner:
             })
             self.telegram.send(
                 "\n".join([
-                    "USDJPY broker position found but lifecycle not attached",
+                    f"{self.bot_label} broker position found but lifecycle not attached",
                     f"epic: {self.epic}",
                     f"error: {exc}",
                 ]),
@@ -854,7 +870,7 @@ class IGDemoBotRunner:
         })
         self.telegram.send(
             "\n".join([
-                "USDJPY broker position recovered",
+                f"{self.bot_label} broker position recovered",
                 f"deal_id: {restored.deal_id}",
                 f"direction: {restored.direction}",
                 f"size: {restored.size}",
@@ -874,7 +890,7 @@ class IGDemoBotRunner:
                 "signal_status": result.get("status"),
             })
             self.telegram.send(
-                "USDJPY order blocked: broker position reconciliation not ready",
+                f"{self.bot_label} order blocked: broker position reconciliation not ready",
                 category="trade",
             )
             return None
@@ -885,11 +901,28 @@ class IGDemoBotRunner:
                 "signal_status": result.get("status"),
             })
             self.telegram.send(
-                f"USDJPY order blocked: {self.lifecycle_reconciliation_block_reason}",
+                f"{self.bot_label} order blocked: {self.lifecycle_reconciliation_block_reason}",
                 category="trade",
             )
             return None
         order = _order_from_result(result)
+        if order.epic != self.epic:
+            self._write_audit_event({
+                "event": "ORDER_BLOCKED",
+                "reason": "ORDER_EPIC_MISMATCH",
+                "bot_epic": self.epic,
+                "order_epic": order.epic,
+                "signal_status": result.get("status"),
+            })
+            self.telegram.send(
+                "\n".join([
+                    f"{self.bot_label} order blocked: epic mismatch",
+                    f"bot_epic: {self.epic}",
+                    f"order_epic: {order.epic}",
+                ]),
+                category="trade",
+            )
+            return None
         execution = place_demo_test_order(
             self.client,
             order,
@@ -912,7 +945,7 @@ class IGDemoBotRunner:
         })
         self.telegram.send(
             "\n".join([
-                f"USDJPY {self.config.env} order submitted",
+                f"{self.bot_label} {self.config.env} order submitted",
                 f"status: {execution.get('deal_status')}",
                 f"reason: {execution.get('reason')}",
                 f"deal_id: {execution.get('deal_id')}",
@@ -947,7 +980,7 @@ class IGDemoBotRunner:
             })
             self.telegram.send(
                 "\n".join([
-                    "USDJPY lifecycle action submitted",
+                    f"{self.bot_label} lifecycle action submitted",
                     f"action: {action.action_type}",
                     f"reason: {action.reason}",
                     f"deal_id: {action.deal_id}",
@@ -974,7 +1007,7 @@ class IGDemoBotRunner:
             })
             self.telegram.send(
                 "\n".join([
-                    "USDJPY lifecycle action failed",
+                    f"{self.bot_label} lifecycle action failed",
                     f"action: {action.action_type}",
                     f"reason: {action.reason}",
                     f"deal_id: {action.deal_id}",
@@ -993,7 +1026,7 @@ class IGDemoBotRunner:
                 "state": state,
                 "control_path": str(self.config.telegram_control_path),
             })
-            self.telegram.send(f"USDJPY bot control state changed: {state}", category="system")
+            self.telegram.send(f"{self.bot_label} bot control state changed: {state}", category="system")
         return state
 
     def _market_hibernate_window(self, now_utc: datetime):
@@ -1018,7 +1051,7 @@ class IGDemoBotRunner:
         self._write_run_snapshot(result)
         self.telegram.send(
             "\n".join([
-                "USDJPY bot started",
+                f"{self.bot_label} bot started",
                 f"epic: {self.epic}",
                 f"duration_seconds: {duration_seconds}",
                 f"orders_enabled: {bool(execute_confirmation)}",
@@ -1044,6 +1077,7 @@ class IGDemoBotRunner:
             telegram=self.telegram,
             run_id=self.run_id,
             run_started_at=self.run_started_at,
+            bot_label=self.bot_label,
         )
         calendar_guard = NewsCalendarRefreshGuard(
             config=self.config,
@@ -1122,7 +1156,7 @@ class IGDemoBotRunner:
                     if signal_result.get("status") == "SIGNAL_READY_FOR_DEMO_DRY_RUN":
                         self.telegram.send(
                             "\n".join([
-                                "USDJPY signal ready",
+                                f"{self.bot_label} signal ready",
                                 f"candle: {candle.isoformat()}",
                                 f"direction: {(signal_result.get('current_signal') or {}).get('direction')}",
                                 f"session: {(signal_result.get('current_signal') or {}).get('session')}",
@@ -1157,7 +1191,7 @@ class IGDemoBotRunner:
             self._write_run_snapshot(result)
             self.telegram.send(
                 "\n".join([
-                    "USDJPY bot stopped",
+                    f"{self.bot_label} bot stopped",
                     f"status: {result.status}",
                     f"tick_count: {result.tick_count}",
                     f"last_evaluated_candle: {result.last_evaluated_candle}",

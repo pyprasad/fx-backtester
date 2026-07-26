@@ -10,12 +10,14 @@ from src.broker.ig.ig_bot import (
     IGDemoBotRunner,
     NewsCalendarRefreshGuard,
     SessionProgressTracker,
+    _bot_label,
     active_session_windows,
     latest_closed_hour,
     within_run_duration,
     write_bot_audit_event,
 )
 from src.broker.ig.ig_candle_cache import CandleCachePaths
+from src.broker.ig.models import DryRunOrder
 from src.broker.ig.ig_trade_lifecycle import IGTradeLifecycleManager, ManagedPosition
 from src.broker_guardrails.time_guard import weekend_market_hibernate_window
 
@@ -336,6 +338,11 @@ def test_write_run_snapshot_updates_status_file(tmp_path):
     assert '"tick_count": 42' in path.read_text()
 
 
+def test_bot_label_uses_contract_market_before_epic_fallback():
+    assert _bot_label("CS.D.GBPUSD.TODAY.IP", {"strategy": {"market": "GBPUSD"}}) == "GBPUSD"
+    assert _bot_label("CS.D.GBPUSD.TODAY.IP") == "GBPUSD"
+
+
 def test_bot_subscribes_to_chart_tick_stream_when_configured(tmp_path):
     class Streaming:
         def __init__(self):
@@ -486,3 +493,49 @@ def test_stale_open_trade_update_for_closed_position_is_not_notified(tmp_path):
     assert sends == []
     rows = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
     assert "TRADE_STREAM_UPDATE_SUPPRESSED" in rows
+
+
+def test_order_submission_blocks_if_order_epic_does_not_match_bot_epic(tmp_path):
+    client = SimpleNamespace(create_demo_position=lambda _payload: (_ for _ in ()).throw(
+        AssertionError("broker submission should not be called")
+    ))
+    runner = _runner_for_reconciliation(tmp_path, client)
+    runner.epic = "CS.D.GBPUSD.TODAY.IP"
+    runner.contract = {"strategy": {"market": "GBPUSD"}}
+    runner.lifecycle_reconciled = True
+    sends = []
+    runner.telegram = SimpleNamespace(send=lambda text, *, category="system": sends.append((category, text)))
+    order = DryRunOrder(
+        deal_reference="dry-1234567890123456789012345",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=0.1,
+        order_type="MARKET",
+        level=None,
+        stop_distance=6,
+        stop_level=1.2492,
+        limit_distance=6,
+        limit_level=1.25068,
+        currency="GBP",
+        force_open=True,
+        guaranteed_stop=False,
+        time_in_force="FILL_OR_KILL",
+        expiry="-",
+        validation_status="READY_FOR_DEMO_DRY_RUN",
+    )
+    result = {
+        "status": "SIGNAL_READY_FOR_DEMO_DRY_RUN",
+        "dry_run_order": {
+            "payload": order.payload(),
+            "validation_status": order.validation_status,
+            "validation_errors": [],
+            "validation_warnings": [],
+        },
+    }
+
+    assert runner._maybe_execute(result, "PLACE_DEMO_ORDER") is None
+    audit = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
+    assert "ORDER_EPIC_MISMATCH" in audit
+    assert "CS.D.GBPUSD.TODAY.IP" in audit
+    assert "CS.D.USDJPY.TODAY.IP" in audit
+    assert "GBPUSD order blocked: epic mismatch" in sends[0][1]

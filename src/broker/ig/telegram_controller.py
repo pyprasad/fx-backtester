@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 HELP_TEXT = "\n".join([
-    "USDJPY bot commands:",
+    "IG bot commands:",
     "/status - show bot/control state",
     "/pause - pause new signal evaluation/order placement",
     "/resume - resume normal operation",

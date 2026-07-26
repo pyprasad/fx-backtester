@@ -104,7 +104,7 @@ def control_state(path: str | Path) -> str:
 def status_summary(status_path: str | Path, control_path: str | Path) -> str:
     control = read_control_state(control_path)
     lines = [
-        "USDJPY bot status",
+        "IG bot status",
         f"control: {control.get('state', 'ACTIVE')}",
         f"control_updated_at: {control.get('updated_at', 'n/a')}",
     ]

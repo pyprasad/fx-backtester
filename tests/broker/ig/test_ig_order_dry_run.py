@@ -24,10 +24,28 @@ def _six_pip_strategy():
     return yaml.safe_load(open("config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml"))
 
 
+def _gbpusd_six_pip_strategy():
+    return yaml.safe_load(open("config/strategies/gbpusd_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml"))
+
+
 def _rules(status="TRADEABLE", minimum=2):
     return extract_market_rules({
         "instrument": {"epic": "USDJPY", "name": "USD/JPY", "expiry": "-", "pipSize": .01},
         "snapshot": {"marketStatus": status}, "dealingRules": {"minNormalStopOrLimitDistance": {"value": minimum}},
+    })
+
+
+def _gbpusd_rules(status="TRADEABLE", minimum=6):
+    return extract_market_rules({
+        "instrument": {
+            "epic": "CS.D.GBPUSD.TODAY.IP",
+            "name": "GBP/USD",
+            "expiry": "-",
+            "pipSize": .0001,
+            "currencies": [{"code": "GBP", "isDefault": True}],
+        },
+        "snapshot": {"marketStatus": status},
+        "dealingRules": {"minNormalStopOrLimitDistance": {"value": minimum}},
     })
 
 
@@ -112,6 +130,26 @@ def test_intraday_long_short_demo_accepts_buy_and_sell_directions():
         signal={"direction": "BUY", "stop_price": 149.94, "target_price": 150.40},
     )
     assert buy.validation_status == "READY_FOR_DEMO_DRY_RUN"
+
+
+def test_gbpusd_demo_order_uses_gbpusd_epic_from_market_rules():
+    tick = InternalTick(
+        datetime(2026, 6, 15, 8, tzinfo=timezone.utc),
+        1.2500, 1.25008, 1.25004, 0.8, "test", "CS.D.GBPUSD.TODAY.IP", False,
+        raw={"normalization_price_scale_divisor": 1.0},
+    )
+
+    order = _order(
+        strategy=_gbpusd_six_pip_strategy(),
+        rules=_gbpusd_rules(),
+        tick=tick,
+        signal={"direction": "BUY", "stop_price": 1.2492, "target_price": 1.25069},
+    )
+
+    assert order.validation_status == "READY_FOR_DEMO_DRY_RUN"
+    assert order.epic == "CS.D.GBPUSD.TODAY.IP"
+    assert order.currency == "GBP"
+    assert order.payload()["epic"] == "CS.D.GBPUSD.TODAY.IP"
 
 
 def test_intraday_long_short_demo_validates_buy_stop_and_target_side():
