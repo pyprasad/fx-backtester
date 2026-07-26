@@ -134,6 +134,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         })
         return reason
 
+    pip_size = float(config.broker_execution_guardrails.get("pip_size", 0.01) or 0.01)
     rows = joined.with_columns(pl.col("rsi").shift(1).alias("previous_rsi")).to_dicts()
     for row in rows:
         if any(row.get(k) is None for k in (
@@ -144,7 +145,7 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             row["timestamp"], config.session_filter["entry_windows"],
             config.session_filter["timezone"],
         )
-        spread_pips = row["spread_avg"] / 0.01
+        spread_pips = row["spread_avg"] / pip_size
         common_reason = None
         if not session:
             common_reason = "outside_session"

@@ -197,6 +197,46 @@ def test_news_calendar_refresh_guard_refreshes_stale_calendar(tmp_path, monkeypa
     assert events[1]["status"] == "CURRENT"
 
 
+def test_news_calendar_refresh_guard_uses_gbpusd_refresher_for_gbp_usd(tmp_path, monkeypatch):
+    calendar = tmp_path / "events.csv"
+    calendar.write_text(
+        "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
+        "old,2026-07-23T10:00:00Z,United States,USD,CPI,HIGH,,,,test\n"
+    )
+    calls = []
+
+    def refresh(**kwargs):
+        calls.append(kwargs)
+        calendar.write_text(
+            "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
+            "future,2026-08-10T10:00:00Z,United Kingdom,GBP,CPI,HIGH,,,,test\n"
+        )
+        return {"status": "REFRESHED", "output": str(kwargs["output"])}
+
+    monkeypatch.setattr("src.broker.ig.ig_bot.refresh_gbpusd_calendar", refresh)
+    guard = NewsCalendarRefreshGuard(
+        config=SimpleNamespace(
+            news_guard_calendar_refresh_enabled=True,
+            news_guard_calendar_forward_days=21,
+            news_guard_calendar_min_forward_days=7,
+            news_guard_calendar_refresh_minutes_before_session=30,
+            news_guard_calendar_cache_dir=tmp_path / "cache",
+        ),
+        contract={
+            "news_guard": {
+                "enabled": True,
+                "calendar_file": str(calendar),
+                "affected_currencies": ["GBP", "USD"],
+            }
+        },
+        audit_callback=lambda _event: None,
+        first_session={"name": "Tokyo", "start": "09:00", "end": "18:00", "timezone": "Asia/Tokyo"},
+    )
+
+    assert guard.check(datetime(2026, 7, 22, 23, 30, tzinfo=timezone.utc))
+    assert calls
+
+
 def test_news_calendar_refresh_guard_fails_closed_and_does_not_retry_same_day(tmp_path, monkeypatch):
     calendar = tmp_path / "events.csv"
     calendar.write_text(

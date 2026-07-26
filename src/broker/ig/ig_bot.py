@@ -28,6 +28,7 @@ from .ig_trade_lifecycle import (
 )
 from .models import DryRunOrder, InternalTick
 from .telegram_notifier import TelegramNotifier, control_state
+from scripts.ensure_live_gbpusd_macro_calendar import refresh_calendar as refresh_gbpusd_calendar
 from scripts.ensure_live_usdjpy_macro_calendar import calendar_status, prune_calendar, refresh_calendar
 
 logger = logging.getLogger(__name__)
@@ -339,6 +340,12 @@ class NewsCalendarRefreshGuard:
         path = Path(self.contract["news_guard"]["calendar_file"])
         return path if path.is_absolute() else Path.cwd() / path
 
+    def _refresh_calendar(self, **kwargs) -> dict:
+        currencies = set(self.contract.get("news_guard", {}).get("affected_currencies") or [])
+        if currencies == {"GBP", "USD"}:
+            return refresh_gbpusd_calendar(**kwargs)
+        return refresh_calendar(**kwargs)
+
     def _scheduled_key(self, now_utc: datetime) -> tuple[str, datetime, datetime] | None:
         tz_name = self.first_session.get("timezone", "UTC")
         local_now = now_utc.astimezone(ZoneInfo(tz_name))
@@ -385,7 +392,7 @@ class NewsCalendarRefreshGuard:
             return True
 
         try:
-            refreshed = refresh_calendar(
+            refreshed = self._refresh_calendar(
                 start_date=now_utc.date().isoformat(),
                 end_date=(now_utc.date() + timedelta(
                     days=getattr(self.config, "news_guard_calendar_forward_days", 21)
