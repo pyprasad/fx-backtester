@@ -5,7 +5,12 @@ import polars as pl
 from src.strategies.fx_swing_trend_reclaim import generate_signals
 
 
+def _use_candle_close_timing(strategy_config):
+    strategy_config.execution["signal_timing_mode"] = "candle_close_timestamp"
+
+
 def test_signal_session_uses_configured_timezone(strategy_config):
+    _use_candle_close_timing(strategy_config)
     strategy_config.session_filter = {
         "timezone": "Asia/Tokyo",
         "entry_windows": [{"name": "Tokyo", "start": "09:00", "end": "18:00"}],
@@ -47,6 +52,7 @@ def test_signal_session_uses_configured_timezone(strategy_config):
 
 
 def test_signal_session_supports_per_window_timezones(strategy_config):
+    _use_candle_close_timing(strategy_config)
     strategy_config.session_filter = {
         "timezone": "UTC",
         "entry_windows": [
@@ -77,6 +83,7 @@ def test_signal_session_supports_per_window_timezones(strategy_config):
 
 
 def test_news_guard_blocks_valid_signal_and_logs_event(strategy_config, tmp_path):
+    _use_candle_close_timing(strategy_config)
     calendar = tmp_path / "events.csv"
     calendar.write_text(
         "event_id,event_time_utc,country,currency,event_name,impact,actual,forecast,previous,source\n"
@@ -123,6 +130,7 @@ def test_news_guard_blocks_valid_signal_and_logs_event(strategy_config, tmp_path
 
 
 def test_trend_filter_uses_4h_ema_not_entry_ema(strategy_config):
+    _use_candle_close_timing(strategy_config)
     strategy_config.session_filter = {
         "timezone": "Asia/Tokyo",
         "entry_windows": [{"name": "Tokyo", "start": "09:00", "end": "18:00"}],
@@ -164,6 +172,7 @@ def test_trend_filter_uses_4h_ema_not_entry_ema(strategy_config):
 
 
 def test_signal_uses_entry_candle_close_and_closed_4h_context(strategy_config):
+    _use_candle_close_timing(strategy_config)
     strategy_config.session_filter = {
         "timezone": "UTC",
         "entry_windows": [{"name": "London", "start": "07:00", "end": "11:30"}],
@@ -194,4 +203,39 @@ def test_signal_uses_entry_candle_close_and_closed_4h_context(strategy_config):
 
     assert len(signals) == 1
     assert signals[0].timestamp_utc == datetime(2025, 1, 6, 7, tzinfo=timezone.utc)
+    assert signals[0].session == "London"
+
+
+def test_legacy_signal_timing_uses_entry_candle_open_and_legacy_4h_context(strategy_config):
+    strategy_config.execution["signal_timing_mode"] = "legacy_open_timestamp"
+    strategy_config.session_filter = {
+        "timezone": "UTC",
+        "entry_windows": [{"name": "London", "start": "06:00", "end": "11:30"}],
+    }
+    strategy_config.broker_execution_guardrails["enabled"] = False
+    entry_times = [
+        datetime(2025, 1, 6, 5, tzinfo=timezone.utc),
+        datetime(2025, 1, 6, 6, tzinfo=timezone.utc),
+    ]
+    entry = pl.DataFrame({
+        "timestamp": entry_times, "timestamp_london": entry_times, "symbol": ["USDJPY"] * 2,
+        "mid_open": [150.1, 150.1], "mid_high": [150.2, 150.2],
+        "mid_low": [149.9, 149.9], "mid_close": [150.0, 150.0],
+        "spread_avg": [.001, .001], "ema_20": [150.0, 150.0], "ema_50": [150.1, 150.1],
+        "ema_200": [151.0, 151.0], "rsi_14": [45.0, 40.0],
+        "atr_14": [.1, .1], "atr_14_pips": [10.0, 10.0],
+    })
+    trend = pl.DataFrame({
+        "timestamp": [
+            datetime(2025, 1, 6, 2, tzinfo=timezone.utc),
+            datetime(2025, 1, 6, 6, tzinfo=timezone.utc),
+        ],
+        "mid_close": [160.0, 149.0],
+        "ema_200": [150.0, 150.0],
+    })
+
+    signals, _ = generate_signals(entry, trend, strategy_config)
+
+    assert len(signals) == 1
+    assert signals[0].timestamp_utc == datetime(2025, 1, 6, 6, tzinfo=timezone.utc)
     assert signals[0].session == "London"

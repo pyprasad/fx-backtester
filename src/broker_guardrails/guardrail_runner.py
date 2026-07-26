@@ -34,7 +34,7 @@ class BrokerGuardrailRunner:
                  variant=None, continue_on_error=True, session_timezone=None,
                  session_windows=None, news_guard_enabled=None,
                  news_calendar_file=None, news_before_minutes=None,
-                 news_after_minutes=None):
+                 news_after_minutes=None, signal_timing_mode=None):
         self.strategy_path = Path(strategy_config)
         self.variants_path = Path(variants_config)
         self.tick_path = str(Path(normalised_tick_path).resolve())
@@ -50,6 +50,7 @@ class BrokerGuardrailRunner:
         self.news_calendar_file = news_calendar_file
         self.news_before_minutes = news_before_minutes
         self.news_after_minutes = news_after_minutes
+        self.signal_timing_mode = signal_timing_mode
         self.output = self.report_parent / datetime.now(timezone.utc).strftime(
             "%Y%m%d_%H%M%S_usdjpy_fx_swing_trend_reclaim_v1"
         )
@@ -69,6 +70,8 @@ class BrokerGuardrailRunner:
             config.news_guard["before_minutes"] = self.news_before_minutes
         if self.news_after_minutes is not None:
             config.news_guard["after_minutes"] = self.news_after_minutes
+        if self.signal_timing_mode:
+            config.execution["signal_timing_mode"] = self.signal_timing_mode
         config.broker_execution_guardrails = deep_merge(
             config.broker_execution_guardrails, variant["broker_execution_guardrails"]
         )

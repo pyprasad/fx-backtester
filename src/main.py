@@ -37,6 +37,7 @@ from src.data.tick_normalizer import normalize_ticks
 from src.forensics.trade_forensics import TradeForensicsEngine
 from src.reporting.html_report import add_forensic_link
 from src.robustness.robustness_runner import ParameterRobustnessRunner
+from src.research.candle_close_search import CandleCloseSearchRunner
 from src.stability.stability_runner import StabilityValidationRunner
 from src.stress.monte_carlo_runner import MonteCarloStressRunner
 from src.utils.logging import configure_logging, get_logger, timed_stage
@@ -64,6 +65,12 @@ def session_window(value):
     if len(parts) == 4:
         result["timezone"] = parts[3]
     return result
+
+
+def optional_float(value):
+    if str(value).lower() in {"none", "off", "false", "null"}:
+        return None
+    return float(value)
 
 
 def quality(config, ticks=None):
@@ -106,6 +113,15 @@ def add_strategy_overrides(parser):
     parser.add_argument("--normalised-tick-path", help="Override strategy normalized Parquet input")
     parser.add_argument("--candle-path", help="Override candle output/input directory")
     parser.add_argument("--report-output-path", help="Override backtest report parent directory")
+    parser.add_argument(
+        "--signal-timing-mode",
+        choices=["candle_close_timestamp", "legacy_open_timestamp"],
+        help=(
+            "candle_close_timestamp evaluates/executes after the signal candle closes. "
+            "legacy_open_timestamp reproduces historical backtests that timestamped "
+            "signals at the candle open."
+        ),
+    )
     parser.add_argument(
         "--fixed-take-profit-pips",
         type=float,
@@ -178,6 +194,7 @@ def strategy_config(args, path):
         news_calendar_file=getattr(args, "news_calendar_file", None),
         news_before_minutes=getattr(args, "news_before_minutes", None),
         news_after_minutes=getattr(args, "news_after_minutes", None),
+        signal_timing_mode=getattr(args, "signal_timing_mode", None),
     )
     if getattr(args, "weekend_policy_name", None):
         config = apply_weekend_policy_variant(
@@ -245,6 +262,47 @@ def main():
     robustness_parser.add_argument("--baseline-run-path")
     robustness_parser.add_argument("--session-timezone")
     robustness_parser.add_argument("--session-window", action="append", type=session_window)
+    candle_search_parser = sub.add_parser("candle-close-search")
+    candle_search_parser.add_argument("--config", required=True)
+    candle_search_parser.add_argument("--strategy-contract-config")
+    candle_search_parser.add_argument("--normalised-tick-path", required=True)
+    candle_search_parser.add_argument("--candle-path", required=True)
+    candle_search_parser.add_argument("--news-calendar-file")
+    candle_search_parser.add_argument("--report-output-path", required=True)
+    candle_search_parser.add_argument("--max-variants", type=int, default=50)
+    candle_search_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
+    candle_search_parser.add_argument(
+        "--direction-mode",
+        action="append",
+        choices=["long_short", "long_only", "short_only"],
+        help="Repeat to restrict the search to selected direction modes.",
+    )
+    candle_search_parser.add_argument(
+        "--session-preset",
+        action="append",
+        choices=["all", "tokyo", "london_morning", "overlap", "london_combined"],
+        help="Repeat to restrict the search to selected session presets.",
+    )
+    candle_search_parser.add_argument("--rsi-level", action="append", type=int)
+    candle_search_parser.add_argument("--pullback-atr", action="append", type=float)
+    candle_search_parser.add_argument("--fixed-take-profit-pips", action="append", type=float)
+    candle_search_parser.add_argument("--min-body-atr", action="append", type=optional_float)
+    candle_search_parser.add_argument("--min-atr-pips", action="append", type=optional_float)
+    candle_search_parser.add_argument(
+        "--hour-preset",
+        action="append",
+        choices=[
+            "all_hours",
+            "london_morning_utc",
+            "overlap_utc",
+            "london_combined_utc",
+            "london_no_13_utc",
+            "london_no_13_16_utc",
+            "london_core_utc",
+            "overlap_no_13_16_utc",
+        ],
+    )
+    candle_search_parser.add_argument("--allowed-signal-hour-utc", action="append", type=int)
     stress_parser = sub.add_parser("monte-carlo-stress")
     stress_parser.add_argument("--strategy-config", required=True)
     stress_parser.add_argument("--run-path", required=True)
@@ -267,6 +325,10 @@ def main():
     guardrail_parser.add_argument("--continue-on-error", action=argparse.BooleanOptionalAction, default=True)
     guardrail_parser.add_argument("--session-timezone")
     guardrail_parser.add_argument("--session-window", action="append", type=session_window)
+    guardrail_parser.add_argument(
+        "--signal-timing-mode",
+        choices=["candle_close_timestamp", "legacy_open_timestamp"],
+    )
     add_news_guard_overrides(guardrail_parser)
     bakeoff_parser = sub.add_parser("final-guardrail-bakeoff")
     bakeoff_parser.add_argument("--strategy-config", required=True)
@@ -355,6 +417,44 @@ def main():
             args.session_timezone, args.session_window,
         ).run()
         print(f"Parameter robustness report: {output / 'robustness_report.html'}")
+    elif args.command == "candle-close-search":
+        hour_presets = None
+        if args.hour_preset or args.allowed_signal_hour_utc:
+            available_hour_presets = {
+                "all_hours": None,
+                "london_morning_utc": tuple(range(7, 12)),
+                "overlap_utc": tuple(range(13, 17)),
+                "london_combined_utc": (*range(7, 12), *range(13, 17)),
+                "london_no_13_utc": (6, 7, 8, 9, 10, 11, 12, 14, 15, 16),
+                "london_no_13_16_utc": (6, 7, 8, 9, 10, 11, 12, 14, 15),
+                "london_core_utc": (8, 9, 10, 11, 12, 14, 15),
+                "overlap_no_13_16_utc": (12, 14, 15),
+            }
+            hour_presets = {
+                name: available_hour_presets[name]
+                for name in (args.hour_preset or [])
+            }
+            if args.allowed_signal_hour_utc:
+                hour_presets["custom"] = tuple(sorted(set(args.allowed_signal_hour_utc)))
+        output = CandleCloseSearchRunner(
+            strategy_config=args.config,
+            strategy_contract_config=args.strategy_contract_config,
+            normalised_tick_path=args.normalised_tick_path,
+            candle_path=args.candle_path,
+            news_calendar_file=args.news_calendar_file,
+            report_output_path=args.report_output_path,
+            max_variants=args.max_variants,
+            continue_on_error=args.continue_on_error,
+            direction_modes=args.direction_mode,
+            session_presets=args.session_preset,
+            rsi_levels=args.rsi_level,
+            pullback_atrs=args.pullback_atr,
+            fixed_take_profit_pips=args.fixed_take_profit_pips,
+            min_body_atrs=args.min_body_atr,
+            min_atr_pips_values=args.min_atr_pips,
+            hour_presets=hour_presets,
+        ).run()
+        print(f"Candle-close search: {output / 'candle_close_search_ranked.csv'}")
     elif args.command == "monte-carlo-stress":
         output = MonteCarloStressRunner(
             args.strategy_config, args.run_path, args.report_output_path,
@@ -370,6 +470,7 @@ def main():
             args.session_timezone, args.session_window,
             args.news_guard_enabled, args.news_calendar_file,
             args.news_before_minutes, args.news_after_minutes,
+            args.signal_timing_mode,
         ).run()
         print(f"Broker guardrail report: {output / 'broker_guardrail_report.html'}")
     elif args.command == "final-guardrail-bakeoff":

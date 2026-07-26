@@ -10,9 +10,13 @@ This directory contains the integration package for the final agreed historical 
 
 Start with the [Plain-English Strategy Guide](usdjpy_strategy_plain_english_guide.md), then use the
 [Final Strategy](usdjpy_fx_swing_trend_reclaim_v1_final_strategy.md) and
-[Pipeline Contract](usdjpy_strategy_pipeline_contract.md) for implementation work. The current DEMO
-validation contract is
-`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml`.
+[Pipeline Contract](usdjpy_strategy_pipeline_contract.md) for implementation work. Older DEMO
+research used `config/strategies/usdjpy_fx_swing_trend_reclaim_v1_strict_combined_demo.yaml`.
+
+For the latest long/short 6-pip DEMO validation evidence, signal-timing decision, and operating
+checklist, use the [USDJPY Legacy Demo Validation Playbook](usdjpy_legacy_demo_validation_playbook.md).
+Its current validation contract is
+`config/strategies/usdjpy_fx_swing_trend_reclaim_v1_intraday_6pip_attached_demo.yaml`.
 
 The existing executable research configuration remains
 `config/strategy.usdjpy.fx_swing_trend_reclaim.yaml`. The final package does not enable live

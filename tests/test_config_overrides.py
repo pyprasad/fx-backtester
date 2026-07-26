@@ -32,6 +32,7 @@ def test_news_guard_env_overrides_are_optional(monkeypatch):
         "NEWS_GUARD_CALENDAR_FILE",
         "NEWS_GUARD_BEFORE_MINUTES",
         "NEWS_GUARD_AFTER_MINUTES",
+        "SIGNAL_TIMING_MODE",
     ):
         monkeypatch.delenv(key, raising=False)
 
@@ -69,6 +70,17 @@ def test_cli_news_guard_override_wins_after_env(monkeypatch):
     )
 
     assert config.news_guard["enabled"] is False
+
+
+def test_signal_timing_mode_overrides_strategy_config(monkeypatch):
+    monkeypatch.setenv("SIGNAL_TIMING_MODE", "legacy_open_timestamp")
+    config = load_strategy_config("config/strategy.usdjpy.fx_swing_trend_reclaim.yaml")
+
+    assert config.execution["signal_timing_mode"] == "legacy_open_timestamp"
+
+    config = apply_strategy_overrides(config, signal_timing_mode="candle_close_timestamp")
+
+    assert config.execution["signal_timing_mode"] == "candle_close_timestamp"
 
 
 def test_cli_strategy_contract_config_preserves_intraday_contract_with_fixed_tp():

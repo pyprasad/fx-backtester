@@ -13,6 +13,11 @@ from src.risk.weekend_policy import WeekendPolicy
 from .signal import Signal
 
 
+SIGNAL_TIMING_CANDLE_CLOSE = "candle_close_timestamp"
+SIGNAL_TIMING_LEGACY_OPEN = "legacy_open_timestamp"
+SIGNAL_TIMING_MODES = {SIGNAL_TIMING_CANDLE_CLOSE, SIGNAL_TIMING_LEGACY_OPEN}
+
+
 def _timeframe_duration(value: str) -> timedelta:
     amount = int(value[:-1])
     unit = value[-1].upper()
@@ -23,6 +28,44 @@ def _timeframe_duration(value: str) -> timedelta:
     if unit == "D":
         return timedelta(days=amount)
     raise ValueError(f"Unsupported timeframe: {value}")
+
+
+def signal_timing_mode(config: StrategyConfig) -> str:
+    mode = (
+        (config.execution or {}).get("signal_timing_mode")
+        or (config.strategy or {}).get("signal_timing_mode")
+        or SIGNAL_TIMING_CANDLE_CLOSE
+    )
+    if mode not in SIGNAL_TIMING_MODES:
+        raise ValueError(
+            f"Unsupported signal_timing_mode: {mode}. "
+            f"Expected one of: {', '.join(sorted(SIGNAL_TIMING_MODES))}"
+        )
+    return mode
+
+
+def signal_timestamp_for_candle(timestamp_utc, config: StrategyConfig):
+    if signal_timing_mode(config) == SIGNAL_TIMING_LEGACY_OPEN:
+        return timestamp_utc
+    return timestamp_utc + _timeframe_duration(config.timeframes.get("entry", "1H"))
+
+
+def _entry_quality_rejection(row: dict, config: StrategyConfig) -> str | None:
+    quality = (config.entry.get("quality_filters", {}) or {})
+    if not quality.get("enabled", False):
+        return None
+    min_atr_pips = quality.get("min_atr_pips")
+    if min_atr_pips is not None and row["atr_pips"] < float(min_atr_pips):
+        return "entry_quality_atr_too_low"
+    min_body_atr = quality.get("min_body_atr")
+    if min_body_atr is not None:
+        body_atr = abs(row["mid_close"] - row["mid_open"]) / row["atr"] if row["atr"] else 0
+        if body_atr < float(min_body_atr):
+            return "entry_quality_body_too_small"
+    allowed_hours = quality.get("allowed_signal_hours_utc")
+    if allowed_hours and row["signal_timestamp_utc"].hour not in {int(hour) for hour in allowed_hours}:
+        return "entry_quality_hour_not_allowed"
+    return None
 
 
 def _session(timestamp_utc, windows: list[dict], default_timezone: str) -> tuple[str | None, object]:
@@ -52,16 +95,25 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
         *(pl.col(source).alias(target) for target, source in aliases.items()
           if target not in trend.columns and source in trend.columns)
     )
-    entry_duration = _timeframe_duration(config.timeframes.get("entry", "1H"))
-    trend_duration = _timeframe_duration(config.timeframes.get("trend", "4H"))
-    entry = entry.with_columns(
-        (pl.col("timestamp") + entry_duration).alias("signal_timestamp_utc")
-    )
-    trend_view = trend.select(
-        (pl.col("timestamp") + trend_duration).alias("trend_available_timestamp"),
-        pl.col("mid_close").alias("trend_close"),
-        pl.col("ema_slow").alias("trend_ema_slow"),
-    )
+    timing_mode = signal_timing_mode(config)
+    if timing_mode == SIGNAL_TIMING_LEGACY_OPEN:
+        entry = entry.with_columns(pl.col("timestamp").alias("signal_timestamp_utc"))
+        trend_view = trend.select(
+            pl.col("timestamp").alias("trend_available_timestamp"),
+            pl.col("mid_close").alias("trend_close"),
+            pl.col("ema_slow").alias("trend_ema_slow"),
+        )
+    else:
+        entry_duration = _timeframe_duration(config.timeframes.get("entry", "1H"))
+        trend_duration = _timeframe_duration(config.timeframes.get("trend", "4H"))
+        entry = entry.with_columns(
+            (pl.col("timestamp") + entry_duration).alias("signal_timestamp_utc")
+        )
+        trend_view = trend.select(
+            (pl.col("timestamp") + trend_duration).alias("trend_available_timestamp"),
+            pl.col("mid_close").alias("trend_close"),
+            pl.col("ema_slow").alias("trend_ema_slow"),
+        )
     joined = entry.sort("signal_timestamp_utc").join_asof(
         trend_view.sort("trend_available_timestamp"),
         left_on="signal_timestamp_utc",
@@ -175,6 +227,8 @@ def generate_signals(entry: pl.DataFrame, trend: pl.DataFrame, config: StrategyC
             common_reason = "sunday_open"
         elif spread_pips > config.spread_filter["max_spread_pips"]:
             common_reason = "spread_too_high"
+        else:
+            common_reason = _entry_quality_rejection(row, config)
         if common_reason:
             rejected.append({
                 "timestamp": row["signal_timestamp_utc"], "timestamp_utc": row["signal_timestamp_utc"],

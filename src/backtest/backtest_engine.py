@@ -13,7 +13,7 @@ from src.reporting.csv_report import write_csv_reports, write_funding_reports, w
 from src.reporting.html_report import write_html_report
 from src.reporting.metrics import calculate_metrics
 from src.risk.risk_manager import RiskManager
-from src.strategies.fx_swing_trend_reclaim import generate_signals
+from src.strategies.fx_swing_trend_reclaim import generate_signals, signal_timing_mode
 from src.utils.logging import get_logger, timed_stage
 
 logger = get_logger(__name__)
@@ -133,6 +133,7 @@ def run_backtest(config: StrategyConfig, output_override=None) -> tuple[list, di
             risk.record(trade.net_pnl, balance, trade.exit_timestamp_utc)
             active_until = trade.exit_timestamp_utc
     metrics = calculate_metrics(trades, config.risk["starting_balance"])
+    metrics["signal_timing_mode"] = signal_timing_mode(config)
     metrics.update(_news_guard_metrics(config, rejections))
     run_name = strategy_run_name(config)
     output = output_override or (resolve(config, config.reporting["output_path"]) / run_name)

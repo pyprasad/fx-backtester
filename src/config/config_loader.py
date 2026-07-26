@@ -62,6 +62,10 @@ def apply_news_guard_env_overrides(config: StrategyConfig) -> StrategyConfig:
     if after_minutes is not None:
         config.news_guard["after_minutes"] = after_minutes
 
+    signal_timing_mode = os.environ.get("SIGNAL_TIMING_MODE")
+    if signal_timing_mode:
+        config.execution["signal_timing_mode"] = signal_timing_mode
+
     return config
 
 
@@ -103,6 +107,7 @@ def apply_strategy_overrides(
     news_calendar_file: str | None = None,
     news_before_minutes: int | None = None,
     news_after_minutes: int | None = None,
+    signal_timing_mode: str | None = None,
 ) -> StrategyConfig:
     if normalised_tick_path:
         config.data["normalised_tick_path"] = normalised_tick_path
@@ -133,6 +138,8 @@ def apply_strategy_overrides(
         config.news_guard["before_minutes"] = news_before_minutes
     if news_after_minutes is not None:
         config.news_guard["after_minutes"] = news_after_minutes
+    if signal_timing_mode:
+        config.execution["signal_timing_mode"] = signal_timing_mode
     return config
 
 

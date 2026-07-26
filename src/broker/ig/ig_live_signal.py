@@ -10,7 +10,7 @@ import yaml
 from src.broker_guardrails.guardrail_runner import deep_merge
 from src.config.config_loader import load_strategy_config
 from src.indicators.indicator_engine import add_indicators
-from src.strategies.fx_swing_trend_reclaim import generate_signals
+from src.strategies.fx_swing_trend_reclaim import generate_signals, signal_timestamp_for_candle
 
 from .ig_order_dry_run import build_dry_run_order
 from .ig_position_sizing import account_balance, active_account, dynamic_deal_size
@@ -357,7 +357,7 @@ def evaluate_live_signal_from_candles(*, client, config, contract: dict, epic: s
     trend = add_indicators(four_hour, parameters=config.indicators)
     signals, rejections = generate_signals(entry, trend, config)
     latest_closed = entry["timestamp"].max()
-    latest_signal_time = latest_closed + timedelta(hours=1) if latest_closed else None
+    latest_signal_time = signal_timestamp_for_candle(latest_closed, config) if latest_closed else None
     current_signals = [
         signal for signal in signals
         if latest_signal_time and signal.timestamp_utc == latest_signal_time
