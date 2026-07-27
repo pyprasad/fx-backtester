@@ -58,6 +58,35 @@ def _broker_level(level: float, price_scale_divisor: float | None) -> float:
     return round(level * price_scale_divisor, 8) if price_scale_divisor else round(level, 8)
 
 
+def trade_update_deal_ids(payload: dict) -> set[str]:
+    deal_ids = {
+        str(value) for value in (payload.get("dealId"), payload.get("dealIdOrigin"))
+        if value not in (None, "")
+    }
+    for item in payload.get("affectedDeals") or []:
+        if not isinstance(item, dict):
+            continue
+        for key in ("dealId", "dealIdOrigin"):
+            value = item.get(key)
+            if value not in (None, ""):
+                deal_ids.add(str(value))
+    return deal_ids
+
+
+def trade_update_closes_position(payload: dict) -> bool:
+    statuses = {
+        str(value).upper()
+        for value in (payload.get("status"), payload.get("dealStatus"))
+        if value not in (None, "")
+    }
+    statuses.update(
+        str(item.get("status")).upper()
+        for item in payload.get("affectedDeals") or []
+        if isinstance(item, dict) and item.get("status") not in (None, "")
+    )
+    return bool(statuses & {"DELETED", "CLOSED", "FULLY_CLOSED"})
+
+
 class IGTradeLifecycleManager:
     def __init__(self, *, config: dict, pip_size: float = 0.01):
         self.config = config
@@ -204,9 +233,8 @@ class IGTradeLifecycleManager:
             "update_type": update_type,
             "payload": payload,
         })
-        if update_type == "OPU" and payload.get("dealId") == self.position.deal_id:
-            status = str(payload.get("status", "")).upper()
-            if status in {"DELETED", "CLOSED", "FULLY_CLOSED"}:
+        if update_type == "OPU" and self.position.deal_id in trade_update_deal_ids(payload):
+            if trade_update_closes_position(payload):
                 self.position.remaining_size = 0
 
     def snapshot(self) -> dict:
@@ -308,15 +336,16 @@ class IGTradeLifecycleExecutor:
         elif action.action_type in {"PARTIAL_CLOSE", "FULL_CLOSE"}:
             size = action.size if action.action_type == "PARTIAL_CLOSE" else position.remaining_size
             payload = {
+                "currencyCode": position.currency,
                 "dealId": action.deal_id,
                 "direction": _opposite(position.direction),
-                "epic": position.epic,
-                "expiry": position.expiry,
                 "size": size,
                 "orderType": "MARKET",
                 "timeInForce": "FILL_OR_KILL",
             }
-            response = self.client.close_position(payload)
+            response = self.client.close_position({
+                key: value for key, value in payload.items() if value is not None
+            })
         else:
             raise ValueError(f"Unsupported lifecycle action: {action.action_type}")
         return {
