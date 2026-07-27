@@ -170,8 +170,14 @@ def test_lifecycle_executor_scales_stop_level_and_closes_opposite_direction():
 
     assert calls[0] == ("amend", "DEAL1", {"stopLevel": 15987.0})
     assert calls[1][0] == "close"
-    assert calls[1][1]["direction"] == "BUY"
-    assert calls[1][1]["size"] == 6.0
+    assert calls[1][1] == {
+        "currencyCode": "GBP",
+        "dealId": "DEAL1",
+        "direction": "BUY",
+        "size": 6.0,
+        "orderType": "MARKET",
+        "timeInForce": "FILL_OR_KILL",
+    }
 
 
 def test_lifecycle_emits_full_close_for_max_duration():

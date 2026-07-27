@@ -16,7 +16,7 @@ from src.broker.ig.ig_bot import (
     write_bot_audit_event,
 )
 from src.broker.ig.ig_candle_cache import CandleCachePaths
-from src.broker.ig.ig_trade_lifecycle import IGTradeLifecycleManager, ManagedPosition
+from src.broker.ig.ig_trade_lifecycle import IGTradeLifecycleManager, LifecycleAction, ManagedPosition
 from src.broker_guardrails.time_guard import weekend_market_hibernate_window
 
 
@@ -446,3 +446,260 @@ def test_stale_open_trade_update_for_closed_position_is_not_notified(tmp_path):
     assert sends == []
     rows = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
     assert "TRADE_STREAM_UPDATE_SUPPRESSED" in rows
+
+
+def test_lifecycle_close_is_skipped_when_broker_position_already_closed(tmp_path):
+    client = SimpleNamespace(get_open_positions=lambda: {"positions": []})
+    runner = _runner_for_reconciliation(tmp_path, client)
+    sends = []
+    runner.telegram = SimpleNamespace(send=lambda text, *, category="system": sends.append((category, text)))
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="DEAL1",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=4.13,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    manager.pending_action = LifecycleAction(
+        "FULL_CLOSE", "INTRADAY_FUNDING_AVOIDANCE_CLOSE", "DEAL1", "REF1", size=4.13
+    )
+    executor_calls = []
+    runner.lifecycle_manager = manager
+    runner.lifecycle_executor = SimpleNamespace(
+        execute=lambda action, position: executor_calls.append((action, position)) or {}
+    )
+
+    result = runner._process_lifecycle_action()
+
+    assert result == {
+        "skipped": True,
+        "reason": "BROKER_POSITION_ALREADY_CLOSED",
+        "action": "FULL_CLOSE",
+    }
+    assert executor_calls == []
+    assert runner.lifecycle_manager is None
+    assert runner.lifecycle_executor is None
+    snapshot = json.loads((tmp_path / "audit" / "trade_lifecycle_usdjpy.json").read_text())
+    assert snapshot["position"] is None
+    assert snapshot["reason"] == "BROKER_POSITION_ALREADY_CLOSED"
+    rows = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
+    assert "LIFECYCLE_ACTION_SKIPPED" in rows
+    assert sends[0][0] == "trade"
+
+
+def test_lifecycle_close_preflight_failure_backs_off_without_close_attempt(tmp_path):
+    def get_open_positions():
+        raise RuntimeError("temporary broker read failure")
+
+    client = SimpleNamespace(get_open_positions=get_open_positions)
+    runner = _runner_for_reconciliation(tmp_path, client)
+    runner.telegram = SimpleNamespace(send=lambda *_args, **_kwargs: None)
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="DEAL1",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=4.13,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    manager.pending_action = LifecycleAction(
+        "FULL_CLOSE", "INTRADAY_FUNDING_AVOIDANCE_CLOSE", "DEAL1", "REF1", size=4.13
+    )
+    executor_calls = []
+    runner.lifecycle_manager = manager
+    runner.lifecycle_executor = SimpleNamespace(
+        execute=lambda action, position: executor_calls.append((action, position)) or {"dealReference": "REF2"}
+    )
+
+    result = runner._process_lifecycle_action()
+
+    assert result == {
+        "skipped": True,
+        "reason": "LIFECYCLE_POSITION_PREFLIGHT_FAILED",
+        "action": "FULL_CLOSE",
+    }
+    assert executor_calls == []
+    rows = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
+    assert "LIFECYCLE_POSITION_PREFLIGHT_FAILED" in rows
+    assert "LIFECYCLE_ACTION_SUBMITTED" not in rows
+
+
+def test_trade_update_deal_id_origin_closes_managed_position(tmp_path):
+    client = SimpleNamespace()
+    runner = _runner_for_reconciliation(tmp_path, client)
+    runner.telegram = SimpleNamespace(send=lambda *_args, **_kwargs: None)
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="OPEN_DEAL",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=4.13,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    runner.lifecycle_manager = manager
+
+    runner._on_trade_update("OPU", {
+        "dealId": "CLOSING_DEAL",
+        "dealIdOrigin": "OPEN_DEAL",
+        "status": "DELETED",
+        "direction": "SELL",
+        "size": 0,
+    })
+
+    assert manager.position.remaining_size == 0
+
+
+def test_lifecycle_failure_enters_cooldown_without_repeated_broker_calls(tmp_path):
+    broker_reads = []
+
+    def get_open_positions():
+        broker_reads.append("read")
+        return {"positions": [{
+            "position": {"dealId": "DEAL1", "dealSize": 4.13},
+            "market": {"epic": "CS.D.USDJPY.TODAY.IP"},
+        }]}
+
+    client = SimpleNamespace(get_open_positions=get_open_positions)
+    runner = _runner_for_reconciliation(tmp_path, client)
+    runner.telegram = SimpleNamespace(send=lambda *_args, **_kwargs: None)
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="DEAL1",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=4.13,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    runner.lifecycle_manager = manager
+    runner.lifecycle_executor = SimpleNamespace(
+        execute=lambda _action, _position: (_ for _ in ()).throw(RuntimeError("IG rejected"))
+    )
+
+    manager.pending_action = LifecycleAction("FULL_CLOSE", "cutoff", "DEAL1", "REF1", size=4.13)
+    first = runner._process_lifecycle_action()
+    manager.pending_action = LifecycleAction("FULL_CLOSE", "cutoff", "DEAL1", "REF1", size=4.13)
+    second = runner._process_lifecycle_action()
+
+    assert first == {"error": "IG rejected", "action": "FULL_CLOSE"}
+    assert second["reason"] == "LIFECYCLE_ACTION_COOLDOWN"
+    assert broker_reads == ["read"]
+
+
+def test_partial_close_skips_when_broker_size_is_already_below_requested_size(tmp_path):
+    client = SimpleNamespace(get_open_positions=lambda: {"positions": [{
+        "position": {"dealId": "DEAL1", "dealSize": 2.0},
+        "market": {"epic": "CS.D.USDJPY.TODAY.IP"},
+    }]})
+    runner = _runner_for_reconciliation(tmp_path, client)
+    runner.telegram = SimpleNamespace(send=lambda *_args, **_kwargs: None)
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="DEAL1",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=4.13,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    manager.pending_action = LifecycleAction("PARTIAL_CLOSE", "partial_take_profit", "DEAL1", "REF1", size=2.5)
+    executor_calls = []
+    runner.lifecycle_manager = manager
+    runner.lifecycle_executor = SimpleNamespace(
+        execute=lambda action, position: executor_calls.append((action, position)) or {}
+    )
+
+    result = runner._process_lifecycle_action()
+
+    assert result["reason"] == "BROKER_SIZE_BELOW_PARTIAL_CLOSE_SIZE"
+    assert executor_calls == []
+    assert manager.position.remaining_size == 2.0
+    assert manager.position.partial_close_applied is True
+
+
+def test_lifecycle_action_skips_when_broker_position_size_is_zero(tmp_path):
+    client = SimpleNamespace(get_open_positions=lambda: {"positions": [{
+        "position": {"dealId": "DEAL1", "dealSize": 0},
+        "market": {"epic": "CS.D.USDJPY.TODAY.IP"},
+    }]})
+    runner = _runner_for_reconciliation(tmp_path, client)
+    runner.telegram = SimpleNamespace(send=lambda *_args, **_kwargs: None)
+    manager = IGTradeLifecycleManager(config=runner.runtime_config.model_dump())
+    manager.attach(ManagedPosition(
+        deal_id="DEAL1",
+        deal_reference="REF1",
+        epic="CS.D.USDJPY.TODAY.IP",
+        direction="BUY",
+        size=4.13,
+        remaining_size=4.13,
+        entry_price=163.814,
+        initial_stop=163.634,
+        current_stop=163.634,
+        target_price=163.874,
+        initial_risk=0.18,
+        atr=0.0,
+        opened_at=datetime(2026, 7, 24, 4, tzinfo=timezone.utc),
+        currency="GBP",
+        expiry="DFB",
+    ))
+    manager.pending_action = LifecycleAction("FULL_CLOSE", "cutoff", "DEAL1", "REF1", size=4.13)
+    executor_calls = []
+    runner.lifecycle_manager = manager
+    runner.lifecycle_executor = SimpleNamespace(
+        execute=lambda action, position: executor_calls.append((action, position)) or {}
+    )
+
+    result = runner._process_lifecycle_action()
+
+    assert result["reason"] == "BROKER_POSITION_ALREADY_CLOSED"
+    assert executor_calls == []
+    assert runner.lifecycle_manager is None

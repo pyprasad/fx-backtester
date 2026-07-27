@@ -25,12 +25,15 @@ from .ig_trade_lifecycle import (
     IGTradeLifecycleManager,
     LifecycleJSONWriter,
     ManagedPosition,
+    trade_update_deal_ids,
 )
 from .models import DryRunOrder, InternalTick
 from .telegram_notifier import TelegramNotifier, control_state
 from scripts.ensure_live_usdjpy_macro_calendar import calendar_status, prune_calendar, refresh_calendar
 
 logger = logging.getLogger(__name__)
+
+LIFECYCLE_ACTION_COOLDOWN_SECONDS = 60.0
 
 
 def _parse_broker_datetime(value: str | None) -> datetime:
@@ -62,6 +65,16 @@ def _scaled_broker_level(value, price_scale_divisor: float | None) -> float | No
 
 def _position_epic(item: dict) -> str | None:
     return (item.get("market") or {}).get("epic") or (item.get("position") or {}).get("epic")
+
+
+def _position_deal_id(item: dict) -> str | None:
+    value = (item.get("position") or {}).get("dealId")
+    return str(value) if value not in (None, "") else None
+
+
+def _position_size(item: dict) -> float:
+    position = item.get("position") or {}
+    return float(position.get("dealSize", position.get("size", 0)) or 0)
 
 
 def _managed_position_from_broker_position(
@@ -508,6 +521,7 @@ class IGDemoBotRunner:
         self.run_started_at: str | None = None
         self.lifecycle_reconciled = False
         self.lifecycle_reconciliation_block_reason: str | None = None
+        self._lifecycle_action_cooldown_until: dict[tuple[str, str, str], float] = {}
 
     def _write_run_snapshot(self, result: BotRunResult) -> Path:
         result.tick_count = self.price_state.tick_count
@@ -555,7 +569,7 @@ class IGDemoBotRunner:
             "payload": payload,
         })
         if self.lifecycle_manager and self.lifecycle_manager.position:
-            if payload.get("dealId") == self.lifecycle_manager.position.deal_id:
+            if self.lifecycle_manager.position.deal_id in trade_update_deal_ids(payload):
                 status = payload.get("status") or payload.get("dealStatus") or update_type
                 if (
                     self.lifecycle_manager.position.remaining_size <= 0
@@ -917,6 +931,83 @@ class IGDemoBotRunner:
         )
         return execution
 
+    def _lifecycle_action_key(self, action) -> tuple[str, str, str]:
+        return (action.action_type, action.reason, action.deal_id)
+
+    def _set_lifecycle_action_cooldown(self, action) -> None:
+        self._lifecycle_action_cooldown_until[self._lifecycle_action_key(action)] = (
+            time.monotonic() + LIFECYCLE_ACTION_COOLDOWN_SECONDS
+        )
+
+    def _lifecycle_action_cooldown_remaining(self, action) -> float:
+        until = self._lifecycle_action_cooldown_until.get(self._lifecycle_action_key(action), 0)
+        return max(0.0, until - time.monotonic())
+
+    def _clear_lifecycle_action_cooldown(self, action) -> None:
+        self._lifecycle_action_cooldown_until.pop(self._lifecycle_action_key(action), None)
+
+    def _skip_missing_broker_position(self, action) -> dict:
+        with self._lock:
+            self.lifecycle_manager = None
+            self.lifecycle_executor = None
+            report = self.lifecycle_writer.clear(reason="BROKER_POSITION_ALREADY_CLOSED")
+        self._write_audit_event({
+            "event": "LIFECYCLE_ACTION_SKIPPED",
+            "action": action.action_type,
+            "reason": "BROKER_POSITION_ALREADY_CLOSED",
+            "deal_id": action.deal_id,
+            "report": str(report),
+        })
+        self.telegram.send(
+            "\n".join([
+                "USDJPY lifecycle action skipped",
+                f"action: {action.action_type}",
+                "reason: broker position already closed",
+                f"deal_id: {action.deal_id}",
+            ]),
+            category="trade",
+        )
+        return {
+            "skipped": True,
+            "reason": "BROKER_POSITION_ALREADY_CLOSED",
+            "action": action.action_type,
+        }
+
+    def _preflight_lifecycle_action(self, action, position) -> dict | None:
+        positions = self.client.get_open_positions().get("positions", [])
+        broker_position = next(
+            (item for item in positions if _position_deal_id(item) == action.deal_id),
+            None,
+        )
+        if broker_position is None:
+            return self._skip_missing_broker_position(action)
+
+        broker_size = _position_size(broker_position)
+        position.remaining_size = broker_size
+        if broker_size <= 0:
+            return self._skip_missing_broker_position(action)
+        if action.action_type == "PARTIAL_CLOSE" and action.size is not None:
+            if action.size >= broker_size:
+                position.partial_close_applied = True
+                with self._lock:
+                    report = self.lifecycle_writer.write(self.lifecycle_manager)
+                self._write_audit_event({
+                    "event": "LIFECYCLE_ACTION_SKIPPED",
+                    "action": action.action_type,
+                    "reason": "BROKER_SIZE_BELOW_PARTIAL_CLOSE_SIZE",
+                    "deal_id": action.deal_id,
+                    "requested_size": action.size,
+                    "broker_size": broker_size,
+                    "report": str(report),
+                })
+                return {
+                    "skipped": True,
+                    "reason": "BROKER_SIZE_BELOW_PARTIAL_CLOSE_SIZE",
+                    "action": action.action_type,
+                    "broker_size": broker_size,
+                }
+        return None
+
     def _process_lifecycle_action(self) -> dict | None:
         with self._lock:
             if not self.lifecycle_manager or not self.lifecycle_executor:
@@ -925,8 +1016,36 @@ class IGDemoBotRunner:
             position = self.lifecycle_manager.position
         if not action or not position:
             return None
+        cooldown_remaining = self._lifecycle_action_cooldown_remaining(action)
+        if cooldown_remaining > 0:
+            return {
+                "skipped": True,
+                "reason": "LIFECYCLE_ACTION_COOLDOWN",
+                "action": action.action_type,
+                "cooldown_seconds_remaining": round(cooldown_remaining, 2),
+            }
+        if action.action_type in {"AMEND_STOP", "PARTIAL_CLOSE", "FULL_CLOSE"}:
+            try:
+                preflight_result = self._preflight_lifecycle_action(action, position)
+                if preflight_result is not None:
+                    return preflight_result
+            except Exception as exc:
+                self._set_lifecycle_action_cooldown(action)
+                self._write_audit_event({
+                    "event": "LIFECYCLE_POSITION_PREFLIGHT_FAILED",
+                    "action": action.action_type,
+                    "deal_id": action.deal_id,
+                    "error": str(exc),
+                    "cooldown_seconds": LIFECYCLE_ACTION_COOLDOWN_SECONDS,
+                })
+                return {
+                    "skipped": True,
+                    "reason": "LIFECYCLE_POSITION_PREFLIGHT_FAILED",
+                    "action": action.action_type,
+                }
         try:
             result = self.lifecycle_executor.execute(action, position)
+            self._clear_lifecycle_action_cooldown(action)
             with self._lock:
                 self.lifecycle_manager.mark_action_applied(action, result)
                 report = self.lifecycle_writer.write(self.lifecycle_manager)
@@ -975,6 +1094,7 @@ class IGDemoBotRunner:
                 ]),
                 category="trade",
             )
+            self._set_lifecycle_action_cooldown(action)
             return {"error": str(exc), "action": action.action_type}
 
     def _control_state(self) -> str:
