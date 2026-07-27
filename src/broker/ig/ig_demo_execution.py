@@ -85,9 +85,9 @@ def place_demo_test_order(client, order: DryRunOrder, *, currency_code: str,
     }
 
 
-def write_demo_execution_report(output: str | Path, result: dict) -> Path:
+def write_demo_execution_report(output: str | Path, result: dict, *, symbol: str = "usdjpy") -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
-    path = output / "demo_execution_test.json"
+    path = output / f"demo_execution_{symbol}.json"
     path.write_text(json.dumps(result, indent=2, default=str))
     return path

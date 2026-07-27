@@ -156,6 +156,10 @@ def _bot_label(epic: str, contract: dict | None = None) -> str:
     return str(epic or "IG").upper()
 
 
+def _epic_symbol(epic: str, contract: dict | None = None) -> str:
+    return _bot_label(epic, contract).lower()
+
+
 def active_session_windows(windows: list[dict], now_utc: datetime) -> list[dict]:
     active = []
     for window in windows:
@@ -465,10 +469,11 @@ def write_bot_audit_event(
     *,
     run_id: str | None = None,
     run_started_at: str | None = None,
+    symbol: str = "usdjpy",
 ) -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
-    path = output / "bot_audit_events_usdjpy.jsonl"
+    path = output / f"bot_audit_events_{symbol}.jsonl"
     run_context = {}
     if run_id:
         run_context["run_id"] = run_id
@@ -519,7 +524,7 @@ class IGDemoBotRunner:
         self.market_rules = None
         self.lifecycle_manager: IGTradeLifecycleManager | None = None
         self.lifecycle_executor: IGTradeLifecycleExecutor | None = None
-        self.lifecycle_writer = LifecycleJSONWriter(self.config.audit_output_path)
+        self.lifecycle_writer = LifecycleJSONWriter(self.config.audit_output_path, symbol=self.symbol)
         self.telegram = TelegramNotifier(config)
         self._last_control_state = "ACTIVE"
         self._lock = Lock()
@@ -532,9 +537,13 @@ class IGDemoBotRunner:
     def bot_label(self) -> str:
         return _bot_label(self.epic, self.contract)
 
+    @property
+    def symbol(self) -> str:
+        return _epic_symbol(self.epic, self.contract)
+
     def _write_run_snapshot(self, result: BotRunResult) -> Path:
         result.tick_count = self.price_state.tick_count
-        report = Path(self.config.audit_output_path) / "bot_run_usdjpy.json"
+        report = Path(self.config.audit_output_path) / f"bot_run_{self.symbol}.json"
         report.parent.mkdir(parents=True, exist_ok=True)
         result.reports["bot_run"] = str(report)
         report.write_text(json.dumps(result.__dict__, indent=2, default=str))
@@ -546,6 +555,7 @@ class IGDemoBotRunner:
             event,
             run_id=self.run_id,
             run_started_at=self.run_started_at,
+            symbol=self.symbol,
         )
 
     def _on_tick(self, tick: InternalTick) -> None:
@@ -684,7 +694,7 @@ class IGDemoBotRunner:
                 four_hour=four_hour,
                 execution_tick=self.price_state.latest_tick,
             )
-        report = write_signal_dry_run_report(self.config.audit_output_path, result)
+        report = write_signal_dry_run_report(self.config.audit_output_path, result, symbol=self.symbol)
         logger.info(
             "IG bot signal evaluated | run_id=%s | candle=%s | status=%s | "
             "current_signal=%s | dry_run_status=%s | order_sent=false",
@@ -935,7 +945,7 @@ class IGDemoBotRunner:
         execution["strategy_signal_used"] = True
         execution["signal"] = result.get("current_signal")
         self._attach_lifecycle_manager(result, execution, order)
-        report = write_demo_execution_report(self.config.audit_output_path, execution)
+        report = write_demo_execution_report(self.config.audit_output_path, execution, symbol=self.symbol)
         self._write_audit_event({
             "event": "ORDER_SUBMITTED",
             "deal_reference": execution.get("deal_reference"),
@@ -1135,6 +1145,7 @@ class IGDemoBotRunner:
                         report = write_signal_dry_run_report(
                             self.config.audit_output_path,
                             signal_result,
+                            symbol=self.symbol,
                         )
                         self._write_audit_event({
                             "event": "SIGNAL_EVALUATION_BLOCKED",

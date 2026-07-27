@@ -338,6 +338,32 @@ def test_write_run_snapshot_updates_status_file(tmp_path):
     assert '"tick_count": 42' in path.read_text()
 
 
+def test_gbpusd_runner_uses_gbpusd_report_filenames(tmp_path):
+    config = SimpleNamespace(
+        audit_output_path=tmp_path / "audit",
+        price_scale_divisor=None,
+        telegram_enabled=False,
+    )
+    runner = IGDemoBotRunner(
+        config=config,
+        session=SimpleNamespace(),
+        client=SimpleNamespace(),
+        env_file=".env.demo",
+        strategy_path="contract.yaml",
+        epic="CS.D.GBPUSD.TODAY.IP",
+        runtime_strategy_config="runtime.yaml",
+    )
+    result = BotRunResult(status="RUNNING", started_at="2026-06-18T00:00:00+00:00")
+
+    snapshot = runner._write_run_snapshot(result)
+    audit = runner._write_audit_event({"event": "TEST"})
+    lifecycle = runner.lifecycle_writer.clear(reason="TEST")
+
+    assert snapshot.name == "bot_run_gbpusd.json"
+    assert audit.name == "bot_audit_events_gbpusd.jsonl"
+    assert lifecycle.name == "trade_lifecycle_gbpusd.json"
+
+
 def test_bot_label_uses_contract_market_before_epic_fallback():
     assert _bot_label("CS.D.GBPUSD.TODAY.IP", {"strategy": {"market": "GBPUSD"}}) == "GBPUSD"
     assert _bot_label("CS.D.GBPUSD.TODAY.IP") == "GBPUSD"
@@ -534,7 +560,7 @@ def test_order_submission_blocks_if_order_epic_does_not_match_bot_epic(tmp_path)
     }
 
     assert runner._maybe_execute(result, "PLACE_DEMO_ORDER") is None
-    audit = (tmp_path / "audit" / "bot_audit_events_usdjpy.jsonl").read_text()
+    audit = (tmp_path / "audit" / "bot_audit_events_gbpusd.jsonl").read_text()
     assert "ORDER_EPIC_MISMATCH" in audit
     assert "CS.D.GBPUSD.TODAY.IP" in audit
     assert "CS.D.USDJPY.TODAY.IP" in audit

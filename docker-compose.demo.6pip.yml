@@ -101,7 +101,7 @@ services:
       IG_HISTORICAL_TOKEN_CACHE_PATH: .runtime/ig_demo_6pip_gbpusd_historical_session.json
       TELEGRAM_ENABLED: "true"
       TELEGRAM_CONTROL_PATH: .runtime/ig_6pip_bot_control_gbpusd.json
-      TELEGRAM_STATUS_PATH: reports/ig_demo_audit_6pip_gbpusd/bot_run_usdjpy.json
+      TELEGRAM_STATUS_PATH: reports/ig_demo_audit_6pip_gbpusd/bot_run_gbpusd.json
     volumes:
       - ./data:/app/data
       - ./reports:/app/reports
@@ -176,7 +176,7 @@ services:
       TELEGRAM_CONTROLLER_PORT: "3000"
       TELEGRAM_WEBHOOK_PATH: /telegram/gbpusd
       TELEGRAM_CONTROL_PATH: .runtime/ig_6pip_bot_control_gbpusd.json
-      TELEGRAM_STATUS_PATH: reports/ig_demo_audit_6pip_gbpusd/bot_run_usdjpy.json
+      TELEGRAM_STATUS_PATH: reports/ig_demo_audit_6pip_gbpusd/bot_run_gbpusd.json
     ports:
       - "3002:3000"
     volumes:

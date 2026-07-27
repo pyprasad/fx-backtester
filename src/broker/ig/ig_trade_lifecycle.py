@@ -328,18 +328,22 @@ class IGTradeLifecycleExecutor:
 
 
 class LifecycleJSONWriter:
-    def __init__(self, output: str | Path):
+    def __init__(self, output: str | Path, *, symbol: str = "usdjpy"):
         self.output = Path(output)
+        self.symbol = symbol
+
+    def path(self) -> Path:
+        return self.output / f"trade_lifecycle_{self.symbol}.json"
 
     def write(self, manager: IGTradeLifecycleManager) -> Path:
         self.output.mkdir(parents=True, exist_ok=True)
-        path = self.output / "trade_lifecycle_usdjpy.json"
+        path = self.path()
         path.write_text(json.dumps(manager.snapshot(), indent=2, default=str))
         return path
 
     def clear(self, *, reason: str) -> Path:
         self.output.mkdir(parents=True, exist_ok=True)
-        path = self.output / "trade_lifecycle_usdjpy.json"
+        path = self.path()
         path.write_text(json.dumps({
             "position": None,
             "reconciled_at": datetime.now(timezone.utc).isoformat(),

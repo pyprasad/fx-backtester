@@ -439,12 +439,12 @@ def evaluate_live_signal(*, client, config, contract: dict, ig_config, epic: str
     )
 
 
-def write_live_signal_report(output: str | Path, result: dict) -> Path:
+def write_live_signal_report(output: str | Path, result: dict, *, symbol: str = "usdjpy") -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
-    path = output / "live_signal_check_usdjpy.json"
+    path = output / f"live_signal_check_{symbol}.json"
     path.write_text(json.dumps(result, indent=2, default=str))
-    md = output / "live_signal_check_usdjpy.md"
+    md = output / f"live_signal_check_{symbol}.md"
     md.write_text(
         f"# IG DEMO Live Signal Check\n\nStatus: **{result['status']}**\n\n"
         f"Order sent: **{result.get('order_sent', False)}**\n"
@@ -452,7 +452,7 @@ def write_live_signal_report(output: str | Path, result: dict) -> Path:
     return path
 
 
-def write_signal_dry_run_report(output: str | Path, result: dict) -> Path:
+def write_signal_dry_run_report(output: str | Path, result: dict, *, symbol: str = "usdjpy") -> Path:
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     last_signal = result.get("last_signal")
@@ -481,9 +481,9 @@ def write_signal_dry_run_report(output: str | Path, result: dict) -> Path:
     }
     if result.get("status") == "NO_SIGNAL":
         payload["last_signal"] = last_signal
-    path = output / "signal_dry_run_order_usdjpy.json"
+    path = output / f"signal_dry_run_order_{symbol}.json"
     path.write_text(json.dumps(payload, indent=2, default=str))
-    md = output / "signal_dry_run_order_usdjpy.md"
+    md = output / f"signal_dry_run_order_{symbol}.md"
     md.write_text(
         f"# IG DEMO Signal Dry-Run Order\n\nStatus: **{payload['status']}**\n\n"
         f"Order sent: **False**\n"
